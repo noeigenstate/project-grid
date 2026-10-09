@@ -197,8 +197,9 @@ test('session IPC returns Codex empty lists and only follows active local Claude
   const f = await fixture(t); await f.write('current', [user('current')]); await f.write('other', [user('other')]);
   const h = mainHarness(t, f), handlers = {};
   h.s.claudeSessionId = 'current';
-  Object.assign(h.context, { handle: (name, handler) => { handlers[name] = handler; }, findProject: () => h.project, listClaudeSessions: (cwd, id) => listClaudeSessions(cwd, id, f.home) });
-  vm.runInContext(main.slice(main.indexOf("  handle('terminal:agentSessions'"), main.indexOf("  handle('terminal:commands'")), h.context);
+  require('../electron/features/agents/ipc.cjs').registerAgentsIpc({ handle: (name, handler) => { handlers[name] = handler; },
+    findProject: () => h.project, getSession: id => h.sessions.get(id), getRestoreCwd: id => h.context.store.findTerminal(id)?.record.restore?.cwd,
+    followClaudeSession: (...args) => h.context.followClaudeSession(...args), listClaudeSessions: (cwd, id) => listClaudeSessions(cwd, id, f.home) });
   assert.deepEqual((await handlers['terminal:agentSessions']('terminal')).map(item => item.id), ['other']);
   h.s.claudeSessionId = null; h.restore.threadId = 'current';
   assert.equal((await handlers['terminal:agentSessions']('terminal')).length, 2, 'an old restore id is not the current fresh session');

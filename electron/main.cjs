@@ -1,3 +1,18 @@
+const { registerWindowIpc } = require('./app/window-ipc.cjs');
+const { registerClipboardIpc } = require('./shared/clipboard-ipc.cjs');
+const { registerTerminalIpc } = require('./features/terminal/ipc.cjs');
+const { registerWorkspaceIpc } = require('./features/workspace/ipc.cjs');
+const { createSshRuntime } = require('./features/ssh/runtime.cjs');
+const { registerSshIpc } = require('./features/ssh/ipc.cjs');
+const { registerFilesIpc } = require('./features/files/ipc.cjs');
+const { createEditorGuard } = require('./features/files/editor-guard.cjs');
+const { createGitRuntime } = require('./features/git/runtime.cjs');
+const { registerGitIpc } = require('./features/git/ipc.cjs');
+const { registerUpdatesIpc } = require('./features/updates/ipc.cjs');
+const { registerAgentsIpc } = require('./features/agents/ipc.cjs');
+const { registerNoticesIpc } = require('./features/notices/ipc.cjs');
+const { registerVoiceIpc } = require('./features/voice/ipc.cjs');
+const { createIpcAdapter } = require('./shared/ipc.cjs');
 const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notification, clipboard, shell, protocol, safeStorage, session: electronSession, net: electronNet } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -9,15 +24,12 @@ const { randomUUID } = require('node:crypto');
 const pty = require('node-pty');
 const { WorkspaceStore } = require('./state.cjs');
 const { createEventServer } = require('./events.cjs');
-const { findFiles, listDirectory, readProjectFile, saveProjectFile, resolveProjectPath, VIDEO_TYPES } = require('./project-files.cjs');
-const { projectPaths } = require('./project-paths.cjs');
 const { ProjectGit } = require('./project-git.cjs');
-const { isTerminalResponse, isLocalCommand, acceptShellEvent, SubmissionTracker, PromptMarkers, InputGate } = require('./terminal-input.cjs');
+const { acceptShellEvent, SubmissionTracker, PromptMarkers, InputGate } = require('./terminal-input.cjs');
 const { PromptQueue } = require('./prompt-queue.cjs');
 const { createTerminalEnvironment } = require('./terminal-env.cjs');
 const { adoptSystemProxy } = require('./system-proxy.cjs');
 const { PreviewResources, resourceResponse } = require('./preview-resources.cjs');
-const { resolveTerminalLink } = require('./terminal-links.cjs');
 const { UpdateManager, isInstalledBuild } = require('./updates.cjs');
 const { getSSHInfo } = require('./ssh-config.cjs');
 const { SSHAuthServer } = require('./ssh-auth.cjs');
@@ -66,26 +78,23 @@ protocol.registerSchemesAsPrivileged([
 const { translate } = require('./i18n.cjs');
 // Text shown by the main process follows the language chosen in settings (Chinese source -> locales/en.json).
 const t = (text, values) => translate(store?.settings.language, text, values);
-let window, tray, store, eventServer, sshAuth, updateManager, quitting = false, installingUpdate = false;
-let userFullScreen = false;
+let window, tray, store, eventServer, sshAuth, updateManager, quitting = false, updatesIpc;
 const sessions = new Map();
-const branches = new Map();
+const { setBranch, captureBranch, getBranch, forgetBranch, remoteBranch } = createGitRuntime({ getProjects: () => store.projects, execFile, broadcast });
 const projectGit = new ProjectGit(id => remoteFor(id));
 const startupErrors = new Map();
 const restorePlans = new Map();
 const previewResources = new PreviewResources({ remote: project => remoteFor(project.id) });
 let stateTimer;
 let runtimeDir;
-let sshAskpassPath;
-let sshAskpassDir;
+const { prepareAskpass, cleanupAskpass } = createSshRuntime({ fs, execFileSync, tempDirectory: () => app.getPath('temp'), integrationDir });
 let zshStartup;
 let activeTerminal = null;
 let activeFileTree = null;
-let fileOperations, fileProgress = null;
+let fileOperations, filesIpc;
 let voiceManager, speechManager, summarySecrets;
 let attentionTimer;
-let editorDirty = false, editorCloseRequest = null, editorFile = null;
-const fileSaves = new Set();
+const { allowEditorClose, affectsEditor, getEditorFile, registerEditorIpc } = createEditorGuard({ getWindow: () => window, showWindow, send, randomUUID, dialog, t });
 const clipboardWrites = new ClipboardWrites();
 const powershellPath = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
 const cmdPath = process.env.ComSpec || path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe');
@@ -120,7 +129,7 @@ function publicState() {
       return {
         id: p.id, name: p.name, path: p.path, unread: p.unread, lastCompletedAt: p.lastCompletedAt,
         kind: p.kind || 'local', ssh: p.ssh || null,
-        branch: branches.get(p.id) || '',
+        branch: getBranch(p.id) || '',
         terminals, sessionId: first.sessionId, status,
         codexActive: activeCodex.length > 0, codexActivity: activity, agent: activeCodex[0]?.agent || null,
         shellReady: first.shellReady, codexAvailable: first.codexAvailable,
@@ -166,7 +175,7 @@ function trayImage(name) {
   const image = nativeImage.createFromPath(path.join(root, 'assets', name));
   return process.platform === 'darwin' ? image.resize({ width: 18, height: 18 }) : image;
 }
-// The same "Ctrl+Shift+F" form the window records (src/shortcuts.ts), from an Electron input event.
+// The same "Ctrl+Shift+F" form the window records (src/features/shortcuts/shortcuts.ts), from an Electron input event.
 const SHORTCUT_KEYS = { Comma: ',', Period: '.', Slash: '/', Semicolon: ';', Quote: "'", BracketLeft: '[', BracketRight: ']', Backslash: '\\', Minus: '-', Equal: '=', Backquote: '`', Space: 'Space', Tab: 'Tab', Enter: 'Enter', NumpadEnter: 'Enter' };
 function isAppShortcut(input) {
   const code = String(input.code || '');
@@ -508,31 +517,6 @@ function remoteFor(id) {
   return session.terminal;
 }
 
-// Same label as project:git-status ("HEAD 1a2b3c4d" when detached), so the two sources never flip
-// the header back and forth; broadcast only when the label actually changes.
-function setBranch(id, branch) {
-  if (!store.projects.some(item => item.id === id) || branches.get(id) === branch) return;
-  branches.set(id, branch); broadcast();
-}
-function captureBranch(project) {
-  if (project.kind === 'ssh') return;
-  const git = (args, done) => execFile('git', ['-C', project.path, ...args], { windowsHide: true, timeout: 3000 }, (error, stdout) => done(error ? '' : stdout.trim()));
-  git(['symbolic-ref', '--short', '-q', 'HEAD'], branch => {
-    if (branch) setBranch(project.id, branch);
-    else git(['rev-parse', 'HEAD'], head => setBranch(project.id, head ? `HEAD ${head.slice(0, 8)}` : ''));
-  });
-}
-
-// Adds a local folder as a project and opens its terminal; an already open folder just returns its id.
-function addLocalProject(folder, name) {
-  const { project, added } = store.add(folder, name);
-  if (added) {
-    try { startTerminal(project.id); }
-    catch (error) { startupErrors.set(project.id, error.message); }
-  }
-  return project.id;
-}
-
 // The local shell for a new terminal: PowerShell or Command Prompt on Windows, zsh on macOS, and on Linux
 // Bash or zsh as chosen in Settings (the login shell's kind until one is chosen).
 // Linux looks for the shells again whenever a terminal starts, so one installed meanwhile is used.
@@ -570,18 +554,9 @@ function startTerminal(id) {
     // Every glibc since 2.35 has C.UTF-8; a Linux desktop session normally sets LANG itself.
     locale: process.platform === 'darwin' ? terminalLocale(app.getPreferredSystemLanguages()) : 'C.UTF-8' };
   if (local) env = shellKind === 'zsh' ? zshEnvironment(env, integration) : shellEnvironment(env, integration);
-  if (project.kind === 'ssh' && !sshAskpassPath && process.platform === 'win32') {
-    // Windows OpenSSH 8.1 cannot spawn an askpass executable under a Unicode
-    // directory. The system temp volume provides an ASCII/short-path location
-    // even when the workspace volume has 8.3 names disabled.
-    sshAskpassDir = fs.mkdtempSync(path.join(app.getPath('temp'), 'project-grid-ssh-'));
-    const helper = path.join(sshAskpassDir, 'ssh-askpass.exe');
-    fs.copyFileSync(path.join(integrationDir, 'ssh-askpass.exe'), helper);
-    try { sshAskpassPath = execFileSync(helper, ['--short-path', helper], { encoding: 'utf8', windowsHide: true, timeout: 5000 }).trim(); }
-    catch { sshAskpassPath = helper; }
-  }
+  const sshAskpassPath = project.kind === 'ssh' ? prepareAskpass() : undefined;
   const terminal = project.kind === 'ssh' ? new RemoteConnection({ ...project, id }, { integrationDir, auth: sshAuth, sessionKey, onEvent, codingPath: startPath, askpassPath: sshAskpassPath,
-    onReady: info => { branches.set(project.id, String(info.branch || '').slice(0, 120)); broadcast(); },
+    onReady: info => { remoteBranch(project.id, info.branch); },
   }) : shellKind === 'zsh' ? pty.spawn(shell.file, ['-l', '-i'], {
     name: 'xterm-256color', cols: 90, rows: 22, cwd: startPath, env,
   }) : shellKind === 'bash' ? pty.spawn(shell.file, bashArguments(integrationDir), {
@@ -664,23 +639,6 @@ function disposeTerminal(id) {
   if (s.bootstrapFile) fs.rmSync(s.bootstrapFile, { force: true });
 }
 
-function checkSender(event) {
-  if (!window || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame) throw new Error('Rejected IPC sender');
-  const url = event.senderFrame.url;
-  if (!(devUrl ? url.startsWith(`${devUrl}/`) : url.startsWith('project-grid://app/'))) throw new Error('Rejected IPC origin');
-}
-function handle(channel, fn) {
-  ipcMain.handle(channel, async (event, ...args) => {
-    checkSender(event);
-    try { return { ok: true, value: await fn(...args) }; }
-    // Errors from every module are written in Chinese; they reach the window in the chosen language.
-    catch (error) { return { ok: false, error: t(String(error?.message || error)) }; }
-  });
-}
-function listen(channel, fn) {
-  ipcMain.on(channel, (event, ...args) => { try { checkSender(event); fn(...args); } catch (error) { report(error); } });
-}
-
 async function confirmTerminalClose(id, verb, all = false) {
   const project = findProject(id);
   const chosen = all ? [...sessions.values()].filter(item => item.projectId === project.id) : [sessions.get(id)].filter(Boolean);
@@ -710,328 +668,37 @@ async function requestQuit() {
   return true;
 }
 
-function allowEditorClose() {
-  if (!editorDirty || !window || window.isDestroyed()) return Promise.resolve(true);
-  if (editorCloseRequest) return editorCloseRequest.promise;
-  showWindow();
-  const id = randomUUID();
-  let resolve;
-  const promise = new Promise(done => { resolve = done; });
-  const timer = setTimeout(() => { if (editorCloseRequest?.id === id) { editorCloseRequest = null; resolve(false); } }, 60000);
-  editorCloseRequest = { id, promise, resolve: accepted => { clearTimeout(timer); editorCloseRequest = null; resolve(accepted); } };
-  send('editor:request-close', id);
-  return promise;
-}
-
-function affectsEditor(id, paths) {
-  return editorDirty && editorFile?.id === id && paths.some(value => editorFile.path === value || editorFile.path.startsWith(value + '/'));
-}
-
 function registerIpc() {
-  handle('agents:status', () => agents.getState());
-  handle('agents:install', agent => agents.install(agent));
-  handle('agents:open-node', () => shell.openExternal('https://nodejs.org/'));
-  handle('ssh:info', () => getSSHInfo());
-  handle('ssh:auth-pending', () => sshAuth.getPending());
-  handle('ssh:auth-answer', (id, answer) => sshAuth.answer(id, answer));
-  handle('workspace:add-ssh', input => {
-    const configuration = getSSHInfo();
-    const { project, added } = store.addSSH({ ...input, configFile: configuration.configExists ? configuration.configFile : null });
-    if (added || !sessions.has(project.id) || sessions.get(project.id).status === 'exited') {
-      try { startTerminal(project.id); } catch (error) { startupErrors.set(project.id, error.message); }
-    }
-    broadcast(); return project.id;
-  });
-  handle('updates:state', () => updateManager.getState());
-  handle('updates:check', () => updateManager.check());
-  handle('updates:download-page', () => shell.openExternal('https://github.com/noeigenstate/project-grid/releases/latest'));
-  handle('updates:install', async () => {
-    if (installingUpdate) return false;
-    if (!updateManager.canInstall()) throw new Error('更新尚未下载完成。');
-    installingUpdate = true;
-    try {
-      if (!await allowEditorClose()) { installingUpdate = false; return false; }
-      const count = [...sessions.values()].filter(session => session.status !== 'exited').length;
-      if (count) {
-        const result = await dialog.showMessageBox(window, {
-          type: 'question', title: t('重启并安装更新'), message: t('重启会关闭 {count} 个终端', { count }),
-          detail: t('请先确认任务已经完成。取消后，下载好的更新会继续保留。'),
-          buttons: [t('继续工作'), t('关闭终端并更新')], defaultId: 0, cancelId: 0,
-        });
-        if (result.response !== 1) { installingUpdate = false; return false; }
-      }
-      quitting = true;
-      updateManager.install();
-      return true;
-    } catch (error) { quitting = false; installingUpdate = false; throw error; }
-  });
-  handle('workspace:state', publicState);
-  handle('workspace:add', async () => {
-    const result = await dialog.showOpenDialog(window, { title: t('添加项目文件夹（可多选）'), properties: ['openDirectory', 'multiSelections'] });
-    if (result.canceled) return [];
-    const ids = result.filePaths.map(folder => addLocalProject(folder));
-    broadcast();
-    return ids;
-  });
-  const recentProjects = () => store.recentProjects().map(item => ({ ...item, exists: fs.existsSync(item.path) }));
-  handle('workspace:recent', recentProjects);
-  // Only folders already in the history can be reopened this way; anything else goes through the folder picker.
-  handle('workspace:add-recent', folder => {
-    const entry = store.recentEntry(folder);
-    if (!entry) throw new Error('这个项目不在最近列表里，请重新选择文件夹。');
-    if (!fs.existsSync(entry.path)) throw new Error('文件夹已不存在，可以把它从最近列表中删除。');
-    const id = addLocalProject(entry.path, entry.name); broadcast(); return id;
-  });
-  handle('workspace:forget-recent', folder => { store.forget(folder); return recentProjects(); });
-  handle('workspace:clear-recent', () => { store.clearHistory(); return recentProjects(); });
-  handle('workspace:remove', async id => {
-    if (editorFile?.id === id && !await allowEditorClose()) return false;
-    if (!await confirmTerminalClose(id, '移除', true)) return false;
-    disposeProjectTerminals(findProject(id)); previewResources.closeProject(id); store.remove(id); branches.delete(id); broadcast(); return true;
-  });
-  handle('workspace:acknowledge', id => { findProject(id); store.acknowledge(id); broadcast(); });
-  handle('workspace:reorder', ids => { store.reorderProjects(ids); broadcast(); });
-  handle('workspace:settings', patch => {
-    if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('无效的设置。');
-    const language = store.settings.language;
-    store.updateSettings(patch); broadcast();
-    if (store.settings.language !== language) { trayMenu(); if (process.platform === 'darwin') Menu.setApplicationMenu(macMenu()); }
-    if (patch.restoreSessions === false) restorePlans.clear();
-    voiceManager.choose(store.settings.voiceModel);
-  });
-  handle('project:directory', (id, relativePath = '', offset = 0) => findProject(id).kind === 'ssh' ? remoteFor(id).request('directory', { path: relativePath, offset }) : listDirectory(findProject(id), relativePath, offset));
-  handle('project:findFiles', (projectId, query) => findFiles(findProject(projectId), query));
-  handle('project:git-status', async id => {
-    const project = findProject(id), status = await projectGit.read(project, 'status');
-    const branch = status.repository ? status.detached ? `HEAD ${status.head.slice(0, 8)}` : status.branch : '';
-    setBranch(id, branch);
-    return status;
-  });
-  handle('project:git-history', (id, offset = 0) => projectGit.read(findProject(id), 'history', offset));
-  handle('project:git-files', (id, hash) => projectGit.read(findProject(id), 'files', hash));
-  // The changes of one file as hunks; staged compares the index with HEAD, otherwise the working tree with the index.
-  handle('project:git-diff', (id, relative, options = {}) => projectGit.read(findProject(id), 'diff', { path: relative, staged: options?.staged === true, untracked: options?.untracked === true }));
-  // Keeps (stages) or undoes (reverse) a hunk's patch; an editor holding the file must agree first.
-  handle('project:git-apply', async (id, patch, options = {}) => {
-    const relative = typeof options?.path === 'string' ? options.path : '';
-    if (relative && affectsEditor(id, [relative]) && !await allowEditorClose()) return { applied: false };
-    return projectGit.read(findProject(id), 'apply', { patch, reverse: options?.reverse === true, cached: options?.cached === true });
-  });
-  handle('project:git-confirm-revert', async (id, relative, count) => {
-    findProject(id);
-    const name = String(relative).slice(0, 500);
-    const result = await dialog.showMessageBox(window, { type: 'question', title: t('还原更改'), message: count > 1 ? t('还原“{name}”的 {count} 处更改？', { name, count }) : t('还原“{name}”的这处更改？', { name }),
-      detail: t('工作区里的这些修改会被丢弃，无法撤销。'), buttons: [t('取消'), t('还原')], defaultId: 0, cancelId: 0 });
-    return result.response === 1;
-  });
-  handle('project:create-entry', (id, directory, name, kind) => fileOperations.create(findProject(id), directory, name, kind));
-  handle('project:rename-entry', async (id, relative, name) => {
-    if (affectsEditor(id, [relative]) && !await allowEditorClose()) throw new Error('已取消重命名。');
-    return fileOperations.rename(findProject(id), relative, name);
-  });
-  handle('project:delete-entries', async (id, paths) => {
-    if (Array.isArray(paths) && affectsEditor(id, paths) && !await allowEditorClose()) return { deleted: [] };
-    return fileOperations.remove(findProject(id), paths);
-  });
-  handle('project:copy-entries', (id, paths) => fileOperations.copy(findProject(id), paths));
-  handle('project:copy-paths', async (id, paths, format) => {
-    const project = findProject(id);
-    const revision = clipboardWrites.reserve();
-    const remote = project.kind === 'ssh' && format === 'absolute' ? remoteFor(id) : null;
-    if (remote) await remote.ready;
-    const value = projectPaths(project, paths, format, remote?.info.root);
-    if (!await clipboardWrites.commit(revision, () => clipboard.writeText(value))) return { count: 0, superseded: true };
-    return { count: paths.length };
-  });
-  handle('project:paste-entries', (id, directory) => fileOperations.paste(findProject(id), directory));
-  handle('files:progress', () => fileProgress);
-  handle('files:cancel', () => fileOperations.cancel());
-  handle('voice:state', () => voiceManager.getState());
-  handle('voice:prepare', () => voiceManager.prepare());
-  handle('voice:warm', () => voiceManager.warm());
-  handle('voice:transcribe', audio => voiceManager.transcribe(audio));
-  handle('speech:state', () => speechManager.getState());
-  handle('speech:prepare', () => speechManager.prepare());
-  handle('speech:speak', text => speechManager.speak(text));
-  // Spoken summaries from a model: whether a key is saved (never the key), saving one, the server's models, a trial run.
-  const summaryKeys = () => ({ keys: { cloud: summarySecrets.has('cloud'), local: summarySecrets.has('local') } });
-  const summaryTarget = target => { if (!SUMMARY_TARGETS.includes(target)) throw new Error('无效的模型类型。'); return target; };
-  handle('summary:state', summaryKeys);
-  handle('summary:set-key', (target, key) => { summarySecrets.set(summaryTarget(target), key); return summaryKeys(); });
-  handle('summary:models', target => listModels({ ...connection(summaryTarget(target), store.settings.summary[target], summarySecrets.get(target)), fetcher: (url, options) => electronNet.fetch(url, options) }));
-  handle('summary:test', async mode => {
-    const english = store.settings.language === 'en', started = Date.now();
-    const material = english
-      ? { language: 'en', task: 'add a captcha to the login page', reply: 'I added a captcha component to src/login.tsx and three tests; npm test passes. One question: how long should a captcha stay valid?' }
-      : { language: 'zh', task: '给登录页加上验证码', reply: '我在 src/login.tsx 加了图形验证码组件，补了 3 个测试，npm test 全部通过。还有一个问题：验证码过期时间要设成多久？' };
-    let text;
-    if (mode === 'agent') {
-      const installed = agents.getState();
-      text = await summarizeRound({ agent: installed.claude.installed ? 'claude' : 'codex', ...material, directory: path.join(app.getPath('userData'), 'summaries') });
-      if (!text) throw new Error('编码助手没有给出总结：可能未安装、未登录，或超过了 30 秒。');
-    } else text = await modelSummary({ target: summaryTarget(mode), entry: store.settings.summary[mode], apiKey: summarySecrets.get(mode), ...material, fetcher: (url, options) => electronNet.fetch(url, options) });
-    return { text, ms: Date.now() - started };
-  });
-  listen('files:focus', (id, focused) => { if (focused) { findProject(id); activeFileTree = id; activeTerminal = null; } else if (activeFileTree === id) activeFileTree = null; });
-  handle('project:file', async (id, relativePath, pageIndex) => {
-    const project = findProject(id);
-    const preview = project.kind === 'ssh' ? await remoteFor(id).request('preview', { path: relativePath, page: pageIndex || 0 }) : await readProjectFile(project, relativePath, pageIndex);
-    if (['image', 'html', 'markdown', 'video'].includes(preview.kind)) return { ...preview, ...previewResources.open(project, relativePath, preview.kind, preview.mimeType) };
-    return preview;
-  });
-  handle('project:preview-close', id => previewResources.close(id));
-  handle('project:save-file', async (id, relativePath, pageIndex, revision, content) => {
-    const project = findProject(id), key = `${project.id}:${relativePath}`;
-    if (fileSaves.has(key)) throw new Error('此文件正在保存，请稍候。');
-    if (typeof content !== 'string' || Buffer.byteLength(content, 'utf8') > 1024 * 1024) throw new Error('本次编辑内容超过 1 MB，请分段保存。');
-    fileSaves.add(key);
-    try {
-      const preview = project.kind === 'ssh'
-        ? await remoteFor(id).request('save-file', { path: relativePath, page: pageIndex, revision, data: Buffer.from(content, 'utf8').toString('base64') })
-        : await saveProjectFile(project, relativePath, pageIndex, revision, content);
-      if (['html', 'markdown'].includes(preview.kind)) return { ...preview, ...previewResources.open(project, relativePath, preview.kind) };
-      return preview;
-    } finally { fileSaves.delete(key); }
-  });
-  handle('editor:confirm-close', async filename => {
-    const result = await dialog.showMessageBox(window, { type: 'question', title: t('未保存的修改'), message: t('保存对“{name}”的修改？', { name: String(filename).slice(0, 500) }),
-      buttons: [t('保存'), t('不保存'), t('取消')], defaultId: 0, cancelId: 2 });
-    return ['save', 'discard', 'cancel'][result.response] || 'cancel';
-  });
-  listen('editor:dirty', (value, id, filename) => { editorDirty = value === true; editorFile = editorDirty && typeof id === 'string' && typeof filename === 'string' ? { id, path: filename } : null; });
-  listen('editor:close-result', (id, accepted) => { if (editorCloseRequest?.id === id) editorCloseRequest.resolve(accepted === true); });
-  handle('project:open-link', async (id, target) => {
-    const project = findProject(id);
-    if (project.kind === 'ssh' && !/^(https?:\/\/|www\.)/i.test(target)) {
-      const remote = remoteFor(id); await remote.ready;
-      let value = String(target);
-      if (/^file:\/\//i.test(value)) value = decodeURIComponent(new URL(value).pathname);
-      else if (/^[a-z][a-z\d+.-]*:/i.test(value) && !/:[0-9]+(?::[0-9]+)?$/.test(value)) throw new Error('只支持网页链接和远程项目内文件。');
-      for (const candidate of new Set([value, value.replace(/(?::\d+(?::\d+)?|#L\d+(?:C\d+)?)$/, '')])) {
-        const relative = path.posix.relative(remote.info.root, path.posix.resolve(remote.info.root, candidate));
-        if (relative === '..' || relative.startsWith('../')) throw new Error('该链接指向远程项目目录之外。');
-        try {
-          const stat = await remote.request('stat', { path: relative });
-          if (stat.directory) return { kind: 'directory', path: stat.realPath === '.' ? '' : stat.realPath };
-          return { kind: 'file', path: relative };
-        } catch (error) { if (candidate === value.replace(/(?::\d+(?::\d+)?|#L\d+(?:C\d+)?)$/, '')) throw error; }
-      }
-    }
-    const link = await resolveTerminalLink(findProject(id), target);
-    if (link.kind === 'external') { await shell.openExternal(link.url); return { kind: 'external' }; }
-    if (link.kind === 'directory') { const error = await shell.openPath(link.path); if (error) throw new Error(error); return { kind: 'external' }; }
-    return link;
-  });
-  handle('project:open-video', async (id, relativePath) => {
-    if (findProject(id).kind === 'ssh') throw new Error('远程视频请使用内置播放器，或先下载到本机再用系统播放器打开。');
-    const resolved = await resolveProjectPath(findProject(id), relativePath);
-    if (!VIDEO_TYPES[path.extname(resolved).toLowerCase()] || !(await fs.promises.stat(resolved)).isFile()) throw new Error('请选择一个视频文件。');
-    const error = await shell.openPath(resolved); if (error) throw new Error(error);
-  });
-  handle('project:reveal', async id => {
-    const project = findProject(id);
-    if (project.kind === 'ssh') return { kind: 'directory', path: '' };
-    const error = await shell.openPath(project.path); if (error) throw new Error(error);
-    return { kind: 'external' };
-  });
-  handle('terminal:start', startTerminal);
-  handle('terminal:add', id => {
-    const project = findProject(id);
-    if (!sessions.has(project.id) && !project.terminals?.length) { startTerminal(project.id); return project.id; }
-    const terminalId = store.addTerminal(project.id);
-    try { startTerminal(terminalId); return terminalId; }
-    catch (error) { store.removeTerminal(terminalId); throw error; }
-  });
-  handle('terminal:close', async id => {
-    if (!await confirmTerminalClose(id, '关闭')) return false;
-    restorePlans.delete(id); disposeTerminal(id); store.removeTerminal(id); startupErrors.delete(id); broadcast(); return true;
-  });
-  handle('terminal:restart', async id => {
-    if (!await confirmTerminalClose(id, '重启')) return false;
-    restorePlans.delete(id);
-    disposeTerminal(id); startTerminal(id); return true;
-  });
-  handle('terminal:actions', id => { findProject(id); return sessions.get(id)?.actions.list || []; });
-  handle('terminal:conversation', id => { findProject(id); return sessions.get(id)?.conversation.snapshot() || []; });
-  handle('terminal:agentSessions', id => {
-    const project = findProject(id), s = sessions.get(id);
-    if (project.kind === 'ssh' || s?.agent !== 'claude') return [];
-    const cwd = store.findTerminal(id)?.record.restore?.cwd || project.path;
-    return listClaudeSessions(cwd, s.codexActive ? s.claudeSessionId : s.claudeResumeId);
-  });
-  handle('terminal:followAgentSession', async (id, sessionId) => {
-    const project = findProject(id), s = sessions.get(id);
-    if (project.kind === 'ssh' || !s?.codexActive || s.agent !== 'claude') return false;
-    return followClaudeSession(project, s, sessionId);
-  });
-  handle('terminal:commands', async id => {
-    const project = findProject(id), s = sessions.get(id);
-    const commands = await listAgentCommands({ agent: s?.agent || 'claude', projectPath: project.kind === 'ssh' ? undefined : project.path });
-    return commands.map(command => command.source === 'builtin' ? { ...command, description: t(command.description) } : command);
-  });
-  handle('terminal:attach', id => {
-    findProject(id);
-    const s = sessions.get(id);
-    if (!s) return { sessionId: null, seq: 0, data: '' };
-    s.flush();
-    return { sessionId: s.sessionId, seq: s.seq, data: s.chunks.join('') };
-  });
-  listen('terminal:write', (id, data) => {
-    if (typeof data !== 'string' || data.length > 1024 * 1024) return;
-    const s = sessions.get(id);
-    if (s && s.status !== 'exited') {
-      const submitted = s.submissions.write(data);
-      const prompts = s.submissions.sent.filter(text => !isLocalCommand(text));
-      if (submitted && s.codexActive) for (const text of prompts) s.promptQueue.submit(text, s.codexActivity === 'working');
-      // Sending a new prompt means the last result has been read: clear the unviewed state before the next round.
-      if (submitted && store.projects.find(p => p.id === s.projectId)?.unread) { store.acknowledge(s.projectId); scheduleState(); }
-      if (prompts.length && s.codexActive) {
-        store.expectCompletion(s.projectId);
-        s.codexActivity = 'working'; s.activityInputAt = Date.now();
-        scheduleState(); warmSpeech();
-      }
-      // Escape on its own interrupts a working Claude Code turn. It runs no hook then, writes nothing to its transcript
-      // and only puts the prompt back in its input, so this key is the only sign the round has ended. While Claude asks
-      // something (a permission or a question), Escape only answers it and the round may go on.
-      if (data === '\x1b' && s.codexActive && s.agent === 'claude' && s.codexActivity === 'working' && !s.needsInput) {
-        const project = store.projects.find(p => p.id === s.projectId);
-        if (project) applyActivity(project, s, { threadId: s.claudeSessionId, turnId: null, state: 'interrupted', updatedAt: Date.now() });
-      }
-      if (!s.codexActive && !isTerminalResponse(data)) {
-        const wasReady = s.ready && !s.inputDirty;
-        s.inputDirty = true; if (data.includes('\r') || data.includes('\n')) s.ready = false;
-        if (wasReady) scheduleState();
-      }
-      s.gate.input(data);
-      if (submitted && s.codexActive) pollAfterSubmission(s, () => sessions.get(id) === s);
-    }
-  });
-  listen('terminal:resize', (id, cols, rows) => {
-    if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols < 2 || rows < 2 || cols > 500 || rows > 250) return;
-    const s = sessions.get(id);
-    if (s && s.status !== 'exited') s.terminal.resize(cols, rows);
-  });
-  handle('clipboard:copy', async text => {
-    if (typeof text !== 'string') throw new Error('无效的剪贴板内容。');
-    await clipboardWrites.commit(clipboardWrites.reserve(), () => clipboard.writeText(text));
-  });
-  handle('clipboard:read', () => clipboard.readText());
-  handle('terminal:paste', (id, text, sessionId) => {
-    const session = sessions.get(id);
-    if (!session || session.sessionId !== sessionId || ['starting', 'exited'].includes(session.status)) throw new Error('终端已变化或尚未就绪，请复制文字后手动粘贴。');
-    if (typeof text !== 'string' || text.length > 1024 * 1024) throw new Error('无效的文字。');
-    send('terminal:paste', { id, sessionId, text });
-  });
-  listen('terminal:focus', (id, focused) => { if (sessions.has(id) && focused) { activeTerminal = id; activeFileTree = null; } else if (activeTerminal === id) activeTerminal = null; });
-  listen('window:minimize', () => window.minimize());
-  listen('window:maximize', () => window.isMaximized() ? window.unmaximize() : window.maximize());
-  listen('window:fullscreen', () => { userFullScreen = !window.isFullScreen(); window.setFullScreen(userFullScreen); });
-  listen('window:close', () => window.close());
-  // Keep full screen chosen with the shortcut when returning to the overview. On macOS full screen is a Space of
-  // its own with a sliding transition, so an expanded project stays in the window there.
-  listen('window:focus-mode', enabled => { if (typeof enabled === 'boolean' && process.platform !== 'darwin') window.setFullScreen(enabled || userFullScreen); });
-  handle('window:is-fullscreen', () => window.isFullScreen());
-  handle('app:quit', requestQuit);
+  const { handle, listen } = createIpcAdapter({ ipcMain, getWindow: () => window, devUrl, t, report });
+  registerAgentsIpc({ handle, agents, openExternal: url => shell.openExternal(url), getSession: id => sessions.get(id), findProject,
+    getRestoreCwd: id => store.findTerminal(id)?.record.restore?.cwd, listClaudeSessions, followClaudeSession, listAgentCommands, t });
+  registerSshIpc({ handle, getSSHInfo, sshAuth, addSSH: input => store.addSSH(input), hasSession: id => sessions.has(id), getSession: id => sessions.get(id),
+    startTerminal, setStartupError: (id, message) => startupErrors.set(id, message), broadcast });
+  updatesIpc = registerUpdatesIpc({ handle, updateManager, openExternal: url => shell.openExternal(url), getWindow: () => window, dialog, t,
+    allowEditorClose, liveTerminalCount: () => [...sessions.values()].filter(session => session.status !== 'exited').length, setQuitting: value => { quitting = value; } });
+  registerWorkspaceIpc({ handle, publicState, dialog, getWindow: () => window, t, addProject: (folder, name) => store.add(folder, name), startTerminal,
+    setStartupError: (id, message) => startupErrors.set(id, message), getRecentProjects: () => store.recentProjects(), existsSync: fs.existsSync,
+    getRecentEntry: folder => store.recentEntry(folder), forgetRecent: folder => store.forget(folder), clearHistory: () => store.clearHistory(),
+    getEditorFile, allowEditorClose, confirmTerminalClose, disposeProjectTerminals, findProject, closeProjectPreviews: id => previewResources.closeProject(id),
+    removeProject: id => store.remove(id), forgetBranch, broadcast, acknowledgeProject: id => store.acknowledge(id), reorderProjects: ids => store.reorderProjects(ids),
+    getSettings: () => store.settings, updateStoreSettings: patch => store.updateSettings(patch),
+    rebuildMenus: () => { trayMenu(); if (process.platform === 'darwin') Menu.setApplicationMenu(macMenu()); },
+    clearRestorePlans: () => restorePlans.clear(), chooseVoiceModel: model => voiceManager.choose(model) });
+  filesIpc = registerFilesIpc({ handle, listen, findProject, remoteFor, fileOperations, clipboardWrites, clipboard, previewResources, affectsEditor, allowEditorClose, shell,
+    getActiveFileTree: () => activeFileTree, setActiveFileTree: value => { activeFileTree = value; }, setActiveTerminal: value => { activeTerminal = value; }, send });
+  registerGitIpc({ handle, findProject, projectGit, setBranch, affectsEditor, allowEditorClose, getWindow: () => window, dialog, t });
+  registerVoiceIpc({ handle, voiceManager });
+  registerNoticesIpc({ handle, speechManager, summarySecrets, agents, getSettings: () => store.settings,
+    summaryDirectory: () => path.join(app.getPath('userData'), 'summaries'), fetcher: (url, options) => electronNet.fetch(url, options),
+    summarizeRound, modelSummary, listModels, connection, SUMMARY_TARGETS });
+  registerEditorIpc({ handle, listen });
+  registerTerminalIpc({ handle, listen, findProject, getSession: id => sessions.get(id), hasSession: id => sessions.has(id), startTerminal,
+    addTerminal: id => store.addTerminal(id), removeTerminal: id => store.removeTerminal(id), confirmTerminalClose, forgetRestorePlan: id => restorePlans.delete(id),
+    disposeTerminal, clearStartupError: id => startupErrors.delete(id), broadcast, getProjectById: id => store.projects.find(p => p.id === id),
+    acknowledgeProject: id => store.acknowledge(id), expectCompletion: id => store.expectCompletion(id), scheduleState, warmSpeech, applyActivity, pollAfterSubmission, send,
+    getActiveTerminal: () => activeTerminal, setActiveTerminal: value => { activeTerminal = value; }, setActiveFileTree: value => { activeFileTree = value; } });
+  registerClipboardIpc({ handle, clipboardWrites, clipboard });
+  registerWindowIpc({ handle, listen, getWindow: () => window, requestQuit });
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -1085,7 +752,7 @@ if (!app.requestSingleInstanceLock()) {
       confirmDelete: async (project, paths) => (await dialog.showMessageBox(window, { type: 'question', title: t('删除文件'), message: t('删除 {count} 个文件或文件夹？', { count: paths.length }),
         detail: `${paths.slice(0, 5).join('\n')}${paths.length > 5 ? '\n…' : ''}\n\n${project.kind === 'ssh' ? t('远程文件会被永久删除。') : t('本地文件会移入回收站。')}`,
         buttons: [t('取消'), t('删除')], defaultId: 0, cancelId: 0 })).response === 1,
-      progress: value => { fileProgress = value; send('files:progress', value); },
+      progress: value => filesIpc.setProgress(value),
     });
     runtimeDir = fs.mkdtempSync(path.join(app.getPath('userData'), 'runtime-'));
     eventServer = await createEventServer(onEvent);
@@ -1093,7 +760,7 @@ if (!app.requestSingleInstanceLock()) {
     updateManager = new UpdateManager({
       updater: isInstalledBuild(app.isPackaged, process.execPath) ? require('electron-updater').autoUpdater : null,
       version: app.getVersion(), onChange: state => {
-        if (state.status === 'error' && installingUpdate) { installingUpdate = false; quitting = false; }
+        updatesIpc?.onStateChange(state);
         send('updates:changed', state);
       },
     });
@@ -1214,9 +881,7 @@ app.on('before-quit', event => {
   sshAuth?.close();
   eventServer?.close();
   tray?.destroy();
-  if (sshAskpassDir) {
-    try { fs.rmSync(path.join(sshAskpassDir, 'ssh-askpass.exe'), { force: true }); fs.rmdirSync(sshAskpassDir); } catch { }
-  }
+  cleanupAskpass();
   if (runtimeDir) {
     // Only this launch's generated, now-empty runtime directory is removed.
     try { fs.rmdirSync(runtimeDir); } catch { }

@@ -50,13 +50,13 @@ test('later working, complete, agent exit and shell prompt events clear the wait
 
 test('terminal commands IPC selects the session agent, defaults to Claude and excludes SSH paths', async () => {
   const registrations = new Map(), scans = [];
-  const context = vm.createContext({
-    handle: (name, callback) => registrations.set(name, callback), sessions: new Map([['codex', { agent: 'codex' }]]),
+  const sessions = new Map([['codex', { agent: 'codex' }]]);
+  require('../electron/features/agents/ipc.cjs').registerAgentsIpc({
+    handle: (name, callback) => registrations.set(name, callback), getSession: id => sessions.get(id),
     findProject: id => ({ kind: id === 'ssh' ? 'ssh' : 'local', path: '/project' }),
     listAgentCommands: async options => { scans.push(options); return [{ source: 'builtin', description: 'Builtin' }, { source: 'project', description: 'Custom' }]; },
     t: text => `Translated ${text}`,
   });
-  vm.runInContext(main.slice(main.indexOf("  handle('terminal:commands'"), main.indexOf("  handle('terminal:attach'")), context);
   const list = registrations.get('terminal:commands');
   for (const id of ['codex', 'stopped', 'ssh']) {
     const commands = await list(id);
@@ -68,7 +68,7 @@ test('terminal commands IPC selects the session agent, defaults to Claude and ex
 test('public state exposes waiting messages and null for terminals without a notice', () => {
   const context = vm.createContext({
     store: { projects: [{ id: 'p' }], settings: { language: 'zh' } }, sessions: new Map([['waiting', { needsInput: { message: 'Approve tool' } }]]),
-    terminalIds: () => ['waiting', 'stopped'], branches: new Map(), startupErrors: new Map(), t: text => text, localShell: () => ({ kind: 'powershell' }),
+    terminalIds: () => ['waiting', 'stopped'], getBranch: () => undefined, startupErrors: new Map(), t: text => text, localShell: () => ({ kind: 'powershell' }),
     process: { platform: 'win32', env: { PROJECT_GRID_DATA_DIR: 'isolated' } }, app: { getVersion: () => '1' },
   });
   vm.runInContext(main.slice(main.indexOf('function publicState('), main.indexOf('function terminalIds(')), context);

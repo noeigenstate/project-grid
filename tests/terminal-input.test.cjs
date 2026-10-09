@@ -2,12 +2,9 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { isTerminalResponse, isLocalCommand, acceptShellEvent, SubmissionTracker } = require('../electron/terminal-input.cjs');
 const { PromptQueue } = require('../electron/prompt-queue.cjs');
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
+const { registerTerminalIpc } = require('../electron/features/terminal/ipc.cjs');
 
 // Exercise the IPC handler with an isolated session, without loading Electron.
-const main = fs.readFileSync(path.join(__dirname, '../electron/main.cjs'), 'utf8');
 function terminalWriter(agent, activity = 'idle') {
   const calls = { prompts: [], completion: [], forwarded: [], state: 0, speech: 0, polls: 0 };
   const promptQueue = new PromptQueue();
@@ -19,14 +16,15 @@ function terminalWriter(agent, activity = 'idle') {
     gate: { input: data => calls.forwarded.push(data) },
   };
   let write;
-  const context = vm.createContext({
-    listen: (_channel, handler) => { write = handler; }, sessions: new Map([['terminal', session]]),
-    store: { projects: [{ id: 'project', unread: false }], expectCompletion: id => calls.completion.push(id) },
+  const project = { id: 'project', unread: false };
+  registerTerminalIpc({
+    handle: () => {}, listen: (channel, handler) => { if (channel === 'terminal:write') write = handler; }, getSession: () => session,
+    getProjectById: () => project, expectCompletion: id => calls.completion.push(id),
     scheduleState: () => { calls.state++; }, warmSpeech: () => { calls.speech++; },
     pollAfterSubmission: (target, isCurrent) => { assert.equal(target, session); assert.equal(isCurrent(), true); calls.polls++; },
-    isTerminalResponse, isLocalCommand, Date: { now: () => 1234 },
+    now: () => 1234,
+    applyActivity: (_project, s, snapshot) => { calls.interrupted = snapshot; s.codexActivity = snapshot.state; },
   });
-  vm.runInContext(main.slice(main.indexOf("  listen('terminal:write'"), main.indexOf("  listen('terminal:resize'")), context);
   return { session, calls, write: data => write('terminal', data) };
 }
 
@@ -89,6 +87,19 @@ test('plain text and unknown recalled history still arm completion on submission
     assert.equal(calls.state, 1);
     assert.equal(calls.speech, 1);
     session.promptQueue.reset();
+  }
+});
+
+test('Escape interrupts only a working Claude turn without a pending question', () => {
+  for (const agent of ['claude', 'codex']) for (const activity of ['working', 'complete']) for (const waiting of [false, true]) {
+    const { session, calls, write } = terminalWriter(agent, activity);
+    session.claudeSessionId = 'current'; session.needsInput = waiting ? { message: 'Approve' } : null;
+    write('\x1b');
+    if (agent === 'claude' && activity === 'working' && !waiting) {
+      assert.deepEqual(calls.interrupted, { threadId: 'current', turnId: null, state: 'interrupted', updatedAt: 1234 });
+      assert.equal(session.codexActivity, 'interrupted');
+    } else assert.equal(calls.interrupted, undefined);
+    assert.deepEqual(calls.completion, []); assert.deepEqual(calls.forwarded, ['\x1b']);
   }
 });
 
