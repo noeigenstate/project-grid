@@ -920,11 +920,6 @@
   "提交回答": "Submit answers",
   "回答已换行，请切换到终端修改后提交。": "This answer wraps over several lines; change it in the terminal and submit there.",
   "（{seconds} 秒 · Esc 中断）": "({seconds}s · Esc to interrupt)",
-  "语音输入窗口换上新设计：深蓝玻璃面板、发光的麦克风球和随声音起伏的声波，Enter 发送、Esc 取消的提示更醒目。": "The dictation window has a new look: a navy glass pane, a glowing microphone sphere and sound waves that follow your voice, with clearer Enter (send) and Esc (cancel) hints.",
-  "阅读视图里，智能体正在做什么显示在对话末尾，和命令行一样带计时和“Esc 中断”提示，不再挤在角落。": "In the reading view, what the agent is doing is the last line of the conversation, as in its CLI, with a timer and an Esc-to-interrupt hint, instead of a corner label.",
-  "展开项目时不再重复显示项目标题，按钮移到活动栏顶部，对话和终端从卡片顶端开始，阅读空间更大。": "An expanded project no longer repeats its title: the buttons move to the top of the activity column and the conversation or terminal starts at the top of the card.",
-  "在 Windows 上给 Codex 发多行消息不再被拆成几条分别发送，也不会留下一直“发送中”的消息；阅读视图里的中断、追加消息和 /clear 更可靠。": "On Windows, a multi-line message to Codex is no longer split into several sends or left stuck as \"sending\"; interrupting, follow-ups and /clear behave better in the reading view.",
-  "Windows 上的文字改为常规字重，更清晰；卡片动画更流畅；安装包缩小约 15 MB。": "Text on Windows uses regular weight and reads more clearly; card animations are smoother; installers are about 15 MB smaller.",
   "网页": "Web",
   "新建": "Created",
   "写入": "Wrote",
@@ -965,5 +960,10 @@
   "只调整外观；手动修改和切换主题不会自动覆盖你的配置": "Appearance only; manual changes and theme switches never automatically overwrite your settings",
   "{size}px · {weight} · {renderer} · {background}": "{size}px · {weight} · {renderer} · {background}",
   "应用推荐配置": "Apply recommendations",
-  "正在等待 {command} 的结果…": "Waiting for {command}…"
+  "正在等待 {command} 的结果…": "Waiting for {command}…",
+  "阅读视图里斜杠命令的结果直接排进对话：/usage、/status 等的统计排成表格、用量变成进度条，关闭后也留在原处；命令列表成为版面的一部分，不再是弹窗。": "Slash command results are laid out in the reading view: /usage, /status and the like become tables and progress bars that stay in the conversation; the command list is part of the page, not a popup.",
+  "斜杠命令不再锁住输入框；Codex 的命令只显示它真正输出的内容，/diff 这样的全屏视图也能看到；按 Esc 中断后紧接着输入命令不再被当成提问。": "Slash commands no longer lock the message box; a Codex command shows only what it printed, full-screen views such as /diff included; a command typed right after Esc is no longer taken for a prompt.",
+  "活动栏逐条写明每一步：命令原文、用了哪个技能、调用了哪个 MCP 工具、新建或修改了哪些文件；本轮统计固定在顶部。": "The activity pane names every step: the command as typed, the skill used, the MCP tool called, the files created or changed; the round's numbers stay at the top.",
+  "新增「黑白橙」浅色和「白黑橙」深色主题，可调玻璃背景与透明度、终端字体和字重（感谢社区贡献）。": "Two minimal themes, light Monochrome amber and dark White, Black & Amber, with adjustable glass background and transparency, terminal font and weight (a community contribution).",
+  "发出消息后立刻显示「正在思考」；README 与宣传片全新。": "A sent message shows \"thinking\" at once; a new README and film."
 }

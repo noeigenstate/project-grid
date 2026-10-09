@@ -515,11 +515,11 @@ jobs:
 
           ## Changes in $RELEASE_VERSION
 
-          - The dictation window is redrawn: navy glass with a thin pale-blue rim, a glossy microphone sphere in two rings, cyan-peaked sound bars that follow the voice, and larger Enter and Esc hints.
-          - The reading view writes what the agent is doing as the last line of the conversation, the way its CLI does (a live mark, the current step, seconds elapsed, Esc to interrupt), instead of a label in the corner.
-          - An expanded project no longer keeps an empty title row: the sidebar already names it, so with the activity column open the card's buttons sit at the top of that column and the conversation or terminal starts at the top of the card.
-          - Codex on Windows took every line break of a message sent from the reading view as Enter (and dropped a bare newline after Chinese text), splitting one message into several and leaving one stuck as sending. Line breaks now go as Alt+Enter. Interrupts, follow-ups and /clear are also handled more reliably.
-          - Windows text uses regular weight without shadows; card hover and focus animations no longer repaint shadows or re-blur in flight; installers are about 15 MB smaller with two fewer dependencies. Main-process IPC and the renderer are split into feature modules.
+          - Slash command results are laid out in the reading view as part of the conversation: frames go, figures line up in tables, usage becomes progress bars, groups get headings, and a dialog such as /usage stays after Esc closes it. The command list sits in the page above the message box instead of popping up over the conversation.
+          - Slash commands never lock the message box; sending a message while a command dialog is open closes the dialog first. A Codex command shows only the lines it printed since it was sent (not the banner above), full-screen views such as the /diff pager show whole, and closing a card no longer sends Escape to an empty Codex input.
+          - A command typed right after Escape (to interrupt or close a dialog) lost its first character and was taken for a prompt, leaving Codex shown as thinking; a lone Escape is now a key of its own.
+          - The activity pane keeps the round's calls, completions, failures and time at the top; each step names the command as typed, the skill, the MCP tool, or the files created, changed or deleted. Below the feed only the prompts being worked on remain.
+          - Optional monochrome themes (light and dark) with glass background and transparency, terminal font and weight choices and recommended presets, contributed in PR #2; defaults are unchanged. A sent message shows the working line at once. New README and promo film.
 
           Commit: $GITHUB_SHA
           Build: https://github.com/$GH_REPO/actions/runs/$GITHUB_RUN_ID
