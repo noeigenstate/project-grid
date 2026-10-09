@@ -392,6 +392,7 @@ try {
     // xterm reuses row elements when output scrolls, so the row found a moment ago may already hold
     // the next line. Locate and measure again until both steps see the same text.
     const row = panel.locator('.xterm-rows > div').filter({ hasText: text }).last();
+    const screen = panel.locator('.xterm-screen');
     let position = null;
     await terminalsSettled(page);
     await waitFor(async () => {
@@ -416,14 +417,15 @@ try {
         }
         throw new Error('No terminal cell');
       }, text).catch(error => { if (/Missing terminal text/.test(error.message)) return null; throw error; });
-      return position !== null;
-    }, `terminal text ${text} stays in place`);
-    const screen = panel.locator('.xterm-screen');
-    // Cross a different cell before revisiting the same link: xterm caches the
-    // last hovered cell even after a pointer leaves the terminal.
-    await screen.hover({ position: { x: position.x > 24 ? position.x - 20 : position.x + 20, y: position.y } });
-    await screen.hover({ position });
-    await waitFor(async () => panel.locator('.terminal-host').getAttribute('title').then(value => value?.includes('Ctrl')), `terminal link hover: ${text}`);
+      if (!position) return false;
+      // xterm caches link lookups per row, empty ones included, until the pointer
+      // changes rows. Step onto a neighbouring row and back, measuring again on
+      // each retry in case the line moved after a late repaint.
+      const step = await row.evaluate(element => element.getBoundingClientRect().height);
+      await screen.hover({ position: { x: position.x, y: position.y >= step ? position.y - step : position.y + step } });
+      await screen.hover({ position });
+      return (await panel.locator('.terminal-host').getAttribute('title'))?.includes('Ctrl');
+    }, `terminal link hover: ${text}`);
     await screen.click({ position, modifiers: control ? ['Control'] : [] });
   };
   const printLine = async text => {
