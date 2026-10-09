@@ -48,14 +48,23 @@ export function cliInputArea(agent: ScreenAgent, rows: string[], screen: AgentSc
 // draws anything, so an empty input beside it is not idle. A finished turn's "✻ Worked for 25s" has no ellipsis.
 const claudeWorking = (rows: string[]) => rows.some(row => /^\s*[·✢✳✶✻✽*]\s+\S[^…]*…/.test(row));
 
+// What is typed in the CLI's own input, without its placeholder ("Try …", "Ask Codex to do anything"). Claude puts an
+// interrupted prompt back there, so it can hold text the reading view did not type.
+const placeholder = (agent: ScreenAgent, text: string) => agent === 'claude' ? /^Try ["“].+["”]$/.test(text) : text === 'Ask Codex to do anything';
+export function cliInputDraft(agent: ScreenAgent, rows: string[], screen: AgentScreen) {
+  const text = cliInputArea(agent, rows, screen)?.text ?? '';
+  return placeholder(agent, text) ? '' : text;
+}
+
+// The agent waits at its own input: no question or popup, no working line, and its input box with the footer drawn.
+export function isAtPrompt(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
+  if (screen.choice || screen.overlay !== 'none' || (agent === 'claude' && claudeWorking(rows))) return false;
+  return !!cliInputArea(agent, rows, screen)?.hasFooter;
+}
+
+// At its prompt with nothing typed: a command the reading view sent has finished.
 export function isCliIdle(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
-  if (screen.choice || screen.overlay !== 'none') return false;
-  if (agent === 'claude' && claudeWorking(rows)) return false;
-  const input = cliInputArea(agent, rows, screen);
-  if (!input?.hasFooter) return false;
-  return input.text === '' || (agent === 'claude'
-    ? /^Try ["“].+["”]$/.test(input.text)
-    : input.text === 'Ask Codex to do anything');
+  return isAtPrompt(agent, rows, screen) && !cliInputDraft(agent, rows, screen);
 }
 
 function echoRow(agent: ScreenAgent, rows: string[], command: string, end: number) {

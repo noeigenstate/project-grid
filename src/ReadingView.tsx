@@ -7,7 +7,7 @@ import { actionText, stepVerb } from './ActivityPane';
 import { dictateInto } from './voice-input';
 import { useScreen } from './terminal-screen';
 import { parseAgentScreen } from './agent-screen';
-import { isCliIdle } from './cli-panel';
+import { cliInputDraft, isAtPrompt } from './cli-panel';
 import { ReadingWelcome } from './ReadingWelcome';
 import { ReadingChoice } from './ReadingChoice';
 import { ReadingQuestion } from './ReadingQuestion';
@@ -34,6 +34,10 @@ import { PendingPromptEntries } from './PendingPromptEntries';
 const purifier = createDOMPurify(window);
 // Switching to the CLI unmounts the composer; sent messages still belong to that terminal.
 const history = new Map<string, string[]>();
+// The entries on screen when /clear (or Codex's /new) was sent from here, per conversation. The agent starts a new
+// conversation at once, but its file only appears with the next message; until then these stay hidden.
+const cleared = new Map<string, ReadonlySet<string>>();
+const clears = (agent: ProjectTerminal['agent'], text: string) => (agent === 'claude' ? /^\/clear(?:\s|$)/ : /^\/(?:clear|new)(?:\s|$)/).test(text.trim());
 // What the agent wrote, laid out as Markdown. Only plain structure survives: no raw HTML, no images (an
 // answer has no business loading anything), and links open outside through the window's link handler.
 function render(text: string) {
@@ -83,7 +87,10 @@ function ToolGroup({ entries, live }: { entries: ConversationEntry[]; live: bool
 // it, and the toggle in the card header switches back to it at any time. autoFocus: the card is expanded and
 // this is its terminal in use, so the message box takes the keyboard (never a small card's).
 export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, onError, onOpenLink }: { projectId: string; terminal: ProjectTerminal; autoFocus: boolean; onShowTerminal: () => void; onError: (message: string) => void; onOpenLink: (target: string) => void }) {
-  const entries = useReadingConversation(terminal.id, terminal.sessionId);
+  const conversationEntries = useReadingConversation(terminal.id, terminal.sessionId);
+  const [hidden, setHidden] = useState(() => cleared.get(conversationKey(terminal.id, terminal.sessionId)));
+  useEffect(() => { setHidden(cleared.get(conversationKey(terminal.id, terminal.sessionId))); }, [terminal.id, terminal.sessionId]);
+  const entries = useMemo(() => hidden ? conversationEntries.filter(entry => !hidden.has(entry.id)) : conversationEntries, [conversationEntries, hidden]);
   const { pending, echo, cancelEcho } = usePendingPrompts(terminal.id, terminal.sessionId, entries);
   const visibleEntries = useMemo(() => [...entries, ...pending], [entries, pending]);
   const sendSession = useRef(terminal.sessionId); sendSession.current = terminal.sessionId;
@@ -104,7 +111,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const [images, setImages] = useState(0);
   const scroller = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null);
   const cli = useReadingCli(terminal.id, terminal.sessionId, terminal.agent === 'claude' ? 'claude' : 'codex', entries, input, autoFocus);
-  const inputBlocked = hasChoice || cli.busy;
+  // A question's own key hint with no card read from it (the question is taller than the view, or its hint wrapped):
+  // a message typed here would land in the question, so the box waits and the terminal shows the question instead.
+  const unreadQuestion = !screen.choice && !!visibleScreen?.rows.some(row => /\benter to submit (?:answer|all)\b/i.test(row) || /^\s*Enter to select\b.*\bEsc to cancel\b/i.test(row));
+  useEffect(() => { if (unreadQuestion && !cli.busy) onShowTerminal(); }, [unreadQuestion, cli.busy]);
+  const inputBlocked = hasChoice || cli.busy || unreadQuestion;
   const conversation = conversationKey(terminal.id, terminal.sessionId);
   const { stuck, unseen, toBottom, ready, holdPosition } = useStickToBottom(scroller, content, visibleEntries, conversation);
   useLayoutEffect(() => { if (caret.current !== null) { input.current?.setSelectionRange(caret.current, caret.current); caret.current = null; } });
@@ -158,7 +169,8 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   }, [terminal.id, autoFocus]);
   // Claude's own screen has the last word: a round its hooks opened without closing (a local slash command) must not
   // keep "thinking" on screen while Claude sits idle at its prompt.
-  const claudeIdle = terminal.agent === 'claude' && !!visibleScreen && isCliIdle('claude', visibleScreen.rows, screen);
+  // It is at its prompt even with an interrupted prompt put back in its input.
+  const claudeIdle = terminal.agent === 'claude' && !!visibleScreen && isAtPrompt('claude', visibleScreen.rows, screen);
   const working = terminal.codexActive && terminal.codexActivity === 'working' && !claudeIdle;
   const agent = terminal.agent === 'claude' ? 'Claude Code' : 'Codex';
   const grouped = useMemo(() => blocks(cli.entries), [cli.entries]);
@@ -171,6 +183,12 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
     const pendingId = text && !typed ? echo(text) : null;
     if (pendingId) toBottom();
+    // Text left in the CLI's own input (Claude puts an interrupted prompt back there) would be sent along with this
+    // message; Ctrl+U clears it first. Pasted images also live there, so it is kept while images are attached.
+    if (text && !images && visibleScreen && cliInputDraft(terminal.agent === 'claude' ? 'claude' : 'codex', visibleScreen.rows, screen)) {
+      window.projectGrid.writeTerminal(terminal.id, '\x15');
+      await new Promise(resolve => setTimeout(resolve, 60));
+    }
     if (text) {
       if (typed) window.projectGrid.writeTerminal(terminal.id, text);
       else {
@@ -184,6 +202,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (text) await new Promise(resolve => setTimeout(resolve, typed ? 150 : 400));
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
     if (typed) cli.begin(text);
+    if (clears(terminal.agent, text)) { const ids = new Set(conversationEntries.map(entry => entry.id)); cleared.set(conversation, ids); setHidden(ids); }
     window.projectGrid.writeTerminal(terminal.id, '\r');
   };
   const sendRef = useRef(send); sendRef.current = send;

@@ -2,10 +2,11 @@ param(
     [Parameter(Mandatory=$true)][string]$PipeName,
     [Parameter(Mandatory=$true)][string]$ProjectId,
     [Parameter(Mandatory=$true)][string]$SessionKey,
-    [Parameter(Mandatory=$true)][ValidateSet('start', 'stop', 'notify')][string]$Kind
+    [Parameter(Mandatory=$true)][ValidateSet('start', 'stop', 'notify', 'session')][string]$Kind
 )
 
-# Claude Code hook: UserPromptSubmit reports a working turn, Stop reports a finished one.
+# Claude Code hook: UserPromptSubmit reports a working turn, Stop reports a finished one, SessionStart the
+# conversation Claude writes now (after /clear, /resume or a new start it is another file).
 # Claude adds anything printed here to the conversation, so this script writes nothing,
 # and a closed Project Grid must never delay or fail a turn.
 $ErrorActionPreference = 'Stop'
@@ -21,7 +22,7 @@ try {
         sessionKey = $SessionKey
         type = 'agent-activity'
         agent = 'claude'
-        state = $(if ($Kind -eq 'notify') { 'attention' } elseif ($Kind -eq 'stop') { 'complete' } else { 'working' })
+        state = $(if ($Kind -eq 'notify') { 'attention' } elseif ($Kind -eq 'stop') { 'complete' } elseif ($Kind -eq 'session') { 'session' } else { 'working' })
         message = $(if ($Kind -eq 'notify') { ([string]$hook.message).Substring(0, [Math]::Min(300, ([string]$hook.message).Length)) } else { $null })
         sessionId = $sessionId
         # Where Claude writes this conversation; Project Grid reads the steps of the round from it.

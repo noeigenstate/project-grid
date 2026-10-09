@@ -107,3 +107,27 @@ test('a chosen model downloads while dictation keeps using the default, then tak
   voice.choose('sensevoice');
   assert.equal((await voice.getState()).active, 'sensevoice', 'choosing back switches at once');
 });
+
+test('a downloaded model stays in use when the chosen one and the default are both missing', () => {
+  const voice = new VoiceManager({ directory: os.tmpdir(), model: 'sensevoice' });
+  voice.status.qwen3.phase = 'ready';
+  assert.equal(voice.active(), 'qwen3');
+  voice.status.sensevoice.phase = 'ready';
+  assert.equal(voice.active(), 'sensevoice', 'the chosen model once it is there');
+});
+
+test('choosing a model back while its download is being stopped starts it again', async t => {
+  const prefix = path.join(os.tmpdir(), 'project-grid-voice-test-'); const folder = await fs.mkdtemp(prefix);
+  const bytes = Buffer.from('fixture'), sha256 = createHash('sha256').update(bytes).digest('hex');
+  MODELS.fixture = { label: 'Fixture', directory: 'fixture', files: [{ name: 'model.onnx', urls: ['https://example.invalid/m'], size: bytes.length, sha256 }], config: file => ({ fixture: file('model.onnx') }) };
+  let calls = 0;
+  const fetcher = async (_url, { signal }) => { calls++; if (calls === 1) await new Promise((_, reject) => signal.addEventListener('abort', () => setTimeout(() => reject(new Error('aborted')), 30))); return new Response(bytes); };
+  const voice = new VoiceManager({ directory: folder, fetcher });
+  t.after(async () => { voice.close(); delete MODELS.fixture; await fs.rm(folder, { recursive: true, force: true }); });
+  voice.initialized = Promise.resolve(); voice.status.sensevoice.phase = 'ready';
+  voice.choose('fixture');
+  for (let tries = 0; tries < 200 && !calls; tries++) await new Promise(resolve => setTimeout(resolve, 5));
+  voice.choose('sensevoice'); voice.choose('fixture');
+  for (let tries = 0; tries < 200 && voice.status.fixture.phase !== 'ready'; tries++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(voice.status.fixture.phase, 'ready'); assert.equal(calls, 2);
+});

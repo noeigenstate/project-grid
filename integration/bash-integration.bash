@@ -88,14 +88,15 @@ claude() {
     return 127
   fi
   local -a program=("${__pg_words[@]}")
-  local hook=ELECTRON_RUN_AS_NODE=1 word REPLY start stop notify
+  local hook=ELECTRON_RUN_AS_NODE=1 word REPLY start stop notify session
   for word in "$__pg_node" "$__pg_helper" claude-hook "$__pg_socket" "$__pg_project" "$__pg_key"; do
     __pg_quote "$word"; hook+=" $REPLY"
   done
   __pg_json "$hook start"; start=$REPLY
   __pg_json "$hook stop"; stop=$REPLY
   __pg_json "$hook notify"; notify=$REPLY
-  local settings="{\"hooks\":{\"UserPromptSubmit\":[{\"hooks\":[{\"type\":\"command\",\"command\":$start,\"timeout\":10}]}],\"Stop\":[{\"hooks\":[{\"type\":\"command\",\"command\":$stop,\"timeout\":10}]}],\"Notification\":[{\"hooks\":[{\"type\":\"command\",\"command\":$notify,\"timeout\":10}]}]}}"
+  __pg_json "$hook session"; session=$REPLY
+  local settings="{\"hooks\":{\"UserPromptSubmit\":[{\"hooks\":[{\"type\":\"command\",\"command\":$start,\"timeout\":10}]}],\"Stop\":[{\"hooks\":[{\"type\":\"command\",\"command\":$stop,\"timeout\":10}]}],\"Notification\":[{\"hooks\":[{\"type\":\"command\",\"command\":$notify,\"timeout\":10}]}],\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":$session,\"timeout\":10}]}]}}"
   __pg_send codex-started 0 claude
   "${program[@]}" --settings "$settings" "$@"
   local code=$?

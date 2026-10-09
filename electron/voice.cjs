@@ -115,8 +115,9 @@ class VoiceManager {
     this.requests = new Map(); this.sequence = 0;
   }
   file(id, name) { return path.join(this.directory, MODELS[id].directory, name); }
-  // The model recordings go to now: the chosen one, or the default while the chosen one is not downloaded.
-  active() { return [this.choice, DEFAULT_MODEL].find(id => this.status[id].phase === 'ready') || null; }
+  // The model recordings go to now: the chosen one, else the default, else any downloaded one while the chosen one
+  // is not downloaded yet.
+  active() { return [this.choice, DEFAULT_MODEL, ...Object.keys(MODELS)].find(id => this.status[id].phase === 'ready') || null; }
   // phase, percent and error describe the model in use, or, before any is downloaded, the chosen one.
   snapshot() {
     const active = this.active(), shown = this.status[active || this.choice];
@@ -144,8 +145,14 @@ class VoiceManager {
   async prepare(id = this.choice) {
     await this.getState();
     if (this.status[id].phase === 'ready') return this.snapshot();
-    if (this.download?.id === id) return this.download.promise;
-    this.download?.controller.abort();
+    // A live download of this model is the one to wait for; any other (or one being stopped) ends first, so two
+    // writers never share a partial file.
+    while (this.download) {
+      const previous = this.download;
+      if (previous.id === id && !previous.controller.signal.aborted) return previous.promise;
+      previous.controller.abort();
+      await previous.promise.catch(() => {});
+    }
     const controller = new AbortController();
     this.set(id, { phase: 'downloading', error: null });
     const promise = (async () => {
@@ -208,7 +215,8 @@ class VoiceManager {
   // Loads the model while a recording is still being spoken, so recognition starts at once.
   async warm() {
     await this.getState();
-    if (this.active()) this.engine().postMessage({ warm: true });
+    // A recognition still running keeps its worker, even if another model was chosen meanwhile.
+    if (this.active() && !this.requests.size) this.engine().postMessage({ warm: true });
   }
   async transcribe(audio) {
     const state = await this.getState();

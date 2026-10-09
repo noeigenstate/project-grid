@@ -18,7 +18,11 @@ export function reconcilePendingPrompts(state: PendingPrompts, sessionId: string
   for (const entry of entries) {
     if (entry.role !== 'user' || seen.has(entry.id)) continue;
     seen.add(entry.id); changed = true;
-    const index = prompts.findIndex(prompt => normalizePrompt(prompt.text) === normalizePrompt(entry.text ?? ''));
+    // The echo with the same text, or one this record ends with: a prompt Claude put back after an interrupt can
+    // precede what was sent.
+    const text = normalizePrompt(entry.text ?? '');
+    let index = prompts.findIndex(prompt => normalizePrompt(prompt.text) === text);
+    if (index < 0) index = prompts.findIndex(prompt => text.endsWith(normalizePrompt(prompt.text)));
     if (index >= 0) prompts.splice(index, 1);
   }
   for (let index = 0; index < prompts.length; index++) {

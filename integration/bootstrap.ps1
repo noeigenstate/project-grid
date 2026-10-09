@@ -133,7 +133,7 @@ function global:claude {
         '-SessionKey', $global:ProjectGridSession.sessionKey
     ) -join ' '
     $hook = { param($kind) @{ hooks = @(@{ type = 'command'; command = ($hookCommand + ' -Kind ' + $kind); timeout = 10 }) } }
-    $settings = @{ hooks = @{ UserPromptSubmit = @(& $hook 'start'); Stop = @(& $hook 'stop'); Notification = @(& $hook 'notify') } } | ConvertTo-Json -Depth 6 -Compress
+    $settings = @{ hooks = @{ UserPromptSubmit = @(& $hook 'start'); Stop = @(& $hook 'stop'); Notification = @(& $hook 'notify'); SessionStart = @(& $hook 'session') } } | ConvertTo-Json -Depth 6 -Compress
     Send-ProjectGridEvent 'codex-started' -Agent 'claude'
     $claudeExit = 0
     try {

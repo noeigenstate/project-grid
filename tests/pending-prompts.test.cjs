@@ -139,3 +139,8 @@ test('a failed paste cancels only its own echo', () => {
   assert.deepEqual(removePendingPrompt(state, 'p1').prompts.map(prompt => prompt.id), ['p2']);
   assert.equal(removePendingPrompt(state, 'missing'), state);
 });
+
+test('a prompt received after one Claude put back in its input still acknowledges the echo', () => {
+  const state = add(createPendingPrompts('session'), 'p', '只回复：MARK-4');
+  assert.deepEqual(sync(state, [user('u', '写一篇文章。最后写 MARK-3。只回复：MARK-4')]).prompts, []);
+});

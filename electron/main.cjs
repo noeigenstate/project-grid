@@ -353,13 +353,15 @@ function applyActivity(project, s, snapshot) {
   broadcast();
 }
 
-// Claude Code hooks: UserPromptSubmit -> working, Stop -> complete (integration/claude-hook.ps1).
+// Claude Code hooks: UserPromptSubmit -> working, Stop -> complete (integration/claude-hook.ps1). SessionStart -> the
+// conversation Claude writes from now on: after /clear or /resume the reading view follows the new file at once.
 // Notification -> attention while Claude waits for a permission answer in its own screen; that only
 // sets the waiting indicator and never changes the round's lifecycle.
 function claudeActivity(project, s, event) {
-  if (!s.codexActive || s.agent !== 'claude' || !['working', 'complete', 'attention'].includes(event.state)) return;
+  if (!s.codexActive || s.agent !== 'claude' || !['working', 'complete', 'attention', 'session'].includes(event.state)) return;
   if (typeof event.sessionId !== 'string' || !/^[\w-]{1,100}$/.test(event.sessionId) || typeof event.eventId !== 'string' || event.eventId.length > 200) return;
   if (event.state === 'attention') { s.needsInput = { message: typeof event.message === 'string' ? event.message.slice(0, 300) : '', since: Date.now() }; broadcast(); return; }
+  if (event.state === 'session') { followClaude(project, s, event); broadcast(); return; }
   // Claude Code runs its prompt hooks for some local slash commands (/context, /doctor, /compact) too. They open a screen
   // or print a line and no round follows, so they neither start a round nor end one; the card would stay "working".
   if (event.state === 'working') {
@@ -987,6 +989,13 @@ function registerIpc() {
         store.expectCompletion(s.projectId);
         s.codexActivity = 'working'; s.activityInputAt = Date.now();
         scheduleState(); warmSpeech();
+      }
+      // Escape on its own interrupts a working Claude Code turn. It runs no hook then, writes nothing to its transcript
+      // and only puts the prompt back in its input, so this key is the only sign the round has ended. While Claude asks
+      // something (a permission or a question), Escape only answers it and the round may go on.
+      if (data === '\x1b' && s.codexActive && s.agent === 'claude' && s.codexActivity === 'working' && !s.needsInput) {
+        const project = store.projects.find(p => p.id === s.projectId);
+        if (project) applyActivity(project, s, { threadId: s.claudeSessionId, turnId: null, state: 'interrupted', updatedAt: Date.now() });
       }
       if (!s.codexActive && !isTerminalResponse(data)) {
         const wasReady = s.ready && !s.inputDirty;

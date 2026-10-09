@@ -1001,5 +1001,6 @@
   "字体边缘按系统和屏幕分辨率优化：普通和 150% 缩放的屏幕用清晰的硬边，高分屏保持柔和；玻璃模糊强度也随系统和屏幕调整。": "Text edges are tuned for each system and screen: standard and 150% screens get crisp edges, high-density screens stay soft, and the glass blur adapts too.",
   "Claude Code 和 Codex（Plan 模式）向你提问时，阅读视图直接显示可点选的问题卡片：单选、多选、自己填写、备注和提交都能在卡片里完成。": "When Claude Code or Codex (Plan mode) asks you a question, the reading view shows it as a card: pick, tick several, type your own answer or notes, and submit there.",
   "语音输入可选“高精度 · 中英混合”模型（Qwen3-ASR，约 985 MB），中英混说的识别明显更准；下载期间继续用原来的模型。": "Dictation can use a high-accuracy model for mixed Chinese and English (Qwen3-ASR, about 985 MB), noticeably better on mixed speech; the current model keeps working while it downloads.",
-  "阅读视图空闲时不再显示状态行；Windows 上偶尔被占用而保存失败的文件会自动重试保存；斜杠命令列表更新到最新的 Claude Code 和 Codex。": "The reading view shows no status line while idle; on Windows, a save refused for a moment by another program is retried; slash command lists match the latest Claude Code and Codex."
+  "阅读视图空闲时不再显示状态行；Windows 上偶尔被占用而保存失败的文件会自动重试保存；斜杠命令列表更新到最新的 Claude Code 和 Codex。": "The reading view shows no status line while idle; on Windows, a save refused for a moment by another program is retried; slash command lists match the latest Claude Code and Codex.",
+  "回答已换行，请切换到终端修改后提交。": "This answer wraps over several lines; change it in the terminal and submit there."
 }

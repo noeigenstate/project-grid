@@ -46,8 +46,10 @@ export function questionKeys(choice: ScreenChoice, action: QuestionAction): stri
     return Array.from({ length: Math.abs(to - from) }, () => to > from ? DOWN : UP);
   };
   switch (action.type) {
-    case 'switch': return [action.direction < 0 ? LEFT : RIGHT];
-    case 'cancel': return [ESCAPE];
+    // Codex pages with Ctrl+P / Ctrl+N wherever focus is (Left/Right move the caret inside notes); Escape in open notes
+    // only clears them, so cancelling takes a second one.
+    case 'switch': return question.agent === 'codex' ? [action.direction < 0 ? '\x10' : '\x0e'] : [action.direction < 0 ? LEFT : RIGHT];
+    case 'cancel': return question.notes?.open ? [ESCAPE, ESCAPE] : [ESCAPE];
     case 'submit': return question.submit ? [...go({ submit: true }), ENTER] : [];
     case 'toggle': return question.multi ? [...go({ option: action.option }), ' '] : [];
     case 'choose': return [...go({ option: action.option }), ENTER];

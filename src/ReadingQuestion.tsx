@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CaretLeft, CaretRight, Check, CircleNotch, PaperPlaneRight } from '@phosphor-icons/react';
 import type { ScreenChoice } from './agent-screen-types';
 import { questionCursor, questionKeys, type QuestionAction } from './question-keys';
+import { choiceContent } from './choice-keys';
 import { t } from './i18n';
 
 // What the CLIs print in English for their own rows, in the window's words.
@@ -14,7 +15,7 @@ const placeholder = (label: string) => /^Type something\.?$/i.test(label);
 
 // A question the agent asked with options (Claude Code's AskUserQuestion, Codex's request_user_input), answered here
 // with the same keys the CLI takes: pick one, tick several and submit, type an own answer, switch questions or cancel.
-// Each answer changes the CLI's screen, which replaces this card (ReadingView keys it by the question's identity).
+// The card lives as long as the question's page; ticks, typed text and the cursor redraw it in place.
 export function ReadingQuestion({ choice, terminalId, onError }: { choice: ScreenChoice; terminalId: string; onError: (message: string) => void }) {
   const question = choice.question!;
   const cursor = questionCursor(choice);
@@ -28,15 +29,20 @@ export function ReadingQuestion({ choice, terminalId, onError }: { choice: Scree
   latest.current = choice;
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   useEffect(() => { card.current?.querySelector<HTMLElement>('[data-highlighted="true"]')?.scrollIntoView({ block: 'nearest' }); }, [highlight]);
-  // A key the CLI ignores (Right on the last question) leaves the same screen; free the card again after a moment.
+  // An answer shows once the CLI redraws what it changed; a key it ignores (Right on the last question) changes
+  // nothing, so the card is free again after a moment either way.
+  const content = choiceContent(choice);
+  useEffect(() => { setPending(null); }, [content]);
   useEffect(() => {
     if (!pending) return;
-    const timer = setTimeout(() => { sending.current = false; setPending(null); }, 1500);
+    const timer = setTimeout(() => setPending(null), 1500);
     return () => clearTimeout(timer);
   }, [pending]);
 
   const act = async (action: QuestionAction, mark: string) => {
     if (sending.current) return;
+    // A typed answer that wrapped is shown in pieces, so its full length (to erase it) is unknown.
+    if (action.type === 'answer' && question.agent === 'claude' && latest.current.options[action.option]?.detail) { onError(t('回答已换行，请切换到终端修改后提交。')); return; }
     const keys = questionKeys(latest.current, action);
     if (!keys.length) return;
     sending.current = true; setPending(mark);
@@ -48,8 +54,8 @@ export function ReadingQuestion({ choice, terminalId, onError }: { choice: Scree
         if (index < keys.length - 1) await new Promise(resolve => setTimeout(resolve, 25));
       }
     } catch (error) {
-      if (active.current) { sending.current = false; setPending(null); onError(String(error)); }
-    }
+      if (active.current) { setPending(null); onError(String(error)); }
+    } finally { sending.current = false; }
   };
   const pick = (index: number) => {
     const option = choice.options[index];
@@ -69,8 +75,10 @@ export function ReadingQuestion({ choice, terminalId, onError }: { choice: Scree
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.target === field.current || event.nativeEvent.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     event.stopPropagation();
+    // Enter and Space on a focused button (Cancel, Submit, a question switch) press that button.
+    if ((event.key === 'Enter' || event.key === ' ') && (event.target as HTMLElement).closest('button')) return;
     const moves = answers.map(({ index }) => index), at = Math.max(0, moves.indexOf(highlight));
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') setHighlight(moves[Math.max(0, Math.min(moves.length - 1, at + (event.key === 'ArrowUp' ? -1 : 1)))]);
+    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') { setHighlight(moves[Math.max(0, Math.min(moves.length - 1, at + (event.key === 'ArrowUp' ? -1 : 1)))]); card.current?.focus(); }
     else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && switchable) void act({ type: 'switch', direction: event.key === 'ArrowLeft' ? -1 : 1 }, event.key === 'ArrowLeft' ? 'previous' : 'next');
     else if (event.key === 'Enter' || (event.key === ' ' && question.multi)) pick(highlight);
     else if (event.key === 'Escape') void act({ type: 'cancel' }, 'cancel');

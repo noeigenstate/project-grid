@@ -105,3 +105,29 @@ test('answering in keys: the cursor moves from where the CLI has it', () => {
   assert.deepEqual(questionKeys(question, { type: 'toggle', option: 0 }), [], 'Codex questions have no ticks');
   assert.deepEqual(questionKeys(question, { type: 'answer', option: 0, text: '  ' }), [], 'nothing to send');
 });
+
+test('numbered lines in the question text stay in the question; the options start above the live cursor', () => {
+  const rows = read('claude-question');
+  const at = rows.findIndex(row => row.trim() === '回收站怎么处理？');
+  const withList = [...rows.slice(0, at + 1), '1. 保留：文件原样不动。', '2. 清空：无法恢复。', ...rows.slice(at + 1)];
+  const choice = parseAgentScreen('claude', withList).choice;
+  assert.deepEqual(choice.options.map(option => option.label), ['保留回收站（推荐）', '清空回收站', 'Type something.', 'Chat about this']);
+  assert.match(choice.title, /1\. 保留：文件原样不动。/);
+});
+
+test('Codex pages with Ctrl+P / Ctrl+N, and cancelling from open notes takes two Escapes', () => {
+  assert.deepEqual(questionKeys(parse('codex-question'), { type: 'switch', direction: 1 }), ['\x0e']);
+  assert.deepEqual(questionKeys(parse('codex-question-notes'), { type: 'switch', direction: -1 }), ['\x10']);
+  assert.deepEqual(questionKeys(parse('codex-question-notes'), { type: 'cancel' }), ['\x1b', '\x1b']);
+  assert.deepEqual(questionKeys(parse('codex-question'), { type: 'cancel' }), ['\x1b']);
+});
+
+test('a question card keeps its identity while ticks, typed text and the cursor change, and not across pages', () => {
+  const { choiceIdentity, choiceContent } = require('../src/choice-keys.ts');
+  const same = ['claude-question-multi', 'claude-question-multi-checked', 'claude-question-typed', 'claude-question-submit'].map(name => choiceIdentity(parse(name)));
+  assert.equal(new Set(same).size, 1);
+  assert.notEqual(choiceContent(parse('claude-question-multi')), choiceContent(parse('claude-question-multi-checked')), 'a tick is new content');
+  assert.notEqual(choiceIdentity(parse('claude-question-tabs')), same[0]);
+  assert.notEqual(choiceIdentity(parse('claude-question-review')), same[0]);
+  assert.equal(choiceIdentity(parse('codex-question')), choiceIdentity(parse('codex-question-notes')));
+});

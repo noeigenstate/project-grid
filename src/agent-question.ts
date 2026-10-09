@@ -11,6 +11,14 @@ function draftOption(match: RegExpExecArray, role: ScreenOption['role'], cursor:
   return { number: Number(match[4]), label: match[5].trim(), detail: '', hotkey: null, selected: match[2] === cursor, role, column: match[1].length + match[2].length + match[3].length };
 }
 const finish = ({ column, ...rest }: Draft): ScreenOption => rest;
+// The live option block: the row with the CLI's cursor (or Claude's selected Submit row), then back to its option 1.
+// Numbered lines in the question's own text are above that and stay part of the question.
+function optionStart(rows: string[], head: number, end: number, cursor: string): number {
+  let selected = end;
+  while (selected > head && option.exec(rows[selected])?.[2] !== cursor && !(cursor === '❯' && /^\s*❯\s*Submit$/.test(rows[selected]))) selected--;
+  for (let index = selected; index > head; index--) if (Number(option.exec(rows[index])?.[4]) === 1) return index;
+  return -1;
+}
 const question = (agent: ScreenAgent, fields: Partial<ScreenQuestion>): ScreenQuestion =>
   ({ agent, tabs: [], position: null, multi: false, submit: null, notes: null, review: null, last: false, ...fields });
 
@@ -50,9 +58,9 @@ function claudeQuestion(rows: string[]): ScreenChoice | null {
     return { kind: 'question', title, context: [], options, hint: null, question: question('claude', { tabs: shownTabs, review }) };
   }
 
-  let index = head + 1;
-  const title: string[] = [];
-  while (index <= end && !option.test(rows[index])) { if (rows[index].trim()) title.push(rows[index].trim()); index++; }
+  let index = optionStart(rows, head, end, '❯');
+  if (index < 0) return null;
+  const title = rows.slice(head + 1, index).map(row => row.trim()).filter(Boolean);
   const options: Draft[] = [];
   let submit: ScreenQuestion['submit'] = null, hint: string | null = null, underRule = false, multi = false;
   for (; index <= end; index++) {
@@ -92,9 +100,9 @@ function codexQuestion(rows: string[]): ScreenChoice | null {
   while (head >= 0 && !/^\s*Question \d+\/\d+\b/.test(rows[head])) head--;
   if (head < 0) return null;
   const position = /Question (\d+)\/(\d+)/.exec(rows[head])!;
-  let index = head + 1;
-  const title: string[] = [];
-  while (index <= end && !option.test(rows[index])) { if (rows[index].trim()) title.push(rows[index].trim()); index++; }
+  let index = optionStart(rows, head, end, '›');
+  if (index < 0) return null;
+  const title = rows.slice(head + 1, index).map(row => row.trim()).filter(Boolean);
   const options: Draft[] = [];
   let notes: ScreenQuestion['notes'] = null, hint: string | null = null;
   for (; index <= end; index++) {

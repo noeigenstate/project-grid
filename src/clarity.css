@@ -72,6 +72,9 @@
 :root[data-theme] .project-panel .panel-header .panel-name { font-size: max(clamp(12px, calc(9.5px + .75cqh), 13px), calc(var(--terminal-font-size, 12px) + 2px)); font-weight: 600; color: var(--accent-green); }
 :root[data-theme] .focus-mode .project-panel .panel-name { font-size: max(16px, calc(var(--terminal-font-size, 12px) + 3px)); }
 :root[data-theme] .project-panel .status-badge { font-weight: 600; }
+/* An expanded project's number and name are already at the top of the sidebar beside it; its header keeps only the
+   status and the buttons, in their places. With the sidebar collapsed to its rail the name stays. */
+:root[data-theme] .focus-mode:has(.focus-sidebar:not(.is-collapsed)) .project-panel .panel-header :is(.panel-index, .panel-name) { visibility: hidden; }
 :root[data-theme] :is(.search-input, .titlebar-tools > .icon-button) {
   border-color: transparent; border-radius: 999px; background: rgba(16, 20, 28, .42); backdrop-filter: blur(16px) saturate(140%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18), 0 4px 12px -4px rgba(0, 0, 0, .3);
@@ -158,11 +161,13 @@
 :root[data-theme][data-surface="solid"] :is(.project-panel, .focus-sidebar, .file-preview)::before { background: var(--glass-solid); backdrop-filter: none; }
 :root[data-theme][data-surface="solid"] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview, .titlebar, .app-shell.titlebar-auto .titlebar, .dropdown, .settings-dialog, .voice-overlay, .tour-bubble, .reorder-hint) { background: var(--glass-solid); backdrop-filter: none; }
 :root[data-theme][data-surface="solid"] :is(.search-input, .titlebar-tools > .icon-button) { backdrop-filter: none; }
+:root[data-theme][data-surface="solid"] .project-panel > .panel-nav-hud { background: var(--glass-solid); backdrop-filter: none; }
 @media (prefers-reduced-transparency: reduce) {
   :root[data-theme] .app-shell::before { background: transparent; backdrop-filter: none; }
   :root[data-theme] :is(.project-panel, .focus-sidebar, .file-preview)::before { background: var(--glass-solid); backdrop-filter: none; }
   :root[data-theme] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview, .titlebar, .app-shell.titlebar-auto .titlebar, .dropdown, .settings-dialog, .voice-overlay, .tour-bubble, .reorder-hint) { background: var(--glass-solid); backdrop-filter: none; }
   :root[data-theme] :is(.search-input, .titlebar-tools > .icon-button) { background: var(--glass-solid); backdrop-filter: none; }
+  :root[data-theme] .project-panel > .panel-nav-hud { background: var(--glass-solid); backdrop-filter: none; }
 }
 
 /* Sharp type and glass for each system and screen density.
