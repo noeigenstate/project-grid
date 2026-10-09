@@ -918,11 +918,11 @@
   "不选了，直接聊这个问题": "Talk it over instead",
   "以上都不是": "None of the above",
   "提交回答": "Submit answers",
-  "界面更清晰：壁纸统一压暗降噪，每张卡片是一块深色磨砂玻璃，正文白色、标题青绿；你的提问、工具调用、代码和选项各有一张浅色卡片，一眼分清。": "Clearer to read: the wallpaper is darkened and smoothed, every card is a pane of dark frosted glass with white text and teal titles, and your prompts, tool calls, code and options each sit on their own light card.",
-  "字体边缘按系统和屏幕分辨率优化：普通和 150% 缩放的屏幕用清晰的硬边，高分屏保持柔和；玻璃模糊强度也随系统和屏幕调整。": "Text edges are tuned for each system and screen: standard and 150% screens get crisp edges, high-density screens stay soft, and the glass blur adapts too.",
-  "Claude Code 和 Codex（Plan 模式）向你提问时，阅读视图直接显示可点选的问题卡片：单选、多选、自己填写、备注和提交都能在卡片里完成。": "When Claude Code or Codex (Plan mode) asks you a question, the reading view shows it as a card: pick, tick several, type your own answer or notes, and submit there.",
-  "语音输入可选“高精度 · 中英混合”模型（Qwen3-ASR，约 985 MB），中英混说的识别明显更准；下载期间继续用原来的模型。": "Dictation can use a high-accuracy model for mixed Chinese and English (Qwen3-ASR, about 985 MB), noticeably better on mixed speech; the current model keeps working while it downloads.",
-  "阅读视图空闲时不再显示状态行；Windows 上偶尔被占用而保存失败的文件会自动重试保存；斜杠命令列表更新到最新的 Claude Code 和 Codex。": "The reading view shows no status line while idle; on Windows, a save refused for a moment by another program is retried; slash command lists match the latest Claude Code and Codex.",
   "回答已换行，请切换到终端修改后提交。": "This answer wraps over several lines; change it in the terminal and submit there.",
-  "（{seconds} 秒 · Esc 中断）": "({seconds}s · Esc to interrupt)"
+  "（{seconds} 秒 · Esc 中断）": "({seconds}s · Esc to interrupt)",
+  "语音输入窗口换上新设计：深蓝玻璃面板、发光的麦克风球和随声音起伏的声波，Enter 发送、Esc 取消的提示更醒目。": "The dictation window has a new look: a navy glass pane, a glowing microphone sphere and sound waves that follow your voice, with clearer Enter (send) and Esc (cancel) hints.",
+  "阅读视图里，智能体正在做什么显示在对话末尾，和命令行一样带计时和“Esc 中断”提示，不再挤在角落。": "In the reading view, what the agent is doing is the last line of the conversation, as in its CLI, with a timer and an Esc-to-interrupt hint, instead of a corner label.",
+  "展开项目时不再重复显示项目标题，按钮移到活动栏顶部，对话和终端从卡片顶端开始，阅读空间更大。": "An expanded project no longer repeats its title: the buttons move to the top of the activity column and the conversation or terminal starts at the top of the card.",
+  "在 Windows 上给 Codex 发多行消息不再被拆成几条分别发送，也不会留下一直“发送中”的消息；阅读视图里的中断、追加消息和 /clear 更可靠。": "On Windows, a multi-line message to Codex is no longer split into several sends or left stuck as \"sending\"; interrupting, follow-ups and /clear behave better in the reading view.",
+  "Windows 上的文字改为常规字重，更清晰；卡片动画更流畅；安装包缩小约 15 MB。": "Text on Windows uses regular weight and reads more clearly; card animations are smoother; installers are about 15 MB smaller."
 }

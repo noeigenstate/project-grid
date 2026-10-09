@@ -515,11 +515,11 @@ jobs:
 
           ## Changes in $RELEASE_VERSION
 
-          - Clearer to read on every theme: the wallpaper is darkened and smoothed once, each card is a pane of dark frosted glass (white text at 92%, teal titles, bright-blue accents), and prompts, tool calls, code, questions and activity groups sit on their own light cards.
-          - Text edges and glass are tuned per system and screen density: crisp one-pixel text shadows below 2x scaling, soft ones above; grayscale smoothing on macOS; a lighter blur over denser panes on Linux; denser panes when the system asks for more contrast.
-          - Questions from Claude Code (AskUserQuestion) and Codex (request_user_input in Plan mode) appear in the reading view as cards: choose, tick several, type an own answer or notes, switch questions and submit. The message box is locked meanwhile.
-          - Dictation offers a high-accuracy model for mixed Chinese and English, Qwen3-ASR 0.6B (about 985 MB, offline). It downloads in the background while SenseVoice keeps working, then takes over.
-          - The reading view shows its status line only while the agent works or waits for you. On Windows, a file save refused for a moment by another program is retried, and still stops if the file changed meanwhile. Slash command lists match Claude Code 2.1.294 and Codex 0.161.
+          - The dictation window is redrawn: navy glass with a thin pale-blue rim, a glossy microphone sphere in two rings, cyan-peaked sound bars that follow the voice, and larger Enter and Esc hints.
+          - The reading view writes what the agent is doing as the last line of the conversation, the way its CLI does (a live mark, the current step, seconds elapsed, Esc to interrupt), instead of a label in the corner.
+          - An expanded project no longer keeps an empty title row: the sidebar already names it, so with the activity column open the card's buttons sit at the top of that column and the conversation or terminal starts at the top of the card.
+          - Codex on Windows took every line break of a message sent from the reading view as Enter (and dropped a bare newline after Chinese text), splitting one message into several and leaving one stuck as sending. Line breaks now go as Alt+Enter. Interrupts, follow-ups and /clear are also handled more reliably.
+          - Windows text uses regular weight without shadows; card hover and focus animations no longer repaint shadows or re-blur in flight; installers are about 15 MB smaller with two fewer dependencies. Main-process IPC and the renderer are split into feature modules.
 
           Commit: $GITHUB_SHA
           Build: https://github.com/$GH_REPO/actions/runs/$GITHUB_RUN_ID

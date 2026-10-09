@@ -111,20 +111,20 @@ curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scri
 
 可以在管道后的 `bash` 前设置这些变量：
 
-- `PROJECT_GRID_VERSION=0.6.12`：安装指定版本。
+- `PROJECT_GRID_VERSION=0.6.13`：安装指定版本。
 - `PROJECT_GRID_INSTALL_DIR=~/Applications`：指定安装目录。
 - `PROJECT_GRID_OPEN=0`：安装后不打开应用。
 
-例如，安装 0.6.12：
+例如，安装 0.6.13：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.12 bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.13 bash
 ```
 
 如果已经下载了 ZIP，也可以用本地的安装脚本安装：
 
 ```bash
-bash install-macos.sh ~/Downloads/Project-Grid-0.6.12-mac-arm64.zip
+bash install-macos.sh ~/Downloads/Project-Grid-0.6.13-mac-arm64.zip
 ```
 
 应用使用临时签名（ad-hoc），没有 Apple Developer ID，也未经过 Apple 公证。如果用浏览器下载 DMG，再将应用拖到「应用程序」，首次打开时 macOS 会提示「无法验证开发者」。在「系统设置 › 隐私与安全性」中点一次「仍要打开」，或运行：

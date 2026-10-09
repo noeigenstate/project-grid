@@ -1,9 +1,9 @@
 // What the usage guide's last page lists for this release. Update it with every version: the guide opens on
 // first use and after each update, on this page for people who are updating.
 export const WHATS_NEW: string[] = [
-  '界面更清晰：壁纸统一压暗降噪，每张卡片是一块深色磨砂玻璃，正文白色、标题青绿；你的提问、工具调用、代码和选项各有一张浅色卡片，一眼分清。',
-  '字体边缘按系统和屏幕分辨率优化：普通和 150% 缩放的屏幕用清晰的硬边，高分屏保持柔和；玻璃模糊强度也随系统和屏幕调整。',
-  'Claude Code 和 Codex（Plan 模式）向你提问时，阅读视图直接显示可点选的问题卡片：单选、多选、自己填写、备注和提交都能在卡片里完成。',
-  '语音输入可选“高精度 · 中英混合”模型（Qwen3-ASR，约 985 MB），中英混说的识别明显更准；下载期间继续用原来的模型。',
-  '阅读视图空闲时不再显示状态行；Windows 上偶尔被占用而保存失败的文件会自动重试保存；斜杠命令列表更新到最新的 Claude Code 和 Codex。',
+  '语音输入窗口换上新设计：深蓝玻璃面板、发光的麦克风球和随声音起伏的声波，Enter 发送、Esc 取消的提示更醒目。',
+  '阅读视图里，智能体正在做什么显示在对话末尾，和命令行一样带计时和“Esc 中断”提示，不再挤在角落。',
+  '展开项目时不再重复显示项目标题，按钮移到活动栏顶部，对话和终端从卡片顶端开始，阅读空间更大。',
+  '在 Windows 上给 Codex 发多行消息不再被拆成几条分别发送，也不会留下一直“发送中”的消息；阅读视图里的中断、追加消息和 /clear 更可靠。',
+  'Windows 上的文字改为常规字重，更清晰；卡片动画更流畅；安装包缩小约 15 MB。',
 ];

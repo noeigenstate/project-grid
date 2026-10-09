@@ -113,20 +113,20 @@ The script downloads the latest release ZIP, verifies its SHA-256 checksum, inst
 
 Set these variables before `bash` on the right side of the pipe:
 
-- `PROJECT_GRID_VERSION=0.6.12`: install a specific release.
+- `PROJECT_GRID_VERSION=0.6.13`: install a specific release.
 - `PROJECT_GRID_INSTALL_DIR=~/Applications`: choose an installation folder.
 - `PROJECT_GRID_OPEN=0`: do not open the app after installation.
 
-For example, to install 0.6.12:
+For example, to install 0.6.13:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.12 bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.13 bash
 ```
 
 You can also use a local copy of the install script with a ZIP you already downloaded:
 
 ```bash
-bash install-macos.sh ~/Downloads/Project-Grid-0.6.12-mac-arm64.zip
+bash install-macos.sh ~/Downloads/Project-Grid-0.6.13-mac-arm64.zip
 ```
 
 The app is ad-hoc signed, with no Apple Developer ID, and is not notarized. If you download the DMG in a browser and drag the app to Applications, macOS shows “cannot verify the developer” on first open. Allow it once in System Settings › Privacy & Security › Open Anyway, or run:
