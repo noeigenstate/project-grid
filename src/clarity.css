@@ -39,6 +39,9 @@
   background: var(--pane-fill); backdrop-filter: var(--pane-blur); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), var(--pane-shadow);
 }
 :root[data-theme] :is(.focus-mode .project-panel, .file-preview)::before { background: var(--pane-dim); }
+/* While a card flies to or from its expanded place, its glass would be blurred again on every frame: it moves on a
+   denser plain fill instead, and the blur returns where it lands. */
+:root[data-theme] .project-panel.focus-motion-panel::before { backdrop-filter: none; background: rgba(16, 20, 28, .72); }
 :root[data-theme] :is(.project-panel, .focus-sidebar, .file-preview)::after { background: var(--pane-edge); padding: 1px; opacity: .9; transition: opacity .2s ease; }
 :root[data-theme] .project-slot:hover > .project-panel::after, :root[data-theme] .project-panel:is(:focus-within, .is-focused)::after { opacity: 1; }
 :root[data-theme] :is(.focus-sidebar, .file-preview) { box-shadow: none; }

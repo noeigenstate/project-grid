@@ -8,7 +8,8 @@
    edge and rim brighten. It moves by whole pixels and is never scaled or tilted (a resampled terminal
    is a blurred one). The hover is read from the slot, which stays put, so a pointer on the card's
    lower edge cannot make it drop and rise in a loop. A card being expanded or dragged is left alone. */
-.app-shell:not(.focus-mode, [data-focus-motion]) .project-grid:not(.is-reordering) .project-slot > .project-panel { transition: transform .32s cubic-bezier(.22, 1, .36, 1), box-shadow .32s cubic-bezier(.22, 1, .36, 1), border-color .2s ease; }
+/* The lift is a compositor transform; the layered shadow switches with it instead of being repainted every frame. */
+.app-shell:not(.focus-mode, [data-focus-motion]) .project-grid:not(.is-reordering) .project-slot > .project-panel { transition: transform .32s cubic-bezier(.22, 1, .36, 1), border-color .2s ease; }
 .app-shell:not(.focus-mode, [data-focus-motion]) .project-grid:not(.is-reordering) .project-slot:hover { z-index: 5; }
 .app-shell:not(.focus-mode, [data-focus-motion]) .project-grid:not(.is-reordering) .project-slot:hover > .project-panel {
   transform: translateY(-4px);
