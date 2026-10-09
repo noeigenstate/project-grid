@@ -515,9 +515,11 @@ jobs:
 
           ## Changes in $RELEASE_VERSION
 
-          - Codex /side: closing the card sends Ctrl+C, the only key that leaves a side conversation (Escape there tried to edit the last prompt). While it is open, messages go into the side conversation without an echo in the main one, the card keeps following it, and its questions and answers stay in the document when it closes.
-          - Codex /copy opens a picker under the input; it now fills the card, Enter copies, and the terminal honours OSC 52 so the text reaches the system clipboard (clipboard reads by programs are refused). Pickers under the input count as an open dialog, so closing or sending a message closes them first.
-          - Codex commands that print a while after returning to the input (/status fetches account limits) are followed until their output settles, up to eight seconds, with a waiting card meanwhile; the command line newer Codex prints above its output is not repeated.
+          - Message delivery: after Enter the reading view checks that the message left the CLI input and presses Enter again (up to three times) if it did not; an earlier message of ours still waiting there is submitted first instead of being cleared; a message no transcript record confirms once the agent has been idle for five seconds is sent again (twice at most) and only then marked "Not delivered" with Send again / Remove.
+          - Codex direct (experimental, Settings › Coding agents): the card starts `codex app-server` instead of a terminal. Messages, interruptions and /new, /clear, /compact go over JSON-RPC; answers stream into the reading view; approvals and questions are answered in a card; pasted pictures are attached; a session that drops offers Reconnect to the same thread.
+          - Pasted pictures are kept with the message: thumbnails in the attachment bar, in the sending echo and in the transcript-backed message (Claude and Codex), with the "[Image #N]" marks removed.
+          - Slash commands: before typing a command the reading view waits until the previous dialog has really closed (retrying Escape, giving up without typing), so Claude /usage after /status opens Usage and Enter can no longer toggle a /config setting; Codex /status, whose card repeats the banner, is found by its echoed command line; a bar given as a value is drawn as a meter; the live command card has Expand/Collapse only, and Escape leaves a Codex side conversation.
+          - Only user messages keep the frosted card in the reading view; assistant answers, tool calls and command output sit on the page.
 
           Commit: $GITHUB_SHA
           Build: https://github.com/$GH_REPO/actions/runs/$GITHUB_RUN_ID
