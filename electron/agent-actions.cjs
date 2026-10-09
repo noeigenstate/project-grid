@@ -8,7 +8,8 @@ const { transcriptWindow, LIVE_READ_LIMIT } = require('./transcript-window.cjs')
 // Both agents already write this down: Claude Code in its transcript, Codex in its rollout file.
 // Reading those costs the agents nothing, unlike a hook that would run before every tool.
 //
-// An action is { id, at, kind, tool, target, detail, description, done, failed }.
+// An action is { id, at, kind, tool, target, detail, description, done, failed }; an edit also lists its
+// files as { path, change } with change add | update | delete | write (written whole, new or replaced).
 // kind: edit | command | read | search | web | skill | mcp | agent | other.
 const clip = (value, limit) => { const text = String(value ?? '').replace(/\s+/g, ' ').trim(); return text.length > limit ? `${text.slice(0, limit - 1)}…` : text; };
 
@@ -42,6 +43,7 @@ function claudeAction(block, at, cwd) {
   else if (action.kind === 'skill') { action.target = clip(input.skill, 120); action.detail = clip(input.args, 160); }
   else if (action.kind === 'agent') { action.target = clip(input.description || input.subagent_type, 160); action.detail = clip(input.subagent_type, 80); }
   else action.target = name;
+  if (action.kind === 'edit' && action.target) action.files = [{ path: action.target, change: name === 'Write' ? 'write' : 'update' }];
   return action;
 }
 
@@ -90,9 +92,9 @@ const EDITING_COMMAND = /\b(apply_patch|writeFileSync|appendFileSync|Set-Content
 // A shell command Codex ran. Codex edits files through the shell too (apply_patch or a script that writes).
 function codexCommand(id, at, command, cwd) {
   const action = { id, at, kind: 'command', tool: 'exec_command', target: clip(command, 240), detail: '', description: '', done: false, failed: false };
-  const files = [...String(command).matchAll(/^\*\*\* (?:Update|Add|Delete) File: (.+)$/gm)].map(match => projectPath(match[1].trim(), cwd));
+  const files = [...String(command).matchAll(/^\*\*\* (Update|Add|Delete) File: (.+)$/gm)].map(match => ({ path: projectPath(match[2].trim(), cwd), change: match[1].toLowerCase() }));
   const skill = /([^\s"'`]*[\\/]([^\\/\s"'`]+)[\\/]SKILL\.md)/.exec(String(command));
-  if (files.length) { action.kind = 'edit'; action.target = files.slice(0, 3).join('、') + (files.length > 3 ? ` +${files.length - 3}` : ''); }
+  if (files.length) { action.kind = 'edit'; action.files = files; action.target = files.slice(0, 3).map(file => file.path).join('、') + (files.length > 3 ? ` +${files.length - 3}` : ''); }
   else if (skill) { action.kind = 'skill'; action.target = skill[2]; action.skillFile = skill[1]; }
   else if (EDITING_COMMAND.test(String(command))) { action.kind = 'edit'; action.detail = action.target; action.target = ''; }
   else Object.assign(action, commandPhrase(command));

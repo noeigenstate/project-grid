@@ -120,7 +120,7 @@ try {
   await page.waitForFunction(() => document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
   await page.getByRole('button', { name: '阅读视图：按文档排版显示对话', exact: true }).click();
   await page.locator('.reading-view .reading-markdown h2').waitFor();
-  await page.locator('.activity-overview .overview-stats').waitFor();
+  await page.locator('.activity-pane .overview-stats').waitFor();
   await page.mouse.move(800, 2); await page.waitForTimeout(600);
   await shot('reading-view.jpg');
 

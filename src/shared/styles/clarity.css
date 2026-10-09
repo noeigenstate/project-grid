@@ -160,7 +160,7 @@
 :root[data-theme] .overview-stats > div:nth-child(2) b { color: var(--accent-green); }
 :root[data-theme] .overview-stats > div.is-failed b { color: #ff6b6b; }
 :root[data-theme] .overview-stats span { color: var(--ink-secondary); }
-:root[data-theme] :is(.overview-prompts li span, .overview-group h5, .overview-task.is-quiet) { color: var(--ink-secondary); }
+:root[data-theme] :is(.overview-prompts li span, .overview-task.is-quiet) { color: var(--ink-secondary); }
 
 /* Menus and dialogs float above everything as a thicker, darker glass. */
 :root[data-theme] :is(.dropdown, .settings-dialog, .tour-bubble, .reorder-hint, .project-panel > .panel-nav-hud) { background: rgba(18, 22, 30, .78); border-color: rgba(255, 255, 255, .18); box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .55); backdrop-filter: blur(28px) saturate(140%); }

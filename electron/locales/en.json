@@ -924,5 +924,13 @@
   "阅读视图里，智能体正在做什么显示在对话末尾，和命令行一样带计时和“Esc 中断”提示，不再挤在角落。": "In the reading view, what the agent is doing is the last line of the conversation, as in its CLI, with a timer and an Esc-to-interrupt hint, instead of a corner label.",
   "展开项目时不再重复显示项目标题，按钮移到活动栏顶部，对话和终端从卡片顶端开始，阅读空间更大。": "An expanded project no longer repeats its title: the buttons move to the top of the activity column and the conversation or terminal starts at the top of the card.",
   "在 Windows 上给 Codex 发多行消息不再被拆成几条分别发送，也不会留下一直“发送中”的消息；阅读视图里的中断、追加消息和 /clear 更可靠。": "On Windows, a multi-line message to Codex is no longer split into several sends or left stuck as \"sending\"; interrupting, follow-ups and /clear behave better in the reading view.",
-  "Windows 上的文字改为常规字重，更清晰；卡片动画更流畅；安装包缩小约 15 MB。": "Text on Windows uses regular weight and reads more clearly; card animations are smoother; installers are about 15 MB smaller."
+  "Windows 上的文字改为常规字重，更清晰；卡片动画更流畅；安装包缩小约 15 MB。": "Text on Windows uses regular weight and reads more clearly; card animations are smoother; installers are about 15 MB smaller.",
+  "网页": "Web",
+  "新建": "Created",
+  "写入": "Wrote",
+  "在 {path} 中搜索": "Search in {path}",
+  "访问网页": "Open a web page",
+  "搜索网页": "Search the web",
+  "MCP 服务 {server}": "MCP server {server}",
+  "正在处理的任务": "Tasks in progress"
 }

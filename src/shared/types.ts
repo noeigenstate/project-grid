@@ -44,7 +44,7 @@ export type GitHistory = { commits: GitCommit[]; nextOffset: number | null };
 type AgentActionKind = 'edit' | 'command' | 'read' | 'search' | 'web' | 'skill' | 'mcp' | 'agent' | 'other';
 export type AgentActionBrief = { kind: AgentActionKind; tool: string; target: string; detail: string; done: boolean; phrase?: string; object?: string };
 export type PendingPrompt = { id: string; text: string; state: 'queued' | 'working'; at: number };
-export type AgentAction = AgentActionBrief & { id: string; at: number; description: string; failed: boolean; server?: string };
+export type AgentAction = AgentActionBrief & { id: string; at: number; description: string; failed: boolean; server?: string; files?: { path: string; change: 'add' | 'update' | 'delete' | 'write' }[] };
 export type AgentActionPacket = { id: string; list?: AgentAction[]; changes?: AgentAction[] };
 // One message or tool call of an agent's conversation, for the reading view.
 export type ConversationEntry = { id: string; at: number; role: 'user' | 'assistant' | 'tool'; text?: string; tool?: AgentActionBrief & { failed: boolean } };

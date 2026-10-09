@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CircleNotch } from '@phosphor-icons/react';
 import type { AgentAction, AgentActionPacket, AgentActionBrief, Project, ProjectTerminal } from '../../shared/types';
 import { t } from '../../shared/i18n';
@@ -27,11 +27,23 @@ export function actionText(action: AgentActionBrief) {
 }
 const clock = (at: number) => new Date(at).toLocaleTimeString([], { hour12: false });
 
-function explanation(action: AgentAction) {
-  if (action.kind === 'skill') return action.description || t('没有找到这个技能的说明（SKILL.md）');
-  if (action.kind === 'mcp') return t('由 MCP 服务 {server} 提供的工具', { server: action.server || action.target.split(' · ')[0] });
-  if (action.kind === 'edit' && !action.target) return action.detail;
-  return action.detail;
+// The live feed names each step by what it really is: a tag for its kind, then the command itself, the skill, the
+// MCP server's tool or the files it made or changed; a second line says what that is or did.
+const KIND_TAGS: Record<AgentActionBrief['kind'], string> = { edit: '文件', command: '命令', read: '读取', search: '搜索', web: '网页', skill: '技能', mcp: 'MCP', agent: '子代理', other: '工具' };
+const CHANGE_LABELS: Record<string, string> = { add: '新建', update: '修改', delete: '删除', write: '写入' };
+function stepLines(action: AgentAction): { title: string; note: string; code: boolean } {
+  const target = action.target, detail = action.detail;
+  if (action.kind === 'edit') return action.files?.length
+    ? { title: action.files.map(file => base(file.path)).join('、'), note: action.files.map(file => `${t(CHANGE_LABELS[file.change] || '修改')} ${file.path}`).join('、'), code: false }
+    : { title: detail || t('通过命令修改文件'), note: t('通过命令修改文件'), code: !!detail };
+  if (action.kind === 'command') return { title: target, note: [action.phrase ? `${t(action.phrase)} ${action.object || ''}`.trim() : '', detail].filter(Boolean).join(' · '), code: true };
+  if (action.kind === 'read') return { title: base(target), note: target, code: false };
+  if (action.kind === 'search') return { title: target, note: detail ? t('在 {path} 中搜索', { path: detail }) : t('搜索代码'), code: true };
+  if (action.kind === 'web') return { title: target, note: /^https?:/i.test(target) ? t('访问网页') : t('搜索网页'), code: false };
+  if (action.kind === 'skill') return { title: target, note: action.description || detail, code: false };
+  if (action.kind === 'mcp') { const [server, tool] = target.split(' · '); return { title: tool || target, note: t('MCP 服务 {server}', { server: action.server || server }), code: false }; }
+  if (action.kind === 'agent') return { title: target, note: [t('子代理'), detail].filter(Boolean).join(' · '), code: false };
+  return { title: target || action.tool, note: t('调用工具'), code: false };
 }
 
 // The steps of the current round for one terminal, newest first: which files the agent edits, which commands
@@ -71,6 +83,10 @@ export function ActivityPane({ project, terminal }: { project: Project; terminal
   const working = terminal.codexActive && terminal.codexActivity === 'working';
   const running = working ? [...actions].reverse().find(action => !action.done) : undefined;
   const agent = terminal.agent === 'claude' ? 'Claude Code' : 'Codex';
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { if (!working) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [working]);
+  const done = actions.filter(action => action.done).length, failed = actions.filter(action => action.failed).length;
+  const started = actions[0]?.at, ended = working ? now : actions.at(-1)?.at;
   const status = !terminal.codexActive ? t('没有运行中的 Codex 或 Claude Code')
     : running ? t('正在{step}', { step: actionText(running) })
     : working ? t('{agent} 正在思考', { agent })
@@ -80,6 +96,12 @@ export function ActivityPane({ project, terminal }: { project: Project; terminal
     <div className={`activity-now ${running?.kind === 'edit' ? 'is-editing' : ''} ${working ? 'is-working' : ''}`} role="status" title={status}>
       {working && <CircleNotch size={14} className="loading-spinner" />}<span>{status}</span>
     </div>
+    <div className="overview-stats" aria-label={t('本轮概览')}>
+      <div><b>{actions.length}</b><span>{t('工具调用')}</span></div>
+      <div><b>{done}</b><span>{t('已完成')}</span></div>
+      <div className={failed ? 'is-failed' : ''}><b>{failed}</b><span>{t('失败')}</span></div>
+      <div><b>{started && ended ? seconds(ended - started) : '—'}</b><span>{working ? t('已进行') : t('用时')}</span></div>
+    </div>
     <div className="activity-split">
     <section className="activity-live" aria-label={t('实时动态')}>
     <h4 className="activity-section-title">{t('实时动态')}</h4>
@@ -87,53 +109,25 @@ export function ActivityPane({ project, terminal }: { project: Project; terminal
       {!actions.length && <p className="activity-empty">{!terminal.codexActive
         ? project.kind === 'ssh' ? t('远程项目暂不显示活动。') : t('在终端里启动 Codex 或 Claude Code 后，这里显示它每一步在做什么：改了哪些文件、运行了什么命令、调用了哪些技能和 MCP 工具。')
         : t('这一轮还没有调用工具。')}</p>}
-      {/* One line a step: "14:03:22：正在运行测试". The command, path or what a skill is for shows on hover. */}
       {[...actions].reverse().map(action => {
-        const step = actionText(action), hover = [action.target, action.detail, explanation(action)].filter((text, index, all) => text && all.indexOf(text) === index).join('\n');
-        return <div key={action.id} role="listitem" title={hover} className={`activity-item activity-${action.kind} ${action.done ? '' : 'is-running'} ${action.failed ? 'is-failed' : ''}`}>
-          <time>{clock(action.at)}</time><span className="activity-step">{t('：')}{action.done ? step : t('正在{step}', { step })}{action.failed && <em>{t('（失败）')}</em>}</span>
+        const { title, note, code } = stepLines(action);
+        return <div key={action.id} role="listitem" title={[title, note].filter(Boolean).join('\n')} className={`activity-item activity-${action.kind} ${action.done ? '' : 'is-running'} ${action.failed ? 'is-failed' : ''}`}>
+          <time>{clock(action.at)}</time><span className="activity-tag">{t(KIND_TAGS[action.kind])}</span>
+          <span className={`activity-title ${code ? 'is-code' : ''}`}>{title}</span>{action.failed && <em>{t('失败')}</em>}
+          {note && <p>{note}</p>}
         </div>;
       })}
     </div>
     </section>
-    <RoundOverview terminal={terminal} actions={actions} working={working} />
+    <section className="activity-overview" aria-label={t('正在处理的任务')}>
+      <h4 className="activity-section-title">{t('正在处理的任务')}</h4>
+      <div className="overview-body"><PromptList terminal={terminal} /></div>
+    </section>
     </div>
   </aside>;
 }
 
 const seconds = (ms: number) => { const total = Math.max(0, Math.round(ms / 1000)), m = Math.floor(total / 60); return m ? t('{m} 分 {s} 秒', { m, s: total % 60 }) : t('{s} 秒', { s: total }); };
-
-// The round at a glance: what it was asked to do, how many tools it called and how long it has taken, which
-// files it touched, and the skills and MCP tools it used with what they are for.
-function RoundOverview({ terminal, actions, working }: { terminal: ProjectTerminal; actions: AgentAction[]; working: boolean }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { if (!working) return; const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, [working]);
-  const summary = useMemo(() => {
-    const files = new Set<string>(), skills = new Map<string, string>(), servers = new Map<string, Set<string>>();
-    for (const action of actions) {
-      if (action.kind === 'edit' && action.target) for (const file of action.target.replace(/\s\+\d+$/, '').split('、')) if (file.trim()) files.add(file.trim());
-      if (action.kind === 'skill' && action.target) skills.set(action.target, action.description || skills.get(action.target) || '');
-      if (action.kind === 'mcp') { const [server, tool] = action.target.split(' · '); if (!servers.has(server)) servers.set(server, new Set()); if (tool) servers.get(server)!.add(tool); }
-    }
-    return { files: [...files], skills: [...skills], servers: [...servers], done: actions.filter(a => a.done).length, failed: actions.filter(a => a.failed).length };
-  }, [actions]);
-  const started = actions[0]?.at, ended = working ? now : actions.at(-1)?.at;
-  return <section className="activity-overview" aria-label={t('本轮概览')}>
-    <h4 className="activity-section-title">{t('本轮概览')}</h4>
-    <div className="overview-body">
-      <PromptList terminal={terminal} />
-      <div className="overview-stats">
-        <div><b>{actions.length}</b><span>{t('工具调用')}</span></div>
-        <div><b>{summary.done}</b><span>{t('已完成')}</span></div>
-        <div className={summary.failed ? 'is-failed' : ''}><b>{summary.failed}</b><span>{t('失败')}</span></div>
-        <div><b>{started && ended ? seconds(ended - started) : '—'}</b><span>{working ? t('已进行') : t('用时')}</span></div>
-      </div>
-      {summary.files.length > 0 && <div className="overview-group"><h5>{t('修改的文件')}<span>{summary.files.length}</span></h5>{summary.files.slice(-6).reverse().map(file => <code key={file} title={file}>{file}</code>)}{summary.files.length > 6 && <small>{t('还有 {count} 个', { count: summary.files.length - 6 })}</small>}</div>}
-      {summary.skills.length > 0 && <div className="overview-group"><h5>{t('技能')}<span>{summary.skills.length}</span></h5>{summary.skills.map(([name, description]) => <div key={name} className="overview-named"><b>{name}</b>{description && <p title={description}>{description}</p>}</div>)}</div>}
-      {summary.servers.length > 0 && <div className="overview-group"><h5>MCP<span>{summary.servers.length}</span></h5>{summary.servers.map(([server, tools]) => <div key={server} className="overview-named"><b>{server}</b><p>{[...tools].join('、') || t('工具')}</p></div>)}</div>}
-    </div>
-  </section>;
-}
 
 // The prompts sent and not finished: the one being worked on first, then those waiting their turn. A prompt
 // leaves the list when the round that worked on it ends.

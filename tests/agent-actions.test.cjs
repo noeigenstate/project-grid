@@ -55,6 +55,7 @@ test('a Codex rollout becomes steps: commands, patches, skills read from disk an
   assert.deepEqual([byId['c1:0'].kind, byId['c1:0'].target], ['command', 'npm run "build"']);
   assert.equal(log.list.filter(action => action.id.startsWith('c1:')).length, 1, 'writing to a running command is not a step');
   assert.deepEqual([byId['c2:0'].kind, byId['c2:0'].target], ['edit', 'src/a.ts、src/b.ts']);
+  assert.deepEqual(byId['c2:0'].files.map(file => file.path), ['src/a.ts', 'src/b.ts'], 'each patched file keeps what happened to it');
   assert.deepEqual([byId['c3:0'].kind, byId['c3:0'].target], ['skill', 'release-notes']);
   assert.deepEqual([byId['c4:0'].kind, byId['c4:0'].target], ['mcp', 'figma · get_file']);
   assert.deepEqual([byId['c5:0'].kind, byId['c5:0'].target], ['edit', ''], 'a script that writes files is an edit without a named file');

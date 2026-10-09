@@ -70,16 +70,16 @@ try {
   // Expanded, the pane beside the terminal lists the steps, newest first, and the running edit is marked.
   await page.getByRole('button', { name: '全屏查看 Parent task status', exact: true }).click();
   const pane = page.locator('.activity-pane'); await pane.waitFor();
-  // The overview below the live feed counts the calls by kind and names the files the round changed.
+  // The round's numbers sit at the top of the pane; below the live feed, only the prompts being worked on.
   const overview = pane.locator('.activity-overview'); await overview.waitFor();
-  await waitFor(async () => (await overview.locator('.overview-stats > div').first().locator('b').innerText()) === '2', 'overview counts the calls');
-  assert.equal(await overview.locator('.overview-group code').first().innerText(), 'src/login.ts');
+  await waitFor(async () => (await pane.locator('.overview-stats > div').first().locator('b').innerText()) === '2', 'the pane counts the calls');
+  assert.equal(await overview.locator('code').count(), 0, 'no list of changed files below the feed');
   await waitFor(async () => await pane.locator('.activity-item').count() === 2, 'activity pane lists the steps');
-  // One line a step, "time：what it does", newest first; the running edit says it is in progress.
-  const lines = await pane.locator('.activity-item').allTextContents();
-  assert.match(lines[0], /^\d{2}:\d{2}:\d{2}：正在修改 login\.ts$/, JSON.stringify(lines));
-  assert.match(lines[1], /^\d{2}:\d{2}:\d{2}：运行测试$/, JSON.stringify(lines));
-  assert.equal(await pane.locator('.activity-item').first().getAttribute('title'), 'src/login.ts', 'the full path shows on hover');
+  // A step names what it really is, newest first: its kind, the file or the command itself, and what it did.
+  const feedItem = index => pane.locator('.activity-item').nth(index).evaluate(item => ['.activity-tag', '.activity-title', 'p'].map(selector => item.querySelector(selector)?.textContent));
+  assert.deepEqual(await feedItem(0), ['文件', 'login.ts', '修改 src/login.ts'], 'the edit names its file and what happened to it');
+  assert.deepEqual(await feedItem(1), ['命令', 'npm test', '运行测试'], 'the command shows as typed');
+  assert.ok((await pane.locator('.activity-item').first().getAttribute('class')).includes('is-running'), 'the running edit is marked');
   // The overview lists the prompts: the one being worked on, then one sent while it works.
   await input('给登录页加上验证码。然后跑一下测试\r');
   const prompts = () => overview.locator('.overview-prompts li').evaluateAll(items => items.map(item => `${item.classList.contains('is-working') ? 'working' : 'queued'}:${item.querySelector('p').textContent}`));
@@ -108,8 +108,8 @@ try {
     return [...node.querySelectorAll('.activity-split, .activity-live, .activity-overview, .overview-stats, .overview-prompts, .activity-item')].filter(item => item.getBoundingClientRect().right > right).map(item => item.className);
   });
   assert.deepEqual(overflow, [], 'nothing in the activity pane reaches past its edge');
-  const halves = await pane.evaluate(node => ['.activity-live', '.activity-overview'].map(selector => Math.round(node.querySelector(selector).getBoundingClientRect().height)));
-  assert.ok(Math.abs(halves[0] - halves[1]) <= 2, `the live feed and the overview share the height equally: ${halves}`);
+  const heights = await pane.evaluate(node => ['.activity-live', '.activity-overview'].map(selector => Math.round(node.querySelector(selector).getBoundingClientRect().height)));
+  assert.ok(heights[0] > heights[1], `the live feed takes most of the height: ${heights}`);
   await page.screenshot({ path: path.join(output, 'activity-pane-long-step.png') });
   await page.getByRole('button', { name: '隐藏活动栏', exact: true }).click(); await waitFor(async () => !await pane.count(), 'activity pane can be hidden');
   await page.getByRole('button', { name: '显示活动栏：它正在做什么', exact: true }).click(); await pane.waitFor();
