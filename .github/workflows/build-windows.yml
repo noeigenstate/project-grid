@@ -515,11 +515,9 @@ jobs:
 
           ## Changes in $RELEASE_VERSION
 
-          - Slash command results are laid out in the reading view as part of the conversation: frames go, figures line up in tables, usage becomes progress bars, groups get headings, and a dialog such as /usage stays after Esc closes it. The command list sits in the page above the message box instead of popping up over the conversation.
-          - Slash commands never lock the message box; sending a message while a command dialog is open closes the dialog first. A Codex command shows only the lines it printed since it was sent (not the banner above), full-screen views such as the /diff pager show whole, and closing a card no longer sends Escape to an empty Codex input.
-          - A command typed right after Escape (to interrupt or close a dialog) lost its first character and was taken for a prompt, leaving Codex shown as thinking; a lone Escape is now a key of its own.
-          - The activity pane keeps the round's calls, completions, failures and time at the top; each step names the command as typed, the skill, the MCP tool, or the files created, changed or deleted. Below the feed only the prompts being worked on remain.
-          - Optional monochrome themes (light and dark) with glass background and transparency, terminal font and weight choices and recommended presets, contributed in PR #2; defaults are unchanged. A sent message shows the working line at once. New README and promo film.
+          - Codex /side: closing the card sends Ctrl+C, the only key that leaves a side conversation (Escape there tried to edit the last prompt). While it is open, messages go into the side conversation without an echo in the main one, the card keeps following it, and its questions and answers stay in the document when it closes.
+          - Codex /copy opens a picker under the input; it now fills the card, Enter copies, and the terminal honours OSC 52 so the text reaches the system clipboard (clipboard reads by programs are refused). Pickers under the input count as an open dialog, so closing or sending a message closes them first.
+          - Codex commands that print a while after returning to the input (/status fetches account limits) are followed until their output settles, up to eight seconds, with a waiting card meanwhile; the command line newer Codex prints above its output is not repeated.
 
           Commit: $GITHUB_SHA
           Build: https://github.com/$GH_REPO/actions/runs/$GITHUB_RUN_ID
