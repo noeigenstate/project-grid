@@ -397,7 +397,7 @@ jobs:
           if ls "$app/resources/app.asar.unpacked/node_modules/node-pty/prebuilds" | grep -E '^(win32|darwin)-'; then echo 'Other platforms PTY binaries are in the Linux app.'; exit 1; fi
           top=$(npx --no-install asar list "$app/resources/app.asar" | cut -d/ -f2 | sort -u | tr '\n' ' ')
           echo "app.asar: $top"
-          [[ $top == 'assets dist electron node_modules package.json ' ]] || { echo 'Unexpected files in app.asar.'; exit 1; }
+          [[ $top == 'LICENSE assets dist electron node_modules package.json ' ]] || { echo 'Unexpected files in app.asar.'; exit 1; }
 
       - name: Verify the packaged app runs a Bash terminal and follows Codex
         run: xvfb-run -a node scripts/retry.mjs node scripts/linux-smoke.mjs --packaged

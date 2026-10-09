@@ -15,7 +15,7 @@ import { shortcut } from './shortcuts';
 // Git titles come from git-status.ts in Chinese, joined with " · " (status · staged · rename); each part is translated.
 const gitTitle = (title: string) => title.split(' · ').map(part => t(part)).join(' · ');
 
-export function FileIcon({ entry, open = false }: { entry: FileEntry; open?: boolean }) {
+function FileIcon({ entry, open = false }: { entry: FileEntry; open?: boolean }) {
   if (entry.kind === 'directory') return open ? <FolderOpen className="file-icon folder-icon" size={16} weight="duotone" /> : <Folder className="file-icon folder-icon" size={16} weight="duotone" />;
   if (entry.kind === 'link') return <LinkSimple className="file-icon" size={15} />;
   if (/\.(png|apng|jpe?g|jpe|jfif|gif|webp|bmp|avif|svg|ico)$/i.test(entry.name)) return <ImageIcon className="file-icon code-icon" size={16} />;

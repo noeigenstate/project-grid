@@ -15,6 +15,7 @@ import { readingShown, setReading, useTerminalChoice } from './reading-mode';
 import { AddProjectDialog } from './AddProjectDialog';
 import { SSHAuthDialog } from './SSHAuthDialog';
 import { useProjectReorder } from './useProjectReorder';
+import { pruneReadingCli } from './useReadingCli';
 import { useProjectFocusMotion } from './useProjectFocusMotion';
 import { applyTheme, themes } from './themes';
 import { applyMotion } from './motion';
@@ -371,6 +372,13 @@ export function App() {
     await showProjectLocation(id, await perform(api.revealProject(id)));
   }, [perform, showProjectLocation]);
 
+  useEffect(() => {
+    if (!workspace) return;
+    const live = workspace.projects.flatMap(project => project.terminals)
+      .filter(terminal => terminal.sessionId && terminal.status !== 'exited');
+    pruneReadingCli(new Set(live.map(terminal => JSON.stringify([terminal.id, terminal.sessionId]))));
+  }, [workspace]);
+
   const settingsRef = useRef<Settings | null>(null); settingsRef.current = workspace?.settings || null;
   // Project order for next/previous (set each render), and the current card even if focus fails.
   const navigation = useRef<string[]>([]);
@@ -466,7 +474,8 @@ export function App() {
   const orderedProjects = reorder.order ? reorder.order.flatMap(id => projectRecords.get(id) || []) : projects;
   const unread = projects.filter(p => p.unread > 0).length;
   const completed = projects.filter(isRoundComplete).length;
-  const visible = projects.filter(p => !query || `${p.name} ${p.path} ${p.ssh?.host || ''}`.toLowerCase().includes(query.toLowerCase()));
+  const normalizedQuery = query.toLowerCase();
+  const visible = projects.filter(p => !normalizedQuery || `${p.name} ${p.path} ${p.ssh?.host || ''}`.toLowerCase().includes(normalizedQuery));
   const visibleIds = new Set(visible.map(p => p.id));
   const columns = Math.min(4, Math.max(1, Math.ceil(Math.sqrt(Math.max(visible.length, 1)))));
   const rows = Math.max(1, Math.ceil(visible.length / columns));

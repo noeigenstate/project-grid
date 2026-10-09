@@ -31,6 +31,7 @@ export function styleTerminal(terminal: Terminal): IDisposable {
     const colors = terminalDecorationColors(document.documentElement.dataset.theme);
     const buffer = terminal.buffer.active;
     if (buffer.type !== 'normal') { clear(); return; }
+    const cellBuffer = buffer.getNullCell();
     const wanted: { row: number; x: number; width: number; foregroundColor: string }[] = [];
     let previousBlank = false;
     for (let row = buffer.viewportY; row < buffer.viewportY + terminal.rows; row++) {
@@ -40,7 +41,7 @@ export function styleTerminal(terminal: Terminal): IDisposable {
       previousBlank = !line.translateToString(true).trim();
       let first = -1, last = -1, allBold = true;
       for (let x = 0; x < terminal.cols; x++) {
-        const cell = line.getCell(x);
+        const cell = line.getCell(x, cellBuffer);
         if (!cell || cell.getWidth() === 0) continue;
         const chars = cell.getChars();
         if (!chars || chars === ' ') continue;
@@ -49,7 +50,7 @@ export function styleTerminal(terminal: Terminal): IDisposable {
         if (!cell.isBold()) allBold = false;
       }
       if (first < 0) continue;
-      const lead = line.getCell(first)!;
+      const lead = line.getCell(first, cellBuffer)!;
       if (BULLETS.has(lead.getChars()) && lead.isFgDefault()) wanted.push({ row, x: first, width: 1, foregroundColor: colors.bullet });
       else if (allBold && afterBlank && !line.isWrapped && last - first >= 1 && last - first < 60 && !BULLETS.has(lead.getChars())) wanted.push({ row, x: first, width: Math.min(terminal.cols - first, last - first + 2), foregroundColor: colors.heading });
     }

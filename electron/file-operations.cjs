@@ -204,4 +204,4 @@ class FileOperations {
     finally { await handle.close(); }
   }
 }
-module.exports = { FileOperations, cleanName, cleanRelative, selections, entryPath, directoryPath };
+module.exports = { FileOperations, cleanName, selections, directoryPath };

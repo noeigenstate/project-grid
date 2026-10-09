@@ -40,7 +40,9 @@ const asar = require('@electron/asar');
 const archive = path.join(release, 'win-unpacked/resources/app.asar');
 const packedFiles = asar.listPackage(archive).map(file => file.replaceAll('\\', '/').replace(/^\//, ''));
 assert.ok(!packedFiles.some(file => file.endsWith('.map')), 'production packages exclude source maps');
-assert.ok(!packedFiles.some(file => /^node_modules\/node-pty\/(src|third_party|scripts|typings)\//.test(file)), 'native build sources and duplicate ConPTY copies stay out of the runtime');
+const runtimeRoots = new Set(['LICENSE', 'assets', 'dist', 'electron', 'node_modules', 'package.json']);
+assert.deepEqual(packedFiles.map(file => file.split('/')[0]).filter(root => !runtimeRoots.has(root)), [], 'app.asar holds only the runtime: no sources, tests, docs or scripts');
+assert.ok(!packedFiles.some(file => /^node_modules\/node-pty\/(src|third_party|scripts|typings|build)\//.test(file)), 'native build sources and duplicate ConPTY copies stay out of the runtime');
 assert.ok(!packedFiles.some(file => /^node_modules\/node-pty\/prebuilds\/(?!win32-x64\/)[^/]+\//.test(file)), 'x64 installer excludes other platform native binaries');
 assert.ok(!packedFiles.some(file => file.startsWith('node_modules/node-addon-api/')), 'native build headers are not runtime dependencies');
 for (const file of ['conpty.node', 'conpty_console_list.node', 'conpty/OpenConsole.exe', 'conpty/conpty.dll']) {

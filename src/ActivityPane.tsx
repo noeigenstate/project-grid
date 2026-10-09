@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CircleNotch } from '@phosphor-icons/react';
-import type { AgentAction, AgentActionBrief, Project, ProjectTerminal } from './types';
+import type { AgentAction, AgentActionPacket, AgentActionBrief, Project, ProjectTerminal } from './types';
 import { t } from './i18n';
 
 // What each kind of step is called, in the card's one-line status and in the activity pane.
@@ -41,16 +41,31 @@ export function ActivityPane({ project, terminal }: { project: Project; terminal
   const [actions, setActions] = useState<AgentAction[]>([]);
   useEffect(() => {
     let active = true; setActions([]);
-    void window.projectGrid.terminalActions(terminal.id).then(result => { if (active && result.ok) setActions(result.value); });
+    let waiting = true;
+    let queued: AgentActionPacket[] = [];
+    const apply = (current: AgentAction[], packet: AgentActionPacket) => {
+      if (packet.list) return packet.list.slice(-200);
+      const next = [...current], positions = new Map(next.map((action, index) => [action.id, index]));
+      for (const action of packet.changes || []) {
+        const at = positions.get(action.id);
+        if (at === undefined) { positions.set(action.id, next.length); next.push(action); }
+        else next[at] = action;
+      }
+      return next.slice(-200);
+    };
+    const snapshot = (initial: AgentAction[]) => {
+      if (!active) return;
+      const next = queued.reduce(apply, initial.slice(-200));
+      queued = []; waiting = false; setActions(next);
+    };
     const off = window.projectGrid.onTerminalAction(packet => {
       if (packet.id !== terminal.id) return;
-      if (packet.list) { setActions(packet.list); return; }
-      setActions(current => {
-        const next = [...current];
-        for (const action of packet.changes || []) { const at = next.findIndex(item => item.id === action.id); if (at < 0) next.push(action); else next[at] = action; }
-        return next.slice(-200);
-      });
+      if (waiting) queued.push(packet);
+      else setActions(current => apply(current, packet));
     });
+    void window.projectGrid.terminalActions(terminal.id).then(
+      result => snapshot(result.ok ? result.value : []), () => snapshot([]),
+    );
     return () => { active = false; off(); };
   }, [terminal.id, terminal.sessionId]);
   const working = terminal.codexActive && terminal.codexActivity === 'working';

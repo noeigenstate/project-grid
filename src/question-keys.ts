@@ -14,7 +14,7 @@ export type QuestionAction =
   | { type: 'cancel' };
 
 // Where the CLI's cursor can stand, in order. Claude's Submit row comes after the options above the rule.
-export type QuestionStop = { option: number } | { submit: true };
+type QuestionStop = { option: number } | { submit: true };
 export function questionStops(choice: ScreenChoice): QuestionStop[] {
   const stops: QuestionStop[] = [];
   const submit = !!choice.question?.submit;
@@ -39,7 +39,8 @@ export function questionKeys(choice: ScreenChoice, action: QuestionAction): stri
   const question = choice.question;
   if (!question) return [];
   const stops = questionStops(choice);
-  const from = Math.max(0, stops.findIndex(stop => isStop(stop, questionCursor(choice))));
+  const cursor = questionCursor(choice);
+  const from = Math.max(0, stops.findIndex(stop => isStop(stop, cursor)));
   const go = (target: QuestionStop) => {
     const to = stops.findIndex(stop => isStop(stop, target));
     if (to < 0) return [];

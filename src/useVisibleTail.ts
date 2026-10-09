@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { ConversationEntry } from './types';
 
-export type ConversationBlock = { kind: 'message'; entry: ConversationEntry } | { kind: 'tools'; id: string; entries: ConversationEntry[] };
+type ConversationBlock = { kind: 'message'; entry: ConversationEntry } | { kind: 'tools'; id: string; entries: ConversationEntry[] };
 export const VISIBLE_TAIL_PAGE = 40;
 export const blockId = (block: ConversationBlock) => block.kind === 'message' ? block.entry.id : block.id;
 

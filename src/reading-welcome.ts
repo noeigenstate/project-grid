@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AgentScreen } from './agent-screen-types';
 
-export const WELCOME_STARTUP_MS = 4000;
+const WELCOME_STARTUP_MS = 4000;
 export const hasStatusFooter = (screen: AgentScreen) => !!(screen.status.model || screen.status.effort || screen.status.context || screen.status.mode || screen.status.notes.length);
 export const welcomeStarting = (screen: AgentScreen, startedAt: number, now: number, seenFooter: boolean) =>
   !screen.banner && (now - startedAt < WELCOME_STARTUP_MS || !seenFooter);

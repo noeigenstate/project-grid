@@ -11,8 +11,8 @@ const parse = name => parseAgentScreen(name.startsWith('claude') ? 'claude' : 'c
 const UP = '\x1b[A', DOWN = '\x1b[B', ENTER = '\r';
 const option = (number, label, detail, role, selected = false, checked) =>
   ({ number, label, detail, hotkey: null, selected, role, ...(checked === undefined ? {} : { checked }) });
-const claude = fields => ({ agent: 'claude', tabs: [], position: null, multi: false, submit: null, notes: null, review: null, last: false, ...fields });
-const codex = fields => ({ agent: 'codex', tabs: [], position: null, multi: false, submit: null, notes: { open: false, text: '' }, review: null, last: false, ...fields });
+const claude = fields => ({ agent: 'claude', tabs: [], position: null, multi: false, submit: null, notes: null, review: null, ...fields });
+const codex = fields => ({ agent: 'codex', tabs: [], position: null, multi: false, submit: null, notes: { open: false, text: '' }, review: null, ...fields });
 
 test('every question fixture is recognised', () => {
   for (const file of fs.readdirSync(path.join(__dirname, 'fixtures/questions'))) {
@@ -65,7 +65,7 @@ test('Codex questions: position, two-column options, the last question and open 
     ],
     question: codex({ position: { index: 1, count: 2 } }),
   });
-  assert.equal(parse('codex-question-last').question.last, true);
+  assert.equal(parse('codex-question-last').title, '要清理哪个目录？');
   const notes = parse('codex-question-notes');
   assert.deepEqual([notes.question.notes, notes.options[1].selected], [{ open: true, text: '' }, true]);
 });

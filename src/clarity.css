@@ -47,7 +47,9 @@
    terminal fills the rest; the menus a header opens still need it lifted above the terminal. */
 :root[data-theme] .project-panel .panel-header { position: relative; z-index: 2; background: transparent; backdrop-filter: none; border-color: transparent; }
 :root[data-theme] .project-panel .panel-name small { background: var(--card-fill); box-shadow: inset 0 0 0 1px var(--card-line); }
-:root[data-theme] .panel-terminal-area { border-radius: 0 0 calc(var(--glass-radius) - 1px) calc(var(--glass-radius) - 1px); background: transparent; backdrop-filter: none; box-shadow: none; }
+/* The terminal keeps xterm's stacked layers (rows, cursor, link canvas) to itself, so menus opened from the header
+   stay above them. */
+:root[data-theme] .panel-terminal-area { border-radius: 0 0 calc(var(--glass-radius) - 1px) calc(var(--glass-radius) - 1px); background: transparent; backdrop-filter: none; box-shadow: none; isolation: isolate; }
 :root[data-theme] .terminal-grid.has-splits { background: transparent; gap: 1px; }
 :root[data-theme] :is(.has-splits .terminal-split, .terminal-grid:not(.has-splits) .terminal-split) { background: transparent; border-radius: 0; }
 :root[data-theme] .has-splits .terminal-split { box-shadow: 1px 0 0 rgba(255, 255, 255, .16), 0 1px 0 rgba(255, 255, 255, .16); }

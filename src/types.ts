@@ -8,7 +8,7 @@ export type ProjectLocation = { kind: 'external' } | { kind: 'file' | 'directory
 export type Project = {
   id: string; name: string; path: string; branch: string; unread: number;
   kind: 'local' | 'ssh'; ssh: { host: string; configFile: string | null } | null;
-  lastCompletedAt: number | null; lastActivityAt: number | null; awaitingCompletion: boolean;
+  lastCompletedAt: number | null;
   sessionId: string | null; status: 'stopped' | 'starting' | 'shell' | 'codex' | 'exited';
   action: AgentActionBrief | null;
   codexActive: boolean; agent: 'codex' | 'claude' | null; codexActivity: 'unknown' | 'working' | 'complete' | 'interrupted'; shellReady: boolean; codexAvailable: boolean | null; error: string | null;
@@ -17,8 +17,8 @@ export type Project = {
 export type ProjectTerminal = { agentStartedAt?: number | null; action: AgentActionBrief | null; task: string; prompts: PendingPrompt[]; id: string; title: string; shell: 'powershell' | 'cmd' | 'bash' | 'zsh'; sessionId: string | null; status: Project['status']; codexActive: boolean; agent: Project['agent']; codexActivity: Project['codexActivity']; needsInput: string | null; shellReady: boolean; codexAvailable: boolean | null; lastActivityAt: number | null; lastCompletedAt: number | null; error: string | null };
 // A model reached over HTTP for the spoken summary. The API key is not part of the settings.
 export type SummaryEndpoint = { provider: string; protocol: 'openai' | 'anthropic'; baseUrl: string; model: string };
-export type SummaryKeys = { keys: { cloud: boolean; local: boolean } };
-export type Settings = { columns: number; surface: 'glass' | 'solid'; terminalRenderer: 'gpu' | 'dom'; summary: { mode: 'fast' | 'agent' | 'cloud' | 'local'; cloud: SummaryEndpoint; local: SummaryEndpoint }; autoSave: boolean; activityPane: boolean; notifications: boolean; sound: boolean; closeToTray: boolean; explorerCollapsed: boolean; fontSize: number; restoreSessions: boolean; focusAnimation: 'smooth' | 'system' | 'off'; theme: ThemeId; announce: boolean; announcePhrase: string; language: 'zh' | 'en'; shortcuts: Partial<Record<'search' | 'addProject' | 'voice' | 'overview' | 'explorer' | 'settings' | 'nextProject' | 'previousProject' | 'maximize' | 'fullscreen' | 'newTerminal', string>>; guideVersion: string; shell: 'powershell' | 'cmd' | 'bash' | 'zsh'; voiceModel: string };
+type SummaryKeys = { keys: { cloud: boolean; local: boolean } };
+export type Settings = { surface: 'glass' | 'solid'; terminalRenderer: 'gpu' | 'dom'; summary: { mode: 'fast' | 'agent' | 'cloud' | 'local'; cloud: SummaryEndpoint; local: SummaryEndpoint }; autoSave: boolean; activityPane: boolean; notifications: boolean; sound: boolean; closeToTray: boolean; explorerCollapsed: boolean; fontSize: number; restoreSessions: boolean; focusAnimation: 'smooth' | 'system' | 'off'; theme: ThemeId; announce: boolean; announcePhrase: string; language: 'zh' | 'en'; shortcuts: Partial<Record<'search' | 'addProject' | 'voice' | 'overview' | 'explorer' | 'settings' | 'nextProject' | 'previousProject' | 'maximize' | 'fullscreen' | 'newTerminal', string>>; guideVersion: string; shell: 'powershell' | 'cmd' | 'bash' | 'zsh'; voiceModel: string };
 export type SpeechState = { phase: 'missing' | 'downloading' | 'ready' | 'error'; ready: boolean; percent: number; error: string | null; downloadBytes: number };
 export type RecentProject = { path: string; name: string; lastOpenedAt: number; exists: boolean };
 export type SSHInfo = { hosts: string[]; configFile: string; configExists: boolean; sshPath: string; source: string };
@@ -26,12 +26,12 @@ export type SSHAuthPrompt = { id: string; host: string; message: string; kind: '
 export type Workspace = { projects: Project[]; settings: Settings; warning: string | null; platform: string; version: string; guide: boolean; autoHideTitlebar: boolean;
   // Linux: the shell new local terminals use and whether zsh is installed.
   localShell: { kind: 'bash' | 'zsh'; zsh: boolean } | null };
-export type TerminalSnapshot = { sessionId: string | null; seq: number; data: string };
+type TerminalSnapshot = { sessionId: string | null; seq: number; data: string };
 export type TerminalPacket = TerminalSnapshot & { id: string };
 export type FileEntry = { name: string; path: string; kind: 'directory' | 'file' | 'link' };
 export type FileProgress = { projectId: string; text: string } | null;
 // One offline recognizer: downloaded (ready), downloading, paused (missing) or failed (error).
-export type VoiceModel = { id: string; label: string; downloadBytes: number; phase: 'missing' | 'downloading' | 'ready' | 'error'; percent: number; error: string | null };
+type VoiceModel = { id: string; label: string; downloadBytes: number; phase: 'missing' | 'downloading' | 'ready' | 'error'; percent: number; error: string | null };
 // phase, percent and error describe the model in use (active), or the chosen one before any is downloaded.
 export type VoiceState = { phase: 'missing' | 'downloading' | 'ready' | 'transcribing' | 'error'; ready: boolean; percent: number; error: string | null; model: string; downloadBytes: number; choice: string; active: string | null; models: VoiceModel[] };
 export type DirectoryListing = { path: string; entries: FileEntry[]; total: number; nextOffset: number | null };
@@ -41,7 +41,7 @@ export type GitStatus = { repository: boolean; branch: string; head: string; det
 export type GitCommit = { hash: string; parents: string[]; author: string; date: string; refs: string; subject: string };
 export type GitHistory = { commits: GitCommit[]; nextOffset: number | null };
 // One step an agent took (a tool call). The card shows the brief form, the activity pane the whole list.
-export type AgentActionKind = 'edit' | 'command' | 'read' | 'search' | 'web' | 'skill' | 'mcp' | 'agent' | 'other';
+type AgentActionKind = 'edit' | 'command' | 'read' | 'search' | 'web' | 'skill' | 'mcp' | 'agent' | 'other';
 export type AgentActionBrief = { kind: AgentActionKind; tool: string; target: string; detail: string; done: boolean; phrase?: string; object?: string };
 export type PendingPrompt = { id: string; text: string; state: 'queued' | 'working'; at: number };
 export type AgentAction = AgentActionBrief & { id: string; at: number; description: string; failed: boolean; server?: string };
@@ -49,11 +49,11 @@ export type AgentActionPacket = { id: string; list?: AgentAction[]; changes?: Ag
 // One message or tool call of an agent's conversation, for the reading view.
 export type ConversationEntry = { id: string; at: number; role: 'user' | 'assistant' | 'tool'; text?: string; tool?: AgentActionBrief & { failed: boolean } };
 export type ConversationPacket = { id: string; list?: ConversationEntry[]; changes?: ConversationEntry[] };
-export type GitDiffLine = { type: ' ' | '+' | '-' | '\\'; text: string };
+type GitDiffLine = { type: ' ' | '+' | '-' | '\\'; text: string };
 export type GitHunk = { header: string; oldStart: number; oldLines: number; newStart: number; newLines: number; lines: GitDiffLine[]; patch: string };
 export type GitDiff = { repository: boolean; binary: boolean; text: boolean; added: number; removed: number; hunks: GitHunk[]; patch: string };
 export type GitCommitFiles = { files: { path: string; status: string; originalPath: string | null }[]; total: number; truncated: boolean };
-export type TextPage = { index: number; count: number; byteStart: number; byteEnd: number; encoding: string };
+type TextPage = { index: number; count: number; byteStart: number; byteEnd: number; encoding: string };
 export type AppUpdateState = { supported: boolean; currentVersion: string; status: 'unavailable' | 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'error'; version: string | null; percent: number; error: string | null };
 export type AgentsState = { codex: { installed: boolean }; claude: { installed: boolean }; npm: boolean; installing: 'codex' | 'claude' | null; message: string; error: string };
 export type FilePreview = { path: string; name: string; size: number; modifiedAt: number; revision: string } & (
@@ -61,7 +61,7 @@ export type FilePreview = { path: string; name: string; size: number; modifiedAt
   | { kind: 'image' | 'video'; mimeType: string; url: string; previewId: string }
   | { kind: 'html' | 'markdown'; content: string; page: TextPage; url: string; previewId: string }
 );
-export type Bridge = {
+type Bridge = {
   getState(): Promise<Result<Workspace>>;
   getAgents(): Promise<Result<AgentsState>>;
   installAgent(agent: 'codex' | 'claude'): Promise<Result<AgentsState>>;

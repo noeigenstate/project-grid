@@ -12,7 +12,7 @@ import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 const require = createRequire(import.meta.url);

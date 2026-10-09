@@ -9,7 +9,7 @@ export function gitMark(code: string) {
   const [label, title, tone] = values[code] || ['M', '已修改', 'modified'];
   return { label, title, tone };
 }
-export function changeCode(file: GitChange) {
+function changeCode(file: GitChange) {
   return file.conflict ? 'U' : file.untracked ? '?' : file.worktree !== '.' ? file.worktree : file.index;
 }
 export type GitDecoration = { code: string; title: string; count: number };

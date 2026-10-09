@@ -29,13 +29,22 @@ class ConversationLog {
   }
   // A tool whose result arrived. prefix: a Codex call id covers every step its script made.
   finish(id, failed = false, prefix = false) {
-    for (const entry of this.list) {
+    for (let index = 0; index < this.list.length; index++) {
+      const entry = this.list[index];
       if (entry.role !== 'tool' || entry.tool.done || !(prefix ? entry.id.startsWith(`${id}:`) : entry.id === id)) continue;
-      this.put({ ...entry, tool: { ...entry.tool, done: true, failed } });
+      const next = { ...entry, tool: { ...entry.tool, done: true, failed } };
+      this.list[index] = next; this.changed({ entry: next });
     }
   }
   // A round that ended leaves nothing running.
-  settle() { for (const entry of this.list) if (entry.role === 'tool' && !entry.tool.done) this.put({ ...entry, tool: { ...entry.tool, done: true } }); }
+  settle() {
+    for (let index = 0; index < this.list.length; index++) {
+      const entry = this.list[index];
+      if (entry.role !== 'tool' || entry.tool.done) continue;
+      const next = { ...entry, tool: { ...entry.tool, done: true } };
+      this.list[index] = next; this.changed({ entry: next });
+    }
+  }
 }
 
 function claudeConversation(log, record, cwd) {
@@ -58,7 +67,8 @@ function claudeConversation(log, record, cwd) {
   }
   if (record.type !== 'assistant' || !Array.isArray(content)) return;
   content.forEach((block, index) => {
-    if (block.type === 'text' && clean(block.text)) log.put({ id: `a:${base}:${index}`, at, role: 'assistant', text: bounded(clean(block.text)) });
+    const text = block.type === 'text' ? clean(block.text) : '';
+    if (text) log.put({ id: `a:${base}:${index}`, at, role: 'assistant', text: bounded(text) });
     else if (block.type === 'tool_use') { const action = claudeAction(block, at, cwd); log.put({ id: action.id, at, role: 'tool', tool: brief(action) }); }
   });
 }

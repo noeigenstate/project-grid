@@ -1,4 +1,3 @@
-import { useSyncExternalStore } from 'react';
 import en from '../electron/locales/en.json';
 import type { Settings } from './types';
 
@@ -19,15 +18,12 @@ const patterns = Object.keys(dictionary).filter(key => /\{\w+\}/.test(key)).map(
 });
 
 let language: Settings['language'] = 'zh';
-const listeners = new Set<() => void>();
 
 // Called while App renders, before its children, so the whole tree renders in one language.
-// Subscribers outside that render (useLanguage) are told afterwards.
 export function applyLanguage(next: Settings['language']) {
   if (next === language) return;
   language = next;
   document.documentElement.lang = next === 'en' ? 'en' : 'zh-CN';
-  queueMicrotask(() => listeners.forEach(listener => listener()));
 }
 
 export function currentLanguage() { return language; }
@@ -44,7 +40,3 @@ export function t(text: string, values?: Record<string, string | number>): strin
   return values ? fill(text, values) : text;
 }
 
-// Components that cache text outside React state re-render when the language changes.
-export function useLanguage() {
-  return useSyncExternalStore(listener => { listeners.add(listener); return () => { listeners.delete(listener); }; }, () => language);
-}

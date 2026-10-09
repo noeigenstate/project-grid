@@ -131,4 +131,4 @@ function resourceResponse(resource, request) {
   return new Response(body, { status, headers });
 }
 
-module.exports = { PreviewResources, PREVIEW_CSP, resourceResponse };
+module.exports = { PreviewResources, resourceResponse };

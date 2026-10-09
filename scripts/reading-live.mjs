@@ -10,7 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 
 const require = createRequire(import.meta.url), root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const output = await testRun('reading-live');

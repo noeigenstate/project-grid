@@ -9,7 +9,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 const require = createRequire(import.meta.url);

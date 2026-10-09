@@ -105,7 +105,7 @@ function publicState() {
         return { id, title: t('终端 {n}', { n: index + 1 }), shell: s?.shellKind || (p.kind === 'ssh' ? 'bash' : localShell().kind), sessionId: s?.sessionId || null, status: s?.status || 'stopped', codexActive: s?.codexActive || false, agent: s?.codexActive ? s.agent || 'codex' : null,
           agentStartedAt: s?.codexActive ? s.activitySince : null,
           codexActivity: s?.codexActivity || 'unknown', needsInput: s?.needsInput?.message || null, shellReady: !!s?.ready && !s?.inputDirty, codexAvailable: s?.codexAvailable ?? null,
-          lastActivityAt: s?.lastActivityAt || null, lastCompletedAt: s?.lastCompletedAt || null, error: s?.error || startupErrors.get(id) || null,
+          lastCompletedAt: s?.lastCompletedAt || null, error: s?.error || startupErrors.get(id) || null,
           // The step a working agent is on, for the card's one-line status; the full list is sent separately.
           action: s?.codexActive && s.codexActivity === 'working' ? briefAction(s.actions.current()) : null,
           // What the round was asked to do, in a few words, for the activity overview.
@@ -118,13 +118,13 @@ function publicState() {
       const activity = activeCodex.some(item => item.codexActivity === 'working') ? 'working' : activeCodex.some(item => item.codexActivity === 'interrupted') ? 'interrupted' : activeCodex.length && activeCodex.every(item => item.codexActivity === 'complete') ? 'complete' : 'unknown';
       const status = activeCodex.length ? 'codex' : terminals.some(item => item.status === 'shell') ? 'shell' : terminals.some(item => item.status === 'starting') ? 'starting' : first.status;
       return {
-        id: p.id, name: p.name, path: p.path, unread: p.unread, lastCompletedAt: p.lastCompletedAt, awaitingCompletion: p.completionArmed,
+        id: p.id, name: p.name, path: p.path, unread: p.unread, lastCompletedAt: p.lastCompletedAt,
         kind: p.kind || 'local', ssh: p.ssh || null,
         branch: branches.get(p.id) || '',
         terminals, sessionId: first.sessionId, status,
         codexActive: activeCodex.length > 0, codexActivity: activity, agent: activeCodex[0]?.agent || null,
         shellReady: first.shellReady, codexAvailable: first.codexAvailable,
-        lastActivityAt: first.lastActivityAt, error: terminals.find(item => item.error)?.error || null,
+        error: terminals.find(item => item.error)?.error || null,
         action: terminals.find(item => item.action)?.action || null,
       };
     }),
@@ -338,9 +338,10 @@ function applyActivity(project, s, snapshot) {
   // Resumed history and a slow response from before a new submission
   // must not make newly running work look complete.
   if (snapshot.updatedAt < Math.max(s.activitySince, s.activityInputAt)) return;
-  s.rootThreadId = snapshot.threadId; s.activeTurnId = snapshot.turnId;
+  s.rootThreadId = snapshot.threadId;
   // Keep the last prompt that named some work; a bare "继续" or "continue" keeps the one before it.
-  if (summarizeTask(snapshot.prompt)) s.lastTask = summarizeTask(snapshot.prompt);
+  const task = summarizeTask(snapshot.prompt);
+  if (task) s.lastTask = task;
   if (s.agent === 'codex') store.setRestore(s.terminalId, { threadId: snapshot.threadId });
   s.codexActivity = snapshot.state;
   if (snapshot.state === 'working') { store.expectCompletion(project.id); warmSpeech(); }
@@ -597,7 +598,7 @@ function startTerminal(id) {
     tools: shellKind === 'cmd' ? { codex: onPath('codex', env), claude: onPath('claude', env) } : null,
     titles: new TerminalTitleTracker(), reportedThreadId: null,
     codexActive: false, codexAvailable: null, seq: 0, chunks: [], bytes: 0, pending: '',
-    flushTimer: null, lastActivityAt: Date.now(), error: null, submissions: new SubmissionTracker(),
+    flushTimer: null, error: null, submissions: new SubmissionTracker(),
   };
   s.actions = new ActionLog(change => publishAction(s, change));
   s.gate = new InputGate(data => { if (sessions.get(id) === s && s.status !== 'exited') terminal.write(data); }, { shellOwnsInput: () => !s.codexActive });
@@ -634,7 +635,6 @@ function startTerminal(id) {
     s.gate.output(data);
     s.chunks.push(data); s.bytes += data.length; s.pending += data;
     while (s.bytes > 1024 * 1024 && s.chunks.length > 1) s.bytes -= s.chunks.shift().length;
-    s.lastActivityAt = Date.now();
     if (s.pending.length > 65536) flush();
     else if (!s.flushTimer) s.flushTimer = setTimeout(flush, 16);
   });

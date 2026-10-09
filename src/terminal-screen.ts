@@ -4,7 +4,7 @@ import type { Terminal } from '@xterm/xterm';
 // What a terminal shows right now, as text rows: the agent's own screen (its welcome lines, footer, mode and the
 // choices it is asking about) for the reading view to present without switching to the terminal. Each
 // TerminalPane registers its xterm; readers subscribe and are told at most every 100 ms after output.
-export type Screen = { rows: string[]; cursorRow: number };
+export type Screen = { rows: string[] };
 type Entry = { terminal: Terminal; listeners: Set<(screen: Screen) => void>; timer: number; dispose: () => void };
 const entries = new Map<string, Entry>();
 const pending = new Map<string, Set<(screen: Screen) => void>>();
@@ -12,15 +12,15 @@ const pending = new Map<string, Set<(screen: Screen) => void>>();
 function read(terminal: Terminal): Screen {
   const buffer = terminal.buffer.active, rows: string[] = [];
   for (let index = 0; index < terminal.rows; index++) rows.push(buffer.getLine(buffer.viewportY + index)?.translateToString(true) ?? '');
-  return { rows, cursorRow: buffer.cursorY };
+  return { rows };
 }
 
 export function registerScreen(id: string, terminal: Terminal) {
   const listeners = pending.get(id) ?? new Set(); pending.delete(id);
   const entry: Entry = { terminal, listeners, timer: 0, dispose: () => {} };
   const notify = () => {
-    if (entry.timer) return;
-    entry.timer = window.setTimeout(() => { entry.timer = 0; const screen = read(terminal); entry.listeners.forEach(listener => listener(screen)); }, 100);
+    if (entry.timer || !entry.listeners.size) return;
+    entry.timer = window.setTimeout(() => { entry.timer = 0; if (!entry.listeners.size) return; const screen = read(terminal); entry.listeners.forEach(listener => listener(screen)); }, 100);
   };
   const written = terminal.onWriteParsed(notify), resized = terminal.onResize(notify);
   entry.dispose = () => { written.dispose(); resized.dispose(); clearTimeout(entry.timer); };

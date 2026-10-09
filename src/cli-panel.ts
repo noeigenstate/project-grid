@@ -16,9 +16,10 @@ const withoutBanner = (agent: ScreenAgent, rows: string[]) => {
 };
 const trimRows = (rows: string[]) => {
   const result = rows.map(row => row.replace(/\r$/, ''));
-  while (result.length && !result[0].trim()) result.shift();
-  while (result.length && !result.at(-1)!.trim()) result.pop();
-  return result;
+  let first = 0, end = result.length;
+  while (first < end && !result[first].trim()) first++;
+  while (end > first && !result[end - 1].trim()) end--;
+  return result.slice(first, end);
 };
 const prompt = (agent: ScreenAgent, row: string) => {
   const match = (agent === 'claude' ? /^\s*❯(?:\s+(.*))?$/ : /^\s*›(?:\s+(.*))?$/).exec(row.replace(/\r$/, ''));
@@ -28,7 +29,7 @@ const prompt = (agent: ScreenAgent, row: string) => {
 
 // A historical prompt is not an input area. Claude needs both surrounding rules;
 // Codex needs the footer that parseAgentScreen found below its last composer.
-export function cliInputArea(agent: ScreenAgent, rows: string[], screen: AgentScreen) {
+function cliInputArea(agent: ScreenAgent, rows: string[], screen: AgentScreen) {
   const status = screen.status;
   const hasFooter = !!(status.model || status.mode || status.context || status.effort || status.notes.length);
   for (let index = rows.length - 1; index >= 0; index--) {

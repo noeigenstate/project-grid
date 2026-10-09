@@ -10,7 +10,7 @@
 .titlebar .workspace-summary { font-size: 12px; margin-left: 14px; }
 .titlebar-tools { gap: 6px; margin-right: 8px; }
 .titlebar-tools .search-input, .titlebar-tools .button { height: 26px; }
-.titlebar-tools > .icon-button, .titlebar-tools > .search-toggle { width: 26px; height: 26px; }
+.titlebar-tools > .icon-button { width: 26px; height: 26px; }
 .window-actions .icon-button { width: 42px; transition: background .16s ease, color .16s ease; }
 
 /* Scrollbars float as soft translucent pills. */

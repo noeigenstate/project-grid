@@ -97,4 +97,4 @@ function repairShortcuts({ shell, executable, iconSource, userData, programs, co
   return { icon, changes, warnings };
 }
 
-module.exports = { APP_ID, APP_NAME, windowsAppId, materializeIcon, repairShortcuts, refreshSearchIcons };
+module.exports = { APP_ID, windowsAppId, materializeIcon, repairShortcuts, refreshSearchIcons };

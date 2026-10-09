@@ -7,9 +7,9 @@ import { t } from './i18n';
 // The editor is a plain textarea that never wraps, so every text line is one row of fixed height. The gutter
 // (line numbers and Git change bars) and the conflict layer are drawn beside and behind it from the
 // textarea's own scroll position, so they stay level with the text; only rows in view are drawn.
-export type EditorView = { top: number; height: number; line: number; padding: number; caret: number };
+type EditorView = { top: number; height: number; line: number; padding: number; caret: number };
 
-export function useEditorView(editor: RefObject<HTMLTextAreaElement | null>): EditorView {
+function useEditorView(editor: RefObject<HTMLTextAreaElement | null>): EditorView {
   const [view, setView] = useState({ top: 0, height: 0, line: 24, padding: 0 });
   const [caret, setCaret] = useState(0);
   useEffect(() => {
@@ -30,7 +30,7 @@ const visibleRows = (view: EditorView, count: number) => {
   return { first, last: Math.min(count, first + Math.ceil(view.height / view.line) + 4) };
 };
 
-export function EditorGutter({ view, text, diff }: { view: EditorView; text: string; diff: GitDiff | null }) {
+function EditorGutter({ view, text, diff }: { view: EditorView; text: string; diff: GitDiff | null }) {
   const count = useMemo(() => { let lines = 1; for (let index = text.indexOf('\n'); index !== -1; index = text.indexOf('\n', index + 1)) lines++; return lines; }, [text]);
   const marks = useMemo(() => lineMarks(diff, count), [diff, count]);
   const { first, last } = visibleRows(view, count);
@@ -52,7 +52,7 @@ export function CodeEditor({ editor, text, diff, onResolve, children }: { editor
   </div>;
 }
 
-export function ConflictLayer({ view, conflicts, onResolve }: { view: EditorView; conflicts: Conflict[]; onResolve: (conflict: Conflict, choice: 'current' | 'incoming' | 'both') => void }) {
+function ConflictLayer({ view, conflicts, onResolve }: { view: EditorView; conflicts: Conflict[]; onResolve: (conflict: Conflict, choice: 'current' | 'incoming' | 'both') => void }) {
   const top = (line: number) => view.padding + line * view.line - view.top;
   const shown = conflicts.filter(conflict => top(conflict.end + 1) > -view.line && top(conflict.start) < view.height + view.line);
   const band = (from: number, to: number, className: string) => <i className={className} style={{ top: top(from), height: Math.max(0, to - from) * view.line }} />;

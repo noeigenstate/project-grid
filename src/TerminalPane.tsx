@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
+import { fitTerminal } from './terminal-fit';
 import type { TerminalPacket } from './types';
 import { createTerminalLinkProvider } from './terminal-links';
 import { styleTerminal } from './terminal-styling';
@@ -19,7 +19,6 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
 }) {
   const host = useRef<HTMLDivElement>(null);
   const term = useRef<Terminal | null>(null);
-  const fit = useRef<FitAddon | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; selection: string } | null>(null);
   const gpu = useRef<ReturnType<typeof gpuRenderer> | null>(null);
   const renderer = useTerminalRenderer();
@@ -81,8 +80,6 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       linkHandler: { activate: activateLink, hover: hoverLink, leave: leaveLink, allowNonHttpProtocols: true },
       theme: terminalTheme(document.documentElement.dataset.theme),
     });
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
     terminal.open(host.current);
     gpu.current = gpuRenderer(terminal); gpu.current.set(terminalRenderer() === 'gpu');
     // node-pty uses its bundled modern ConPTY, including on Windows 10.
@@ -94,7 +91,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       terminal.options.theme = terminalTheme(document.documentElement.dataset.theme);
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    term.current = terminal; fit.current = fitAddon;
+    term.current = terminal;
     const unregister = registerScreen(id, terminal);
     let disposed = false;
     let ready = false;
@@ -113,7 +110,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
     // and double output when the terminal is mounted during an active stream.
     window.projectGrid.attachTerminal(id).then(result => {
       if (disposed) return;
-      if (!result.ok) { report.current(result.error); return; }
+      if (!result.ok) { queued = []; unsubscribe(); report.current(result.error); return; }
       if (result.value.sessionId === sessionId) {
         terminal.write(result.value.data);
         lastSeq = result.value.seq;
@@ -121,7 +118,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       ready = true;
       for (const packet of queued) apply(packet);
       queued = [];
-    }).catch(error => report.current(String(error)));
+    }).catch(error => { if (!disposed) { queued = []; unsubscribe(); report.current(String(error)); } });
     const input = terminal.onData(data => window.projectGrid.writeTerminal(id, data));
     const offPaste = window.projectGrid.onTerminalPaste(packet => { if (!disposed && packet.id === id && packet.sessionId === sessionId) terminal.paste(packet.text); });
     const selection = terminal.onSelectionChange(() => { if (host.current) host.current.dataset.hasSelection = String(terminal.hasSelection()); });
@@ -162,7 +159,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
     terminal.textarea?.addEventListener('blur', focusOut);
     const resize = () => {
       if (!disposed && host.current && host.current.clientWidth > 20 && host.current.clientHeight > 20) {
-        try { fitAddon.fit(); } catch { /* A hidden panel will be fitted when shown. */ }
+        try { fitTerminal(terminal); } catch { /* A hidden panel will be fitted when shown. */ }
       }
     };
     // Transitions change the size every frame. xterm and ConPTY each reflow long lines on resize, and
@@ -181,7 +178,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       unsubscribe(); offPaste(); input.dispose(); selection.dispose(); resized.dispose(); links.dispose(); styling.dispose(); themeObserver.disconnect(); observer.disconnect(); cancelAnimationFrame(frame); clearTimeout(settle);
       terminal.textarea?.removeEventListener('focus', focusIn); terminal.textarea?.removeEventListener('blur', focusOut); focusOut();
       gpu.current?.dispose(); gpu.current = null; unregister();
-      terminal.dispose(); term.current = null; fit.current = null;
+      terminal.dispose(); term.current = null;
     };
   }, [id, sessionId]);
 
@@ -191,12 +188,12 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
   useEffect(() => {
     if (term.current) {
       term.current.options.fontSize = fontSize;
-      if (host.current?.clientWidth) fit.current?.fit();
+      if (host.current?.clientWidth && term.current) fitTerminal(term.current);
     }
   }, [fontSize]);
   useEffect(() => {
     if (focused && sessionId) {
-      const frame = requestAnimationFrame(() => { fit.current?.fit(); term.current?.focus(); });
+      const frame = requestAnimationFrame(() => { if (term.current) { fitTerminal(term.current); term.current.focus(); } });
       return () => cancelAnimationFrame(frame);
     }
   }, [focused, sessionId]);

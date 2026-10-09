@@ -20,7 +20,7 @@ function optionStart(rows: string[], head: number, end: number, cursor: string):
   return -1;
 }
 const question = (agent: ScreenAgent, fields: Partial<ScreenQuestion>): ScreenQuestion =>
-  ({ agent, tabs: [], position: null, multi: false, submit: null, notes: null, review: null, last: false, ...fields });
+  ({ agent, tabs: [], position: null, multi: false, submit: null, notes: null, review: null, ...fields });
 
 // Claude Code's AskUserQuestion: a tab row ("←  ☐ 回收站  ☒ 清理目录  ✔ Submit  →", or just "☐ 回收站"), the question,
 // numbered options with their description on the next row, "Type something." for an own answer (it becomes the
@@ -125,7 +125,7 @@ function codexQuestion(rows: string[]): ScreenChoice | null {
   if (!hint || !title.length || !options.length) return null;
   return {
     kind: 'question', title: title.join(' '), context: [], options: options.map(finish), hint,
-    question: question('codex', { position: { index: Number(position[1]), count: Number(position[2]) }, notes: notes ?? { open: false, text: '' }, last: /submit all/i.test(hint) }),
+    question: question('codex', { position: { index: Number(position[1]), count: Number(position[2]) }, notes: notes ?? { open: false, text: '' } }),
   };
 }
 

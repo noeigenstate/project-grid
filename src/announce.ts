@@ -20,7 +20,7 @@ export function announcementVoice(language: Settings['language']) {
 }
 
 // summary: a sentence about what the round achieved, written by the agent's own CLI; it is spoken as it is.
-export function announcementText(name: string, task: string, settings: Pick<Settings, 'announcePhrase' | 'language'>, summary = '') {
+function announcementText(name: string, task: string, settings: Pick<Settings, 'announcePhrase' | 'language'>, summary = '') {
   if (summary) return settings.language === 'en' ? `${name}: ${summary}` : `${name}，${summary}`;
   const template = settings.announcePhrase || phrases[settings.language][task ? 'task' : 'plain'];
   return template.replace(/\{(项目|project)\}/gi, name).replace(/\{(任务|task)\}/gi, task).replace(/[，,]\s*[，,]/g, '，');

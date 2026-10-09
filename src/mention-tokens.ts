@@ -1,6 +1,6 @@
 import type { MentionFile } from './types';
 
-export type MentionToken = { start: number; end: number; query: string };
+type MentionToken = { start: number; end: number; query: string };
 
 export function mentionToken(draft: string, caret: number, selectionEnd = caret): MentionToken | null {
   if (caret !== selectionEnd || caret < 0 || caret > draft.length) return null;

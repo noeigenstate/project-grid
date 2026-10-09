@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 if (process.platform !== 'win32') {
@@ -73,7 +73,7 @@ async function runScenario(label, delay) {
   }
   await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({
     version: 2, projects,
-    settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, closeToTray: false, restoreSessions: true, columns: 4 },
+    settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, closeToTray: false, restoreSessions: true },
   }));
   const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_RESTORE: '1', CODEX_HOME: codexHome };
   const originalPath = Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1] || '';

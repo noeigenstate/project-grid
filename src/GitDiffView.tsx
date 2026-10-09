@@ -3,7 +3,7 @@ import { ArrowClockwise, ArrowCounterClockwise, Check, GitDiff as GitDiffIcon, P
 import type { GitDiff, GitHunk } from './types';
 import { t } from './i18n';
 
-export type GitDiffMode = 'worktree' | 'staged' | 'untracked';
+type GitDiffMode = 'worktree' | 'staged' | 'untracked';
 
 // One changed file from the Git sidebar, shown as git shows it: the lines that went away in red, the lines
 // that came in green, numbered on both sides. Each hunk is decided on its own: kept (staged, so it leaves the

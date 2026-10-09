@@ -24,7 +24,7 @@ import { useStickToBottom } from './useStickToBottom';
 import { conversationKey, useReadingConversation } from './useReadingConversation';
 import { blocks, useVisibleTail } from './useVisibleTail';
 import './reading.css';
-import { t } from './i18n';
+import { currentLanguage, t } from './i18n';
 import { useMentions } from './useMentions';
 import { MentionPalette } from './MentionPalette';
 import { isTypedCommand } from './pending-prompts';
@@ -60,7 +60,8 @@ function render(text: string) {
 }
 
 function Markdown({ text }: { text: string }) {
-  const html = useMemo(() => { try { return render(text); } catch { return null; } }, [text]);
+  const language = currentLanguage();
+  const html = useMemo(() => { try { return render(text); } catch { return null; } }, [text, language]);
   if (html === null) return <p className="reading-plain">{text}</p>;
   return <div className="reading-markdown" dangerouslySetInnerHTML={{ __html: html }} />;
 }
@@ -106,7 +107,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const [draft, setDraft] = useState('');
   const [commands, setCommands] = useState<AgentCommand[]>([]), [requested, setRequested] = useState(false);
   const [dismissed, setDismissed] = useState(false), [selection, setSelection] = useState(0);
-  const commandLoad = useRef<Promise<AgentCommand[]> | null>(null), historyAt = useRef<number | null>(null), unsent = useRef(''), caret = useRef<number | null>(null);
+  const historyAt = useRef<number | null>(null), unsent = useRef(''), caret = useRef<number | null>(null), sending = useRef(false);
   // Images pasted for the next message. The agent holds them itself; this only counts them.
   const [images, setImages] = useState(0);
   const scroller = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null);
@@ -139,14 +140,12 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     };
   }, [terminal.id]);
   useEffect(() => {
-    setCommands([]); commandLoad.current = null;
+    setCommands([]);
     if (!requested) return;
     let active = true;
-    commandLoad.current = window.projectGrid.terminalCommands(terminal.id).then(result => {
-      const next = result.ok ? result.value : [];
-      if (active) { setCommands(next); if (!result.ok) onError(result.error); }
-      return next;
-    });
+    void window.projectGrid.terminalCommands(terminal.id).then(result => {
+      if (active) { setCommands(result.ok ? result.value : []); if (!result.ok) onError(result.error); }
+    }).catch(error => { if (active) onError(String(error)); });
     return () => { active = false; };
   }, [terminal.id, terminal.agent, requested]);
   const matches = useMemo(() => {
@@ -175,8 +174,14 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const agent = terminal.agent === 'claude' ? 'Claude Code' : 'Codex';
   const grouped = useMemo(() => blocks(cli.entries), [cli.entries]);
   const tail = useVisibleTail(grouped, conversation, scroller, stuck, holdPosition);
-  // The CLI recognises slash commands and shell mode from typed keys, not bracketed paste.
+  // One message at a time: a second Enter while the first is still being pasted waits for nothing and sends nothing.
   const send = async (text = draft.trim()) => {
+    if (sending.current) return;
+    sending.current = true;
+    try { await deliver(text); } catch (error) { if (mounted.current) onError(String(error)); } finally { sending.current = false; }
+  };
+  // The CLI recognises slash commands and shell mode from typed keys, not bracketed paste.
+  const deliver = async (text: string) => {
     if (inputBlocked || (!text && !images) || !terminal.sessionId) return;
     if (usesSessionPicker(terminal, text)) { choiceVisible.current = true; restoreComposer.current = document.activeElement === input.current; edit(''); setSessionsOpen(true); return; }
     const typed = isTypedCommand(text), sessionId = terminal.sessionId;
@@ -253,7 +258,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
         return;
       }
     }
-    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); }
+    if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); }
   };
   let body: ReactNode;
   if (!cli.entries.length && !pending.length) body = <ReadingWelcome agent={terminal.agent === 'claude' ? 'claude' : 'codex'} screen={screen} commands={commands} complete={complete} disabled={inputBlocked} starting={welcomeIsStarting} />;

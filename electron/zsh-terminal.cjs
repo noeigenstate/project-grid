@@ -99,4 +99,4 @@ function mergePath(login, current) {
   return [...new Set(folders)].join(':');
 }
 
-module.exports = { ZSH, findShell, linuxShell, prepareZshStartup, shellEnvironment, zshEnvironment, bashArguments, withoutAppImage, terminalLocale, loginShellPath, mergePath, shellQuote };
+module.exports = { ZSH, findShell, linuxShell, prepareZshStartup, shellEnvironment, zshEnvironment, bashArguments, withoutAppImage, terminalLocale, loginShellPath, mergePath };

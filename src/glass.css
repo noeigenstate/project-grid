@@ -274,7 +274,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 .terminal-context-menu { position: fixed; z-index: 120; width: 218px; padding: 6px; }
 .terminal-context-menu button { display: flex; justify-content: space-between; align-items: center; gap: 10px; }.terminal-context-menu button > span { color: #a9bfd4; font-size: 11px; }.terminal-context-menu button:disabled { cursor: default; }
 .settings-dialog::backdrop { background: #07111f59; backdrop-filter: blur(8px) saturate(115%); }
-.settings-intro, .setting-row small, .settings-note { color: #a4b6ce; }.setting-row { border-color: #dcedff19; }.setting-row svg { color: #b1c4dc; }
+.setting-row small, .settings-note { color: #a4b6ce; }.setting-row { border-color: #dcedff19; }.setting-row svg { color: #b1c4dc; }
 .setting-row select { background: #1b2c41; color: #dfebf9; border-color: #e4f1ff32; border-radius: 7px; }
 .setting-row input[type="checkbox"] { appearance: none; width: 38px; height: 23px; flex: 0 0 38px; position: relative; border: 1px solid #e0f1ff40; border-radius: 999px; background: #081e337a; box-shadow: inset 0 1px 3px #030c1930, 0 1px 0 #ffffff10; cursor: pointer; transition: background .18s ease, border-color .18s ease; }
 .setting-row input[type="checkbox"]::before { content: ''; position: absolute; left: 2px; top: 2px; width: 17px; height: 17px; border-radius: 50%; background: linear-gradient(160deg, #ffffff, #c9dce9); box-shadow: 0 1px 4px #07121e55, inset 0 1px 0 #ffffff; transition: transform .2s cubic-bezier(.2,.8,.2,1); }
@@ -440,7 +440,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 .icon-button, .panel-header .icon-button, .window-actions .icon-button, .text-button, .terminal-tab { color: #f4f9ff; }
 .panel-name small, .panel-meta, .status-badge, .workspace-summary, .session-label,
 .eyebrow, .tree-placeholder, .file-preview-toolbar,
-.file-preview-footer, .preview-readonly, .line-numbers, .zoom-label, .settings-intro, .setting-row small,
+.file-preview-footer, .preview-readonly, .line-numbers, .zoom-label, .setting-row small,
 .settings-note, .empty-workspace p, .empty-hints, .no-results, .terminal-empty > span, kbd { color: #e7f1fa; }
 .search-input input::placeholder { color: #e7f1fa; }
 .terminal-empty p, .no-results h2, .empty-workspace h2, .file-preview-message, .preview-option { color: #f6fbff; }
@@ -468,7 +468,6 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 @media (prefers-reduced-motion: reduce) { :root[data-motion="system"] :is(*, *::before, *::after) { animation: none !important; transition: none !important; } }
 
 .panel-header .voice-button { width: 24px; height: 27px; }
-.titlebar-tools > .search-toggle { width: 28px; height: 28px; }
 
 /* What the agent is doing: in an expanded project, a pane beside the terminal lists the steps of the
    round; the terminal gives it room and refits. */
@@ -488,8 +487,6 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 .activity-item.is-failed .activity-step { color: #ffc9c5; }
 .activity-step em { margin-left: 4px; color: #ffb1ac; font-style: normal; }
 .activity-item.is-running { background: rgba(255, 255, 255, .06); }
-.activity-icon { padding-top: 2px; color: #9fb5ce; }.activity-edit .activity-icon { color: #ffcf8f; }.activity-skill .activity-icon { color: #d0b6f7; }.activity-mcp .activity-icon { color: #a2e1e7; }
-.activity-title { display: flex; align-items: baseline; gap: 8px; font-size: 11px; }.activity-title time { color: #8ea6c1; font-size: 11px; }.activity-title em { color: #ffb1ac; font-style: normal; font-size: 11px; }
 .activity-item code { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 11px/1.6 var(--font-mono); color: #e7f1fa; }
 .activity-item p { margin: 1px 0 0; font-size: 11px; line-height: 1.5; color: #a9bfd6; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .activity-item.is-failed code { color: #ffc9c5; }

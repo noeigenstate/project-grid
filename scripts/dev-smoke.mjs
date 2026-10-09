@@ -1,6 +1,6 @@
 import { testRun } from './test-output.mjs';
 import { createServer } from 'vite';
-import { _electron } from 'playwright';
+import { _electron } from 'playwright-core';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs/promises';

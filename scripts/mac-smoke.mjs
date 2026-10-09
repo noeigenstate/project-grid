@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 const require = createRequire(import.meta.url);
@@ -27,7 +27,7 @@ eval "command=($(print -r -- \${notify:1:-1} | sed 's/,/ /g'))"
 "\${command[@]}" '{"type":"agent-turn-complete","thread-id":"thread","turn-id":"turn"}'
 print -r -- "STAND_IN_CODEX_DONE"
 `, { mode: 0o755 });
-await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 1, projects: [project], settings: { terminalRenderer: 'dom', autoSave: false, columns: 1, notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false } }));
+await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 1, projects: [project], settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false } }));
 
 const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, HOME: home, SHELL: '/bin/zsh' };
 for (const name of ['ELECTRON_RUN_AS_NODE', 'PROJECT_GRID_DEV_URL', 'ZDOTDIR', 'CODEX_HOME']) delete env[name];

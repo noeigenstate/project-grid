@@ -57,4 +57,4 @@ function claudeResumeCommand(restore) {
   return `claude --resume ${restore.threadId}${restore.interrupted ? ' "继续"' : ''}\r`;
 }
 
-module.exports = { recentSession, advanceTaskState, resumeCommand, claudeResumeCommand, records, sameDirectory, interactiveSession };
+module.exports = { recentSession, resumeCommand, claudeResumeCommand, records, interactiveSession };

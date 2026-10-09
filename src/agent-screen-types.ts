@@ -46,7 +46,6 @@ export type ScreenQuestion = {
   submit: { selected: boolean } | null; // Claude's "Submit" row under multi-select options
   notes: { open: boolean; text: string } | null; // Codex's notes on the highlighted option (Tab); null for Claude
   review: { question: string; answer: string }[] | null; // Claude's last page: "Review your answers"
-  last: boolean;                        // Codex: Enter submits every answer
 };
 export type ScreenChoice = {
   kind: 'permission' | 'menu' | 'question';

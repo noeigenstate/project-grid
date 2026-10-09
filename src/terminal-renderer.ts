@@ -6,7 +6,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 // redraws its screen ten times a second, and with the DOM renderer every redraw is rows of HTML to lay out
 // again, which on a slow processor took most of the window's time. "dom" is the compatible renderer, for a
 // graphics driver that draws the GPU one wrongly.
-export type TerminalRenderer = 'gpu' | 'dom';
+type TerminalRenderer = 'gpu' | 'dom';
 let current: TerminalRenderer = 'gpu';
 const listeners = new Set<() => void>();
 export function setTerminalRenderer(value: TerminalRenderer) { if (value === current) return; current = value; listeners.forEach(listener => listener()); }
@@ -17,7 +17,7 @@ export const terminalRenderer = () => current;
 // Chromium keeps at most 16 WebGL contexts in a window and drops the oldest beyond that. Twelve terminals draw
 // on the GPU; any more draw with the DOM renderer, so no visible terminal loses its context to another.
 const GPU_LIMIT = 12;
-export const GPU_TEXT_WEIGHT = 350;
+const GPU_TEXT_WEIGHT = 350;
 let active = 0;
 
 // The GPU renderer draws a background rectangle for each run of cells whose background field is not zero. Dim,

@@ -8,7 +8,7 @@ import { isMac, isLinux } from './platform';
 // One shared dictation controller: a single microphone, one recording at a time,
 // and every terminal's microphone button reflecting the same device and model state.
 // label names the terminal being dictated to; sending marks a recognition that will press Enter.
-export type VoiceSnapshot = { microphone: boolean | null; model: VoiceState | null; recording: string | null; busy: string | null; level: number; label: string | null; sending: boolean };
+type VoiceSnapshot = { microphone: boolean | null; model: VoiceState | null; recording: string | null; busy: string | null; level: number; label: string | null; sending: boolean };
 let snapshot: VoiceSnapshot = { microphone: null, model: null, recording: null, busy: null, level: 0, label: null, sending: false };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<VoiceSnapshot>) => { snapshot = { ...snapshot, ...patch }; listeners.forEach(listener => listener()); };
@@ -58,7 +58,7 @@ function start() {
 function subscribe(listener: () => void) { start(); listeners.add(listener); return () => { listeners.delete(listener); }; }
 export function useVoice() { return useSyncExternalStore(subscribe, () => snapshot); }
 
-export function microphoneMessage(error: unknown) {
+function microphoneMessage(error: unknown) {
   const name = (error as DOMException)?.name;
   if (name === 'NotAllowedError') return isMac ? t('麦克风访问被拒绝，请在“系统设置 › 隐私与安全性 › 麦克风”中允许 Project Grid。') : isLinux ? t('麦克风访问被拒绝，请在系统的隐私或声音设置中允许 Project Grid 使用麦克风。') : t('麦克风访问被拒绝，请在 Windows 设置中允许桌面应用使用麦克风。');
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return t('未检测到麦克风，请连接后重试。');
@@ -76,7 +76,7 @@ function focusTerminal(id: string) {
   document.querySelector<HTMLTextAreaElement>(`[data-terminal-id="${CSS.escape(id)}"] .xterm-helper-textarea`)?.focus();
 }
 
-export async function cancelDictation() {
+async function cancelDictation() {
   target = null; await capture.close(); set({ recording: null, level: 0, label: null });
 }
 

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -18,7 +18,7 @@ const doneFile = path.join(projects[0].path, 'task.done');
 for (const directory of [profile, path.join(home, 'sessions'), ...projects.map(project => project.path)]) await fs.mkdir(directory, { recursive: true });
 await fs.writeFile(path.join(projects[0].path, 'README.md'), '# 清晰的工作区\n\n保留文字、代码和状态的层次。\n');
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
-await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { terminalRenderer: 'dom', columns: 3, notifications: false, sound: false, closeToTray: false, restoreSessions: false, fontSize: 14 } }));
+await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { terminalRenderer: 'dom', notifications: false, sound: false, closeToTray: false, restoreSessions: false, fontSize: 14 } }));
 const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
 const packaged = process.argv.includes('--packaged');
 // --daylight-only: run the Daylight checks (material, working glow, body contrast) and stop before the other themes.

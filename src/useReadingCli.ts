@@ -9,6 +9,13 @@ type Snapshot = { pending: CliCommand | null; panel: { command: string; rows: st
 type Session = { terminalId: string; snapshot: Snapshot; listeners: Set<() => void>; stop: (() => void) | null };
 // Renderer-only state survives switching views; each PTY session owns its results.
 const sessions = new Map<string, Session>();
+const CLI_RESULT_LIMIT = 100;
+export function pruneReadingCli(liveKeys: ReadonlySet<string>) {
+  for (const [key, session] of sessions) {
+    if (liveKeys.has(key)) continue;
+    session.stop?.(); sessions.delete(key);
+  }
+}
 let sequence = 0;
 function sessionFor(id: string, sessionId: string | null) {
   const key = JSON.stringify([id, sessionId]);
@@ -31,11 +38,12 @@ function begin(session: Session, terminalId: string, agent: ScreenAgent, command
   const update = (observation: boolean) => {
     const current = session.snapshot.pending;
     if (!current || !latest) return;
+    if (!observation && (current.idleSince === null || Date.now() - current.idleSince < 400)) return;
     const screen = parseAgentScreen(agent, latest.rows);
     const next = advanceCliCommand(current, agent, latest.rows, screen, Date.now(), observation);
     if (next.done) {
       session.stop?.(); session.stop = null;
-      const results = next.command.output.length ? [...session.snapshot.results, { ...next.command, rows: next.command.output }] : session.snapshot.results;
+      const results = next.command.output.length ? [...session.snapshot.results, { ...next.command, rows: next.command.output }].slice(-CLI_RESULT_LIMIT) : session.snapshot.results;
       publish(session, { pending: null, panel: null, results });
     } else if (observation || next.command.idleSince !== current.idleSince) {
       const panel = screen.choice ? null : isCliIdle(agent, latest.rows, screen)

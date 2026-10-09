@@ -34,7 +34,7 @@ function loadUI(name, overrides = {}) {
   mod.require = name => {
     if (Object.hasOwn(overrides, name)) return overrides[name];
     if (name === '@phosphor-icons/react') return { CircleNotch: props => React.createElement('svg', { className: props.className }) };
-    if (name === './i18n') return { t: (text, values = {}) => (en[text] ?? text).replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match) };
+    if (name === './i18n') return { currentLanguage: () => 'en', t: (text, values = {}) => (en[text] ?? text).replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match) };
     if (name === './choice-keys') return require('../src/choice-keys.ts');
     if (name === './reading-sessions') return require('../src/reading-sessions.ts');
     return originalRequire(name);
@@ -382,7 +382,7 @@ test('reading entry rendering parses only the last 40 blocks and leaves the welc
     './ReadingCliPanel': { ReadingCliPanel: () => null }, './ReadingCommandOutput': { ReadingCommandOutput: () => null },
     './cli-panel': require('../src/cli-panel.ts'),
     './useReadingCli': { useReadingCli: (id, session, agent, list) => ({ entries: list, busy: false, panel: null, begin() {} }) },
-    './i18n': { t: (text, values) => (en[text] ?? text).replace(/\{(\w+)\}/g, (_, name) => String(values?.[name] ?? name)) },
+    './i18n': { currentLanguage: () => 'en', t: (text, values) => (en[text] ?? text).replace(/\{(\w+)\}/g, (_, name) => String(values?.[name] ?? name)) },
   });
   const render = () => renderToStaticMarkup(React.createElement(ReadingView, {
     projectId: 'project', terminal: { id: 'terminal', sessionId: 'session', agent: 'codex', codexActive: true, needsInput: null },

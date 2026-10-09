@@ -117,7 +117,6 @@ kbd { font: 600 11px 'Segoe UI', sans-serif; border: 1px solid #303743; border-r
 .settings-dialog::backdrop { background: #080b12a8; }
 .dialog-content { padding: 26px; }
 .dialog-heading { display: flex; align-items: center; justify-content: space-between; }.dialog-heading h2 { font-size: 21px; font-weight: 700; margin: 8px 0 0; }
-.settings-intro { color: #8593a6; font-size: 12px; margin: 12px 0 19px; }
 .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #2d3643; gap: 15px; }
 .setting-row > span { display: flex; align-items: center; gap: 12px; }.setting-row svg { color: #8495ab; }
 .setting-row b { display: block; font-weight: 600; font-size: 12px; }.setting-row small { display: block; margin-top: 5px; color: #7d8da3; font-size: 11px; }

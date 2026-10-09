@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 const require = createRequire(import.meta.url);

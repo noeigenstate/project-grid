@@ -20,7 +20,7 @@ function cleanHistory(input) {
 // Claude turn was left unfinished. Only non-default values are stored.
 const agentFields = restore => ({ ...(restore?.agent === 'claude' ? { agent: 'claude' } : {}), ...(restore?.interrupted === true ? { interrupted: true } : {}) });
 
-const defaults = { columns: 0, surface: 'glass', terminalRenderer: 'gpu', autoSave: true, activityPane: true, notifications: true, sound: true, announce: true, announcePhrase: '', language: 'zh', shortcuts: {}, guideVersion: '', shell: 'powershell', closeToTray: true, explorerCollapsed: false, fontSize: 12, restoreSessions: true, focusAnimation: 'smooth', theme: 'daylight', voiceModel: DEFAULT_VOICE_MODEL };
+const defaults = { surface: 'glass', terminalRenderer: 'gpu', autoSave: true, activityPane: true, notifications: true, sound: true, announce: true, announcePhrase: '', language: 'zh', shortcuts: {}, guideVersion: '', shell: 'powershell', closeToTray: true, explorerCollapsed: false, fontSize: 12, restoreSessions: true, focusAnimation: 'smooth', theme: 'daylight', voiceModel: DEFAULT_VOICE_MODEL };
 
 // Keyboard shortcuts the user changed, by action; defaults live in the window (src/shortcuts.ts).
 // "Ctrl+Shift+F": Ctrl, Alt and Shift in that order, then one letter, digit, F-key or punctuation key.
@@ -45,7 +45,6 @@ function cleanSummarySettings(input) {
 
 function cleanSettings(input = {}) {
   return {
-    columns: [0, 1, 2, 3, 4].includes(input.columns) ? input.columns : defaults.columns,
     fontSize: Number.isInteger(input.fontSize) && input.fontSize >= 10 && input.fontSize <= 20 ? input.fontSize : defaults.fontSize,
     focusAnimation: ['smooth', 'system', 'off'].includes(input.focusAnimation) ? input.focusAnimation : defaults.focusAnimation,
     theme: ['daylight', 'forest', 'mountain-blue', 'wild-red'].includes(input.theme) ? input.theme : defaults.theme,

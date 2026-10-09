@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
-import { _electron as electron } from 'playwright';
+import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 
 const require = createRequire(import.meta.url);
@@ -44,7 +44,7 @@ for (const [index, name] of ['Claude 中断', 'Claude 已完成'].entries()) {
   claudeProjects.push({ id: randomUUID(), name, path: directory, kind: 'local', seenEvents: [], restore: { terminal: true, codex: true, cwd: directory, agent: 'claude', threadId: sessionId, ...(index === 0 ? { interrupted: true } : {}) }, sessionId });
 }
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
-await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects: [...projects, ...claudeProjects], settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, closeToTray: false, restoreSessions: true, columns: 2 } }));
+await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects: [...projects, ...claudeProjects], settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, closeToTray: false, restoreSessions: true } }));
 const fixture = await createSSHFixture({ password: true, unknownHost: true, nativeWorker: false });
 await fs.writeFile(path.join(fixture.project, 'README.md'), 'REMOTE_TEXT_PREVIEW 中文');
 await fs.copyFile(path.join(root, 'assets/icon.png'), path.join(fixture.project, '图片.png'));

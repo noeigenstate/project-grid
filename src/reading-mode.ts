@@ -10,7 +10,7 @@ let snapshot: string[] = [];
 const inputSeen = new Set<string>(), automatic = new Set<string>();
 const choices = new Set<string>();
 const handoffs = new Map<string, ReturnType<typeof setTimeout>>();
-export const READING_HANDOFF_DELAY = 1500;
+const READING_HANDOFF_DELAY = 1500;
 
 function cancelHandoff(id: string) {
   const timer = handoffs.get(id);

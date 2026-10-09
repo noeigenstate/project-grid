@@ -136,7 +136,7 @@ function parseChoice(agent: ScreenAgent, rows: string[]): ScreenChoice | null {
       else option.label += ' ' + row.trim();
     } else break;
   }
-  if (!options.length || end <= lastOption) return null;
+  if (end <= lastOption) return null;
 
   let hint: string | null = null;
   for (const row of rows.slice(end)) {
