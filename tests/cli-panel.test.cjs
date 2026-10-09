@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
-const { cliHistory, isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
+const { cliCloseKey, cliHistory, isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
 const fixture = name => fs.readFileSync(path.join(__dirname, 'fixtures/screens', name + '.txt'), 'utf8').split('\n');
 const inspect = (agent, rows) => parseAgentScreen(agent, rows);
 const footer = agent => agent === 'claude' ? ['  ⏺ Opus 5.5 · demo · ctx 4%   ● high · /effort', '  ⏸ manual mode on · ← for agents'] : ['  GPT-6.1-Sol high · C:\\work\\demo · 90% left', '? for shortcuts'];
@@ -304,4 +304,42 @@ test('Codex output taller than the screen is all the command\'s; a screen drawn 
   assert.deepEqual(extractCliOutputRows('codex', tall, inspect('codex', tall), '/status', before), ['│ Model: gpt-6.1-sol │', '│ Directory: C:\\work │', '╰────────────────────╯']);
   const cleared = ['>_ OpenAI Codex (v0.162.0)', '   ~\\work', '', ...input('codex')];
   assert.deepEqual(extractCliOutputRows('codex', cleared, inspect('codex', cleared), '/clear', before), []);
+});
+
+test('a Codex side conversation closes with Ctrl+C; a pager with q; an open dialog with Escape; the input with nothing', () => {
+  const side = ['› what is a side conversation', '', '• An answer.', '', ...input('codex')];
+  assert.equal(cliCloseKey('codex', side, inspect('codex', side), '/side'), '\x03');
+  const pager = ['/ D I F F', '+ added', '↑/↓ to scroll · pgup/pgdn to page · home/end to jump', 'q close'];
+  assert.equal(cliCloseKey('codex', pager, inspect('codex', pager), '/diff'), 'q');
+  const idle = ['• Done.', '', ...input('codex')];
+  assert.equal(cliCloseKey('codex', idle, inspect('codex', idle), '/pwd'), null);
+});
+
+test('a Codex command waits for output that comes a moment after its input returns, then for it to settle', () => {
+  const sent = ['• Earlier answer', '', ...input('codex', '/status')];
+  let command = { id: 'c', command: '/status', at: 0, anchor: null, observed: true, idleSince: null, output: [], dialog: [], before: cliHistory('codex', sent, inspect('codex', sent)) };
+  const step = (rows, now) => { const next = advanceCliCommand(command, 'codex', rows, inspect('codex', rows), now, true); command = next.command; return next.done; };
+  const quiet = ['• Earlier answer', '', ...input('codex')];
+  assert.equal(step(quiet, 100), false); assert.equal(step(quiet, 600), false, 'nothing printed yet: keep waiting');
+  const printed = ['• Earlier answer', '', '│ Model: gpt-6.1-sol │', '', ...input('codex')];
+  assert.equal(step(printed, 900), false, 'output just changed');
+  assert.equal(step(printed, 1350), true, 'output settled');
+  assert.deepEqual(command.output, ['│ Model: gpt-6.1-sol │']);
+  command = { ...command, output: [], idleSince: null };
+  assert.equal(step(quiet, 2000), false); assert.equal(step(quiet, 8100), true, 'a command that prints nothing ends after several seconds');
+});
+
+test('a Codex picker drawn under the input (/copy) fills the card and closes with Escape', () => {
+  const sent = ['• MAIN-1', '', ...input('codex', '/copy')];
+  const before = cliHistory('codex', sent, inspect('codex', sent));
+  const picker = ['› 只回复：MAIN-1', ...input('codex', 'Ask Codex to do anything'), '  Copy user message', '  ↑/↓/j/k select · g/G ends · enter copy · esc close'];
+  assert.deepEqual(extractCliPanelRows('codex', picker, inspect('codex', picker), '/copy', before), ['  Copy user message', '  ↑/↓/j/k select · g/G ends · enter copy · esc close']);
+  assert.equal(cliCloseKey('codex', picker, inspect('codex', picker), '/copy'), '\x1b');
+});
+
+test('the command line newer Codex prints above its output is not repeated in the result', () => {
+  const sent = ['• MAIN-1', '', ...input('codex', '/status')];
+  const before = cliHistory('codex', sent, inspect('codex', sent));
+  const printed = ['• MAIN-1', '', '/status', '', '  Model:   gpt-6.1-sol', '', ...input('codex')];
+  assert.deepEqual(extractCliOutputRows('codex', printed, inspect('codex', printed), '/status', before), ['  Model:   gpt-6.1-sol']);
 });

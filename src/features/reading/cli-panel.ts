@@ -60,7 +60,9 @@ export function cliInputDraft(agent: ScreenAgent, rows: string[], screen: AgentS
 // The agent waits at its own input: no question or popup, no working line, and its input box with the footer drawn.
 export function isAtPrompt(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
   if (screen.choice || screen.overlay !== 'none' || (agent === 'claude' && claudeWorking(rows))) return false;
-  return !!cliInputArea(agent, rows, screen)?.hasFooter;
+  const input = cliInputArea(agent, rows, screen);
+  // A Codex picker open under the input (/copy) is still waiting for a choice.
+  return !!input?.hasFooter && !(agent === 'codex' && codexPopupBelow(rows, input).length);
 }
 
 // A dialog (Claude's /usage, /status, /config) takes the input's place; its content is the command's result.
@@ -70,12 +72,18 @@ export function hasCliInput(agent: ScreenAgent, rows: string[], screen: AgentScr
 
 // A dialog of the CLI is open in place of its input, with no work under way: keys sent now would land in it.
 export function cliDialogOpen(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
-  return !cliInputArea(agent, rows, screen) && !(agent === 'claude' && claudeWorking(rows)) && rows.some(row => row.trim());
+  const input = cliInputArea(agent, rows, screen);
+  if (agent === 'codex' && input && codexPopupBelow(rows, input).length) return true;
+  return !input && !(agent === 'claude' && claudeWorking(rows)) && rows.some(row => row.trim());
 }
 
-// The key that closes what a command left open: q for a pager (Codex's /diff), Escape for a dialog, nothing when
-// the CLI is back at its input (Escape there would start editing the last message in Codex).
-export function cliCloseKey(agent: ScreenAgent, rows: string[], screen: AgentScreen): string | null {
+// Codex's /side opens a side conversation that only Ctrl+C leaves; Escape there tries to edit the last prompt.
+export const isSideConversation = (agent: ScreenAgent, command: string) => agent === 'codex' && /^\/side\b/.test(command.trim());
+
+// The key that closes what a command left open: Ctrl+C for a Codex side conversation, q for a pager (Codex's /diff),
+// Escape for a dialog, nothing when the CLI is back at its input (Escape there would start editing the last message).
+export function cliCloseKey(agent: ScreenAgent, rows: string[], screen: AgentScreen, command = ''): string | null {
+  if (isSideConversation(agent, command)) return '\x03';
   if (rows.some(row => /\bq close\b/i.test(row))) return 'q';
   return cliDialogOpen(agent, rows, screen) ? '\x1b' : null;
 }
@@ -83,6 +91,14 @@ export function cliCloseKey(agent: ScreenAgent, rows: string[], screen: AgentScr
 // At its prompt with nothing typed: a command the reading view sent has finished.
 export function isCliIdle(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
   return isAtPrompt(agent, rows, screen) && !cliInputDraft(agent, rows, screen);
+}
+
+// Codex draws some commands' pickers under its input and footer (/copy's "Copy user message", with its own key
+// hints): what is under the footer, other than the footer itself, is that picker.
+const codexFooterRow = (row: string) => /^\s*(?:GPT|gpt|o\d|codex)[^·]*\s+·\s+.+$/.test(row) || /^\s*(?:\? for shortcuts|⚠)/.test(row);
+function codexPopupBelow(rows: string[], input: { row: number }): string[] {
+  const below = rows.slice(input.row + 1).filter(row => row.trim() && !codexFooterRow(row));
+  return below.some(row => /\besc\b|\benter\b/i.test(row)) ? below : [];
 }
 
 // The conversation above the CLI's input, as it stood when a command was sent.
@@ -108,6 +124,9 @@ function anchored(last: string[], rows: string[], end: number): string[] | null 
   }
   return null;
 }
+
+// Newer Codex prints the command itself as the first line of its output; the conversation already shows it.
+const withoutEcho = (rows: string[] | null, command: string) => rows && rows[0]?.trim() === command.trim() ? trimRows(rows.slice(1)) : rows;
 
 function echoRow(agent: ScreenAgent, rows: string[], command: string, end: number) {
   for (let index = end - 1; index >= 0; index--) {
@@ -136,8 +155,12 @@ export function extractCliPanelRows(agent: ScreenAgent, rows: string[], screen: 
   }
   const echo = echoRow(agent, rows, command, input?.row ?? end);
   let start = echo + 1;
+  if (agent === 'codex' && input) {
+    const popup = codexPopupBelow(rows, input);
+    if (popup.length) return squeeze(popup);
+  }
   if (echo < 0 && agent === 'codex' && before) {
-    const since = rowsSince(before, rows, input?.start ?? end);
+    const since = withoutEcho(rowsSince(before, rows, input?.start ?? end), command);
     if (since) return squeeze(since);
     // A full-screen view (the /diff pager) replaced everything that was there: all of it is the command's.
     if (!input && rows.some(row => /\bq close\b|to scroll\b/i.test(row))) return squeeze(trimRows(rows.slice(0, end)));
@@ -169,7 +192,7 @@ export function extractCliOutputRows(agent: ScreenAgent, rows: string[], screen:
   if (!input) return [];
   const echo = echoRow(agent, rows, command, input.start);
   // Without the echo, using old conversation text would fabricate command output; Codex's is what came in since.
-  if (echo < 0) return agent === 'codex' && before ? rowsSince(before, rows, input.start) ?? [] : [];
+  if (echo < 0) return agent === 'codex' && before ? withoutEcho(rowsSince(before, rows, input.start), command) ?? [] : [];
   return trimRows(rows.slice(echo + 1, input.start));
 }
 
@@ -194,15 +217,21 @@ export function cliResultRows(command: CliCommand): string[] {
 
 // Stream observations start the idle clock; timer ticks only advance it. The
 // pre-submit snapshot must never complete a command before the CLI receives it.
+// Codex returns to its input at once and prints some results a while later (/status fetches the account's limits):
+// it is done once its output has stopped changing, and a command that printed nothing yet is given several seconds.
+const CODEX_PATIENCE = 8000;
 export function advanceCliCommand(command: CliCommand, agent: ScreenAgent, rows: string[], screen: AgentScreen, now: number, observation: boolean) {
   const next = { ...command, observed: command.observed || observation };
   const idle = isCliIdle(agent, rows, screen);
   if (!next.observed || !idle) next.idleSince = null;
   else {
-    next.idleSince ??= now;
-    next.output = extractCliOutputRows(agent, rows, screen, command.command, command.before);
+    const output = extractCliOutputRows(agent, rows, screen, command.command, command.before);
+    if (agent === 'codex' && output.join('\n') !== command.output.join('\n')) next.idleSince = now;
+    else next.idleSince ??= now;
+    next.output = output;
   }
-  return { command: next, done: next.idleSince !== null && now - next.idleSince >= 400 };
+  const waited = agent !== 'codex' || next.output.length > 0 || now - command.at >= CODEX_PATIENCE;
+  return { command: next, done: next.idleSince !== null && now - next.idleSince >= 400 && waited };
 }
 
 // Insert immediately after the transcript's command when available. Otherwise a

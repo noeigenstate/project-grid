@@ -3,7 +3,7 @@ import type { ConversationEntry } from '../../shared/types';
 import type { ScreenAgent } from '../agents/agent-screen-types';
 import { parseAgentScreen } from '../agents/agent-screen';
 import { readScreen, subscribeScreen } from '../terminal/terminal-screen';
-import { advanceCliCommand, cliHistory, cliResultRows, extractCliPanelRows, hasCliInput, isCliIdle, mergeCliResults, type CliCommand, type CliResult } from './cli-panel';
+import { advanceCliCommand, cliHistory, cliResultRows, extractCliPanelRows, hasCliInput, isSideConversation, isCliIdle, mergeCliResults, type CliCommand, type CliResult } from './cli-panel';
 
 type Snapshot = { pending: CliCommand | null; panel: { command: string; rows: string[] } | null; results: CliResult[] };
 type Session = { terminalId: string; snapshot: Snapshot; listeners: Set<() => void>; stop: (() => void) | null };
@@ -36,22 +36,25 @@ function begin(session: Session, terminalId: string, agent: ScreenAgent, command
   const before = history ?? (latest ? cliHistory(agent, latest.rows, parseAgentScreen(agent, latest.rows)) : undefined);
   const pending: CliCommand = { id: `cli-output-${++sequence}`, command, anchor, at: Date.now(), observed: false, idleSince: null, output: [], dialog: [], before };
   publish(session, { ...session.snapshot, pending, panel: null });
+  // A Codex side conversation idles at its own input between messages; it lasts until its card is closed.
+  const side = isSideConversation(agent, command);
   const update = (observation: boolean) => {
     const current = session.snapshot.pending;
     if (!current || !latest) return;
     if (!observation && (current.idleSince === null || Date.now() - current.idleSince < 400)) return;
     const screen = parseAgentScreen(agent, latest.rows);
     const next = advanceCliCommand(current, agent, latest.rows, screen, Date.now(), observation);
+    if (side) next.done = false;
     if (next.done) {
       session.stop?.(); session.stop = null;
       const rows = cliResultRows(next.command);
       const results = rows.length ? [...session.snapshot.results, { ...next.command, rows }].slice(-CLI_RESULT_LIMIT) : session.snapshot.results;
       publish(session, { pending: null, panel: null, results });
     } else if (observation || next.command.idleSince !== current.idleSince) {
-      const panel = screen.choice ? null : isCliIdle(agent, latest.rows, screen)
-        ? session.snapshot.panel
+      const panel = screen.choice ? null : isCliIdle(agent, latest.rows, screen) && !side
+        ? agent === 'codex' && next.command.observed ? { command, rows: next.command.output } : session.snapshot.panel
         : next.command.observed ? { command, rows: extractCliPanelRows(agent, latest.rows, screen, command, next.command.before) } : null;
-      if (panel?.rows.length && !hasCliInput(agent, latest.rows, screen)) next.command.dialog = panel.rows;
+      if (panel?.rows.length && (side || !hasCliInput(agent, latest.rows, screen))) next.command.dialog = panel.rows;
       publish(session, { ...session.snapshot, pending: next.command, panel });
     }
   };

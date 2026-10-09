@@ -33,7 +33,6 @@ for (const name of Object.keys(env)) if (/^(CLAUDECODE|CLAUDE_CODE_|CLAUDE_EFFOR
 const SKIP = {
   '/login': 'starts a sign-in flow for the real account', '/logout': 'signs the real account out',
   '/terminal-setup': 'writes the terminal\'s own key bindings', '/statusline': 'has the agent rewrite ~/.claude settings',
-  '/side': 'opens a side conversation this test has no way to leave',
 };
 const MODEL = new Set(['/init', '/review', '/security-review', '/pr-comments', '/btw', '/compact']);
 const LAST = new Set(['/exit', '/quit']);

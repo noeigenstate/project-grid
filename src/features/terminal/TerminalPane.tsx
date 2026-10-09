@@ -91,6 +91,17 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
     // 21376 is xterm's capability threshold for VT wrapping and reflow.
     if (!remote && isWindows) terminal.options.windowsPty = { backend: 'conpty', buildNumber: 21376 };
     const links = terminal.registerLinkProvider(createTerminalLinkProvider(terminal, activateLink, hoverLink, leaveLink));
+    // Programs copy through the terminal (OSC 52, as Codex's /copy does): the text goes to the system clipboard.
+    // A request to read the clipboard ("?") is ignored, so nothing on it ever reaches the program.
+    const clipboardWrites = terminal.parser.registerOscHandler(52, data => {
+      const payload = data.slice(data.indexOf(';') + 1);
+      if (!payload || payload === '?') return true;
+      try {
+        const bytes = Uint8Array.from(atob(payload), character => character.charCodeAt(0));
+        void copy(new TextDecoder().decode(bytes));
+      } catch { /* Not base64: nothing to copy. */ }
+      return true;
+    });
     const styling = styleTerminal(terminal);
     const themeObserver = new MutationObserver(records => {
       if (records.some(record => record.attributeName === 'data-theme')) terminal.options.theme = terminalTheme(document.documentElement.dataset.theme);
@@ -191,7 +202,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
     const frame = requestAnimationFrame(resize);
     return () => {
       disposed = true; queued = [];
-      unsubscribe(); offPaste(); input.dispose(); selection.dispose(); resized.dispose(); links.dispose(); styling.dispose(); themeObserver.disconnect(); observer.disconnect(); cancelAnimationFrame(frame); clearTimeout(settle);
+      unsubscribe(); offPaste(); input.dispose(); selection.dispose(); resized.dispose(); links.dispose(); clipboardWrites.dispose(); styling.dispose(); themeObserver.disconnect(); observer.disconnect(); cancelAnimationFrame(frame); clearTimeout(settle);
       terminal.textarea?.removeEventListener('focus', focusIn); terminal.textarea?.removeEventListener('blur', focusOut); focusOut();
       gpu.current?.dispose(); gpu.current = null; unregister();
       terminal.dispose(); term.current = null;

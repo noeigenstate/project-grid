@@ -7,7 +7,7 @@ import { actionText, stepVerb } from '../agents/ActivityPane';
 import { dictateInto } from '../voice/voice-input';
 import { useScreen } from '../terminal/terminal-screen';
 import { parseAgentScreen } from '../agents/agent-screen';
-import { cliCloseKey, cliHistory, cliInputDraft, isAtPrompt } from './cli-panel';
+import { cliCloseKey, cliHistory, cliInputDraft, isAtPrompt, isSideConversation } from './cli-panel';
 import { ReadingWelcome } from './ReadingWelcome';
 import { ReadingChoice } from './ReadingChoice';
 import { ReadingQuestion } from './ReadingQuestion';
@@ -199,13 +199,16 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     // What the CLI shows above its input before the command is typed, to tell its output from what was there.
     const shown = typed && visibleScreen ? cliHistory(agentKind, visibleScreen.rows, screen) : undefined;
     // A command's dialog still open (Claude's /usage, /config) would take this message's keys and Enter: close it first.
-    if (cli.busy) {
-      const key = visibleScreen ? cliCloseKey(agentKind, visibleScreen.rows, screen) : null;
+    // In a Codex side conversation a message is part of it: the card stays and nothing is closed. Its messages never
+    // reach the main conversation's records, so they get no echo there either.
+    const side = !!cli.panel && isSideConversation(agentKind, cli.panel.command);
+    if (cli.busy && !side) {
+      const key = visibleScreen ? cliCloseKey(agentKind, visibleScreen.rows, screen, cli.panel?.command) : null;
       cli.cancel();
       if (key) { window.projectGrid.writeTerminal(terminal.id, key); await new Promise(resolve => setTimeout(resolve, 150)); }
     }
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
-    const pendingId = text && !typed ? echo(text) : null;
+    const pendingId = text && !typed && !side ? echo(text) : null;
     if (pendingId) toBottom();
     // Text left in the CLI's own input (Claude puts an interrupted prompt back there) would be sent along with this
     // message; Ctrl+U clears it first. Pasted images also live there, so it is kept while images are attached.
@@ -305,7 +308,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     <div className="reading-scroll-area">
       <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} />
         {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} terminalId={terminal.id} onShowTerminal={onShowTerminal} onClose={() => {
-          const key = visibleScreen && cliCloseKey(terminal.agent === 'claude' ? 'claude' : 'codex', visibleScreen.rows, screen);
+          const key = visibleScreen && cliCloseKey(terminal.agent === 'claude' ? 'claude' : 'codex', visibleScreen.rows, screen, cli.panel?.command);
           if (key) window.projectGrid.writeTerminal(terminal.id, key);
           cli.cancel(); input.current?.focus();
         }} />}
