@@ -25,7 +25,8 @@
   --card-fill: rgba(255, 255, 255, .07);
   --card-line: rgba(255, 255, 255, .13);
   --card-radius: 12px;
-  --text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+  --text-shadow: none;
+  --wallpaper-text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
 }
 
 /* 1. The wallpaper, darkened and smoothed evenly (the panes blur it much further behind themselves). */
@@ -56,20 +57,19 @@
 :root[data-theme] :is(.file-text-editor, .file-code-scroll, .file-editor, .line-numbers) { background: transparent; }
 
 /* Ink: white at 92% for text, 72% for secondary text, with a soft shadow that only separates it from the frost. */
-:root[data-theme] .app-shell { color: var(--ink); text-shadow: var(--text-shadow); font-weight: 500; }
+:root[data-theme] .app-shell { color: var(--ink); text-shadow: var(--text-shadow); font-weight: 400; }
+/* The title bar has no pane under it: its text alone keeps a soft shadow against the wallpaper. */
+:root[data-theme] .titlebar { text-shadow: var(--wallpaper-text-shadow); }
 :root[data-theme] .app-shell :is(.xterm, .xterm *, .button.primary) { text-shadow: none; }
-/* Over the brightest part of the wallpaper the frost alone leaves white text near 4:1; a faint shadow on the terminal's
-   screen layer (it reaches the GPU renderer's canvas as well as the DOM rows) carries it the rest of the way. */
-:root[data-theme] .terminal-host .xterm-screen { filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, .45)); }
 :root[data-theme] :is(.project-panel .panel-index, .project-switch-index) { color: white; background: var(--project-accent); text-shadow: none; }
 
 /* Type: the app's name is the largest text and card titles come next; terminal text is never larger than either,
    whatever terminal size is chosen (--terminal-font-size, set by App). */
 :root[data-theme] .titlebar { background: transparent; backdrop-filter: none; box-shadow: none; }
-:root[data-theme] .titlebar-brand { font-size: max(15px, calc(var(--terminal-font-size, 12px) + 4px)); font-weight: 700; color: var(--ink); }
+:root[data-theme] .titlebar-brand { font-size: max(15px, calc(var(--terminal-font-size, 12px) + 4px)); font-weight: 600; color: var(--ink); }
 :root[data-theme] .titlebar .workspace-summary { font-size: max(12.5px, calc(var(--terminal-font-size, 12px) + 1px)); color: var(--ink-secondary); }
 /* themes.css colours names through :is() with a two-class selector in it, so the title needs the header in its path. */
-:root[data-theme] .project-panel .panel-header .panel-name { font-size: max(clamp(12px, calc(9.5px + .75cqh), 13px), calc(var(--terminal-font-size, 12px) + 2px)); font-weight: 700; color: var(--accent-green); }
+:root[data-theme] .project-panel .panel-header .panel-name { font-size: max(clamp(12px, calc(9.5px + .75cqh), 13px), calc(var(--terminal-font-size, 12px) + 2px)); font-weight: 600; color: var(--accent-green); }
 :root[data-theme] .focus-mode .project-panel .panel-name { font-size: max(16px, calc(var(--terminal-font-size, 12px) + 3px)); }
 :root[data-theme] .project-panel .status-badge { font-weight: 600; }
 :root[data-theme] :is(.search-input, .titlebar-tools > .icon-button) {
@@ -79,7 +79,7 @@
 :root[data-theme] .app-shell.titlebar-auto .titlebar { background: rgba(16, 20, 28, .55); backdrop-filter: blur(24px) saturate(140%); box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .16), 0 10px 30px -12px rgba(0, 0, 0, .45); }
 
 /* 3. The reading view: body text at 15px (13.5px in a small card), cards 14px apart and 24px from the pane's edge. */
-:root[data-theme] .reading-scroll { font: 500 13.5px/1.6 var(--font-ui); color: var(--ink); }
+:root[data-theme] .reading-scroll { font: 400 14px/1.65 var(--font-ui); color: var(--ink); }
 :root[data-theme] .focus-mode .reading-scroll { font-size: 15px; padding: 18px 24px 12px; }
 :root[data-theme] .reading-content { gap: 14px; }
 :root[data-theme] :is(.reading-user, .reading-tools, .reading-command-output) { border-radius: var(--card-radius); background: var(--card-fill); box-shadow: inset 0 0 0 1px var(--card-line); }
@@ -93,7 +93,8 @@
 :root[data-theme] .reading-tools li code { color: var(--ink); }
 :root[data-theme] .reading-tools li small { color: var(--ink-faint); }
 :root[data-theme] .reading-assistant { color: var(--ink); }
-:root[data-theme] .reading-markdown :is(h1, h2, h3, h4) { color: #ffffff; font-weight: 700; }
+:root[data-theme] .reading-markdown :is(h1, h2, h3, h4) { color: #ffffff; font-weight: 600; }
+:root[data-theme] .reading-markdown :is(strong, b) { font-weight: 600; }
 :root[data-theme] .reading-markdown :not(pre) > code { background: rgba(255, 255, 255, .1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); color: #e6f2ff; }
 :root[data-theme] .reading-code { border-radius: 10px; background: rgba(4, 7, 12, .42); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 :root[data-theme] .reading-code-bar { background: rgba(255, 255, 255, .05); color: var(--ink-secondary); }
@@ -111,7 +112,7 @@
 :root[data-theme] .reading-composer { margin: 4px 16px 16px; padding: 8px 8px 8px 16px; border-radius: 14px; background: rgba(8, 11, 17, .62); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 10px 28px -8px rgba(0, 0, 0, .45); }
 :root[data-theme] .focus-mode .reading-composer { margin: 4px 24px 20px; }
 :root[data-theme] .reading-composer:focus-within { box-shadow: inset 0 0 0 1px rgba(120, 190, 255, .5), 0 0 0 3px rgba(59, 158, 255, .18), 0 10px 28px -8px rgba(0, 0, 0, .45); }
-:root[data-theme] .reading-composer textarea { color: var(--ink); font-weight: 500; }
+:root[data-theme] .reading-composer textarea { color: var(--ink); font-weight: 400; }
 :root[data-theme] .reading-composer textarea::placeholder { color: var(--ink-faint); }
 :root[data-theme] .reading-send:not(:disabled) { color: #ffffff; background: var(--accent-blue); box-shadow: 0 4px 12px -4px rgba(59, 158, 255, .7); text-shadow: none; }
 
@@ -129,20 +130,20 @@
 /* The activity column: the task's state, the live steps and the round's figures as three cards. */
 :root[data-theme] .project-panel .activity-pane { border: 0; border-radius: 0 0 calc(var(--glass-radius) - 1px) 0; background: transparent; backdrop-filter: none; box-shadow: inset 1px 0 0 rgba(255, 255, 255, .12); padding: 0 10px 10px; gap: 10px; }
 :root[data-theme] .activity-header { padding: 10px 4px 0; }
-:root[data-theme] .activity-header b { color: var(--ink); font-weight: 700; }
+:root[data-theme] .activity-header b { color: var(--ink); font-weight: 600; }
 :root[data-theme] .activity-header span { color: var(--ink-secondary); }
 :root[data-theme] .activity-now { margin: 0; padding: 9px 12px; border-radius: var(--card-radius); background: var(--card-fill); box-shadow: inset 0 0 0 1px var(--card-line); color: var(--ink); }
 :root[data-theme] .activity-now.is-working { background: rgba(59, 158, 255, .16); box-shadow: inset 0 0 0 1px rgba(120, 190, 255, .3); }
 :root[data-theme] .activity-now.is-editing { background: rgba(255, 176, 72, .16); box-shadow: inset 0 0 0 1px rgba(255, 200, 120, .3); }
 :root[data-theme] .activity-split { gap: 10px; }
 :root[data-theme] :is(.activity-live, .activity-overview) { border: 0; border-radius: var(--card-radius); background: var(--card-fill); box-shadow: inset 0 0 0 1px var(--card-line); overflow: hidden; }
-:root[data-theme] .activity-section-title { color: var(--ink); font-size: 12px; font-weight: 700; letter-spacing: .2px; }
+:root[data-theme] .activity-section-title { color: var(--ink); font-size: 12px; font-weight: 600; letter-spacing: .2px; }
 :root[data-theme] .activity-item { color: var(--ink); }
 :root[data-theme] .activity-item time { color: var(--accent-green); }
 :root[data-theme] .activity-item p { color: var(--ink-secondary); }
 :root[data-theme] .activity-empty { color: var(--ink-secondary); }
 :root[data-theme] .overview-stats > div { border-radius: 10px; background: rgba(0, 0, 0, .18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); align-items: center; }
-:root[data-theme] .overview-stats b { font-size: 16px; font-weight: 700; color: var(--ink); }
+:root[data-theme] .overview-stats b { font-size: 16px; font-weight: 600; color: var(--ink); }
 :root[data-theme] .overview-stats > div:nth-child(2) b { color: var(--accent-green); }
 :root[data-theme] .overview-stats > div.is-failed b { color: #ff6b6b; }
 :root[data-theme] .overview-stats span { color: var(--ink-secondary); }
@@ -165,9 +166,11 @@
 }
 
 /* Sharp type and glass for each system and screen density.
-   - Screens below 2 device pixels per CSS pixel (Windows desktops at 100–175%): a blurred
-     shadow smears letter edges over the grayscale antialiasing Chromium uses on translucent layers, so text and the
-     terminal take a hard one-pixel shadow instead, and half-pixel hover lifts (which blur icons) become whole pixels.
+   - Text on the panes carries no shadow and stays at regular weight (400; titles 600): under the grayscale
+     antialiasing Chromium uses on translucent layers, a shadow under every glyph or a medium weight makes all text look
+     bold. Screens below 2 device pixels per CSS pixel get whole-pixel hover lifts (half pixels blur icons).
+   - Windows: Segoe UI Variable Text and Microsoft YaHei UI for Chinese, with the font's own hinting kept (no synthetic
+     weights, whole-pixel sizes), and Cascadia Mono in the terminal at its regular weight.
    - macOS draws light-on-dark text with grayscale antialiasing (subpixel rendering makes it look heavy and fringed).
    - Linux compositors often blur backdrops in software: a lighter blur over a denser fill keeps panes smooth.
    - High-density screens keep the soft shadow and the full blur, which they render crisply. */
@@ -175,14 +178,16 @@
   :root[data-theme] { --pane-blur: blur(20px) saturate(130%); }
 }
 @media (resolution < 2dppx) {
-  :root[data-theme] { --text-shadow: 0 1px 0 rgba(0, 0, 0, .42); }
-  :root[data-theme] .terminal-host .xterm-screen { filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .5)); }
   :root[data-theme] .icon-button:not(.window-actions .icon-button):hover { transform: translateY(-1px); }
 }
 @media (resolution >= 2dppx) {
   :root[data-theme] { --pane-blur: blur(28px) saturate(135%); }
 }
 :root[data-theme][data-platform="darwin"] .app-shell { -webkit-font-smoothing: antialiased; }
+/* Windows: Chinese in Microsoft YaHei UI rather than a fallback chain, no faux bold for weights the font lacks, and
+   kerning without the extra ligature work that can shift glyphs off DirectWrite's pixel grid. */
+:root[data-theme][data-platform="win32"] { --font-ui: 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; }
+:root[data-theme][data-platform="win32"] .app-shell { font-synthesis: none; text-rendering: auto; font-kerning: normal; }
 :root[data-theme][data-platform="darwin"] { --pane-blur: blur(26px) saturate(165%); }
 :root[data-theme][data-platform="linux"] { --pane-fill: rgba(28, 32, 40, .46); --pane-dim: rgba(16, 20, 28, .52); --pane-blur: blur(14px) saturate(120%); }
 /* More contrast asked for by the system: denser panes and plain text edges. Forced colours: the system's own. */

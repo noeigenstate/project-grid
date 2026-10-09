@@ -70,7 +70,7 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
     const hoverLink = (_event: MouseEvent, target: string) => { if (host.current) host.current.title = `${isMac ? t('⌘ + 点按打开链接') : t('Ctrl + 鼠标左键打开链接')}\n${target}`; };
     const leaveLink = () => { if (host.current) host.current.removeAttribute('title'); };
     const terminal = new Terminal({
-      fontFamily: "'Cascadia Code', 'Cascadia Mono', Consolas, 'SF Mono', Menlo, 'Microsoft YaHei UI', 'PingFang SC', monospace",
+      fontFamily: "'Cascadia Mono', 'Cascadia Code', Consolas, 'SF Mono', Menlo, 'Microsoft YaHei UI', 'PingFang SC', monospace",
       fontSize, lineHeight: 1.3, ...terminalOptions, scrollback: 3000,
       cursorBlink: true, cursorStyle: 'bar',
       // Decorations (the heading and bullet styling) are still an experimental part of xterm's API.

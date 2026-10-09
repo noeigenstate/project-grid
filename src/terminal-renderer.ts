@@ -17,6 +17,7 @@ export const terminalRenderer = () => current;
 // Chromium keeps at most 16 WebGL contexts in a window and drops the oldest beyond that. Twelve terminals draw
 // on the GPU; any more draw with the DOM renderer, so no visible terminal loses its context to another.
 const GPU_LIMIT = 12;
+export const GPU_TEXT_WEIGHT = 350;
 let active = 0;
 
 // The GPU renderer draws a background rectangle for each run of cells whose background field is not zero. Dim,
@@ -49,8 +50,13 @@ function attachGpuRenderer(terminal: Terminal, lost: () => void): IDisposable | 
   let addon: WebglAddon;
   try { addon = new WebglAddon(); terminal.loadAddon(addon); keepDefaultBackgroundClear(addon); } catch { return null; }
   active++;
+  // WebGL rasterizes glyphs over the transparent background, where their antialiased edges add up to visibly heavier
+  // strokes than the DOM renderer draws at the same weight. A slightly lighter weight of the variable terminal font
+  // makes the two look alike; the DOM renderer gets its own weight back when the GPU one is released.
+  const weight = terminal.options.fontWeight;
+  terminal.options.fontWeight = GPU_TEXT_WEIGHT;
   let released = false;
-  const release = () => { if (released) return; released = true; active--; try { addon.dispose(); } catch { /* Already gone with its terminal. */ } };
+  const release = () => { if (released) return; released = true; active--; try { addon.dispose(); } catch { /* Already gone with its terminal. */ } try { terminal.options.fontWeight = weight; } catch { /* Disposed. */ } };
   addon.onContextLoss(() => { release(); lost(); });
   return { dispose: release };
 }

@@ -24,9 +24,10 @@ export const daylightTerminalTheme: ITheme = {
   scrollbarSliderBackground: '#ffffff26', scrollbarSliderHoverBackground: '#ffffff40', scrollbarSliderActiveBackground: '#ffffff59',
 };
 
-// Body text is medium (500) and bold is 700, as everywhere in the window. The contrast floor is 4.5:1, the same for
-// every theme, so switching themes never resets the terminal's options.
-export const terminalOptions = { fontWeight: '500', fontWeightBold: '700', minimumContrastRatio: 4.5 } as const;
+// Terminal text is regular (400) and bold is 700: the frosted pane gives the contrast, and a heavier body weight made
+// every line look bold. The contrast floor is 4.5:1, the same for every theme, so switching themes never resets the
+// terminal's options.
+export const terminalOptions = { fontWeight: '400', fontWeightBold: '700', minimumContrastRatio: 4.5 } as const;
 
 export function terminalTheme(theme: string | undefined): ITheme {
   return { ...(theme === 'daylight' ? daylightTerminalTheme : darkTerminalTheme) };
