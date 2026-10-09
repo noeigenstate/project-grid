@@ -3,12 +3,14 @@ import type { AgentScreen, ScreenAgent } from '../agents/agent-screen-types';
 import type { AgentCommand } from '../../shared/types';
 import { t } from '../../shared/i18n';
 
-export function ReadingWelcome({ agent, screen, commands, complete, disabled, starting = true }: {
+export function ReadingWelcome({ agent, screen, commands, complete, disabled, starting = true, names: suggested }: {
   agent: ScreenAgent; screen: AgentScreen; commands: AgentCommand[]; complete: (command: AgentCommand) => void; disabled: boolean; starting?: boolean;
+  // The commands to suggest instead of the agent's usual ones (Codex connected directly has only a few).
+  names?: string[];
 }) {
   const banner = screen.banner;
   const model = screen.status.model ?? banner?.model, effort = screen.status.effort ?? banner?.effort;
-  const names = agent === 'claude' ? ['/init', '/help', '/model', '/status', '/review'] : ['/init', '/model', '/status', '/review', '/permissions'];
+  const names = suggested ?? (agent === 'claude' ? ['/init', '/help', '/model', '/status', '/review'] : ['/init', '/model', '/status', '/review', '/permissions']);
   const suggestions = names.flatMap(name => {
     const command = commands.find(item => item.name === name && item.source === 'builtin');
     return command ? [command] : [];

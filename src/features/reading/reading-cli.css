@@ -25,3 +25,7 @@
 .cli-meter small { color: var(--ink-secondary, #a9bfd6); font-size: 12px; }
 .cli-hint { margin: 2px 0 0; font-size: 12px; color: var(--ink-secondary, #a9bfd6); }
 .cli-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Folded: the head alone, without the gap it keeps above the content. */
+.reading-cli-panel > .reading-choice-head:last-child { margin-bottom: 0; }
+/* A bar given as a value sits in its table row, its text read like the other values. */
+.cli-pairs .cli-meter small { color: inherit; font-size: inherit; }

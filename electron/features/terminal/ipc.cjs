@@ -28,7 +28,8 @@ function registerTerminalIpc({ handle, listen, findProject, getSession, hasSessi
   function writeTerminal(id, data) {
     if (typeof data !== 'string' || data.length > 1024 * 1024) return;
     const s = getSession(id);
-    if (s && s.status !== 'exited') {
+    // A Codex session connected directly has no terminal: its messages go through agent:send.
+    if (s && s.status !== 'exited' && !s.direct) {
       const submitted = s.submissions.write(data);
       const prompts = s.submissions.sent.filter(text => !isLocalCommand(text));
       if (submitted && s.codexActive) for (const text of prompts) s.promptQueue.submit(text, s.codexActivity === 'working');

@@ -10,7 +10,8 @@ export function CliBlocks({ rows, live = false }: { rows: readonly string[]; liv
   return <div className="cli-blocks">{blocks.map((block, index) => {
     if (block.kind === 'tabs') return <div key={index} className="cli-tabs">{block.items.map(item => <span key={item}>{item}</span>)}</div>;
     if (block.kind === 'heading') return <h5 key={index}>{block.text}</h5>;
-    if (block.kind === 'pairs') return <dl key={index} className="cli-pairs">{block.pairs.map(([label, value], at) => <div key={at}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>;
+    if (block.kind === 'pairs') return <dl key={index} className="cli-pairs">{block.pairs.map(([label, value, percent], at) => <div key={at}><dt>{label}</dt>
+      <dd>{percent === undefined ? value : <span className="cli-meter" role="meter" aria-label={label} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}><span><i style={{ width: `${percent}%` }} /></span><small>{value}</small></span>}</dd></div>)}</dl>;
     if (block.kind === 'meter') return <div key={index} className="cli-meter" role="meter" aria-valuenow={block.percent} aria-valuemin={0} aria-valuemax={100}><span><i style={{ width: `${block.percent}%` }} /></span><b>{block.percent}%</b>{block.label && <small>{block.label}</small>}</div>;
     if (block.kind === 'hint') return <p key={index} className="cli-hint">{block.text}</p>;
     return <p key={index} className="cli-text">{block.lines.join('\n')}</p>;

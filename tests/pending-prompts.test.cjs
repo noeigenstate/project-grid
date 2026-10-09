@@ -9,7 +9,7 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const en = require('../electron/locales/en.json');
 const {
   normalizePrompt, isTypedCommand, createPendingPrompts, addPendingPrompt,
-  reconcilePendingPrompts, removePendingPrompt, PENDING_PROMPT_TIMEOUT,
+  reconcilePendingPrompts, removePendingPrompt, PENDING_PROMPT_TIMEOUT, sameMessage,
 } = require('../src/features/reading/pending-prompts.ts');
 
 const user = (id, text) => ({ id, role: 'user', text });
@@ -143,4 +143,13 @@ test('a failed paste cancels only its own echo', () => {
 test('a prompt received after one Claude put back in its input still acknowledges the echo', () => {
   const state = add(createPendingPrompts('session'), 'p', '只回复：MARK-4');
   assert.deepEqual(sync(state, [user('u', '写一篇文章。最后写 MARK-3。只回复：MARK-4')]).prompts, []);
+});
+
+test('a message still held in the CLI input is recognised through wrapping, image marks and long-paste summaries', () => {
+  const message = '合并远端的主分支的内容，然后解决冲突并提交';
+  assert.equal(sameMessage(message, '合并远端的主分支的内容，然后解决\n冲突并提交'), true);
+  assert.equal(sameMessage(message, '[Image #1] 合并远端的主分支的内容'), true);
+  assert.equal(sameMessage('first line\nsecond line', '[Pasted text #1 +2 lines]'), true);
+  assert.equal(sameMessage(message, ''), false);
+  assert.equal(sameMessage(message, '继续'), false, 'a different prompt put back after an interrupt');
 });

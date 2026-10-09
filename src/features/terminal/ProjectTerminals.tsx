@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { ArrowCounterClockwise, Play, Terminal as TerminalIcon, X } from '@phosphor-icons/react';
+import { ArrowCounterClockwise, Lightning, Play, Terminal as TerminalIcon, X } from '@phosphor-icons/react';
 import { TerminalPane } from './TerminalPane';
 import { ReadingView } from '../reading/ReadingView';
 import { readingShown, setReading, syncReading, useTerminalChoice } from '../reading/reading-mode';
@@ -13,8 +13,8 @@ function label(terminal: ProjectTerminal) {
   return terminal.status === 'starting' ? t('正在启动') : terminal.status === 'shell' ? t('终端就绪') : terminal.status === 'exited' ? t('已退出') : t('尚未启动');
 }
 
-export function ProjectTerminals({ project, focused, fontSize, activeId, setActiveId, onAction, onError, onOpenLink }: {
-  project: Project; focused: boolean; fontSize: number; activeId: string | null; setActiveId: (id: string) => void;
+export function ProjectTerminals({ project, focused, fontSize, codexDirect, activeId, setActiveId, onAction, onError, onOpenLink }: {
+  project: Project; focused: boolean; fontSize: number; codexDirect: boolean; activeId: string | null; setActiveId: (id: string) => void;
   onAction: <T,>(promise: Promise<Result<T>>) => Promise<T | undefined>;
   onError: (message: string) => void; onOpenLink: (projectId: string, target: string) => void;
 }) {
@@ -42,9 +42,11 @@ export function ProjectTerminals({ project, focused, fontSize, activeId, setActi
           <button className="icon-button" title={t('关闭此终端')} aria-label={t('关闭 {name}', { name })} onClick={() => void onAction(window.projectGrid.closeTerminal(terminal.id))}><X size={13} /></button>
         </header>}
         <div className="terminal-split-body">
-          {readingShown(terminal, raw) && <ReadingView projectId={project.id} terminal={terminal} autoFocus={focused && selected === terminal.id} onShowTerminal={() => setReading(terminal.id, false)} onError={onError} onOpenLink={target => onOpenLink(project.id, target)} />}
-          {terminal.sessionId ? <TerminalPane id={terminal.id} sessionId={terminal.sessionId} fontSize={fontSize} focused={focused && selected === terminal.id && !readingShown(terminal, raw)} onError={onError} onOpenLink={(_id, target) => onOpenLink(project.id, target)} remote={project.kind === 'ssh'} />
-            : <div className="terminal-empty"><TerminalIcon size={28} weight="light" /><p>{t('项目已就位')}</p><span>{t('启动终端，在这里开始开发')}</span><button className="button secondary small" onClick={() => void onAction(window.projectGrid.startTerminal(terminal.id))}><Play size={13} weight="fill" />{t('启动终端')}</button></div>}
+          {/* Codex connected directly has no terminal: the reading view is all there is, also after it exits. */}
+          {(terminal.direct || readingShown(terminal, raw)) && <ReadingView projectId={project.id} terminal={terminal} autoFocus={focused && selected === terminal.id} onShowTerminal={() => setReading(terminal.id, false)} onError={onError} onOpenLink={target => onOpenLink(project.id, target)} />}
+          {terminal.direct ? null : terminal.sessionId ? <TerminalPane id={terminal.id} sessionId={terminal.sessionId} fontSize={fontSize} focused={focused && selected === terminal.id && !readingShown(terminal, raw)} onError={onError} onOpenLink={(_id, target) => onOpenLink(project.id, target)} remote={project.kind === 'ssh'} />
+            : <div className="terminal-empty"><TerminalIcon size={28} weight="light" /><p>{t('项目已就位')}</p><span>{t('启动终端，在这里开始开发')}</span><button className="button secondary small" onClick={() => void onAction(window.projectGrid.startTerminal(terminal.id))}><Play size={13} weight="fill" />{t('启动终端')}</button>
+              {codexDirect && project.kind !== 'ssh' && <button className="button secondary small" title={t('不经过终端，阅读视图直接与 Codex 对话')} onClick={() => void onAction(window.projectGrid.agentStart(terminal.id))}><Lightning size={13} weight="fill" />{t('直连 Codex')}</button>}</div>}
         </div>
         {multiple && <footer className="terminal-split-footer"><span>{terminal.error ? t(terminal.error) : project.kind === 'ssh' ? 'SSH' : terminal.shell === 'cmd' ? t('命令提示符') : terminal.shell === 'zsh' ? 'zsh' : terminal.shell === 'bash' ? 'Bash' : 'PowerShell'}</span><div>
           <VoiceButton terminalId={terminal.id} sessionId={terminal.sessionId} name={name} size={13} onError={onError} />

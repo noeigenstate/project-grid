@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, ArrowsOutSimple, Terminal as TerminalIcon, Check, Power, ArrowCounterClockwise, Monitor, Cpu, Info, SpeakerHigh, Globe, Microphone, Waveform, BookOpen, FloppyDisk, Palette, Robot, Keyboard } from '@phosphor-icons/react';
+import { Bell, ArrowsOutSimple, Terminal as TerminalIcon, Check, Power, ArrowCounterClockwise, Monitor, Cpu, Info, SpeakerHigh, Globe, Microphone, Waveform, BookOpen, FloppyDisk, Palette, Robot, Keyboard, Lightning } from '@phosphor-icons/react';
 import type { AgentsState, AppUpdateState, Settings, SpeechState, Workspace } from '../../shared/types';
 import { themes } from '../../shared/themes';
 import { VoiceModelSetting } from '../voice/VoiceButton';
@@ -112,6 +112,7 @@ export function SettingsDialog({ settings, desktopGlass, localShell, agents, onA
       </section>
       <section className="settings-section" id="settings-agents" aria-label={t('编码助手')} hidden={current.id !== 'agents'}>
       <AgentsSettings agents={agents} onChange={onAgents} />
+      <label className="setting-row"><span><Lightning size={19} /><span><b>{t('Codex 直连（实验）')}</b><small>{t('项目卡片上多一个“直连 Codex”：不经过终端，阅读视图通过 Codex 的协议直接对话，回答逐字出现，确认和提问在卡片里作答')}</small></span></span><input type="checkbox" checked={settings.codexDirect} onChange={event => update({ codexDirect: event.target.checked })} /></label>
       </section>
       {current.id === 'shortcuts' && <ShortcutSettings settings={settings} update={update} />}
       <section className="settings-section" id="settings-about" aria-label={t('更新与关于')} hidden={current.id !== 'about'}>

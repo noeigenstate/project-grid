@@ -377,7 +377,7 @@ test('reading entry rendering parses only the last 40 blocks and leaves the welc
     './useMentions': { useMentions: () => ({ open: false }) }, './MentionPalette': { MentionPalette: () => null },
     './pending-prompts': require('../src/features/reading/pending-prompts.ts'),
     './usePendingPrompts': { usePendingPrompts: () => ({ pending: [], echo() {}, cancelEcho() {} }) },
-    './PendingPromptEntries': { PendingPromptEntries: () => null },
+    './PendingPromptEntries': { PendingPromptEntries: () => null }, './ReadingDirectCard': { ReadingDirectCard: () => null },
     './ReadingSessions': { ReadingSessions: () => null }, './reading-sessions': require('../src/features/reading/reading-sessions.ts'),
     './reading-welcome': { useWelcomeStarting: () => false },
     './ReadingCliPanel': { ReadingCliPanel: () => null }, './ReadingCommandOutput': { ReadingCommandOutput: () => null },

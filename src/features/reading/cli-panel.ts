@@ -107,13 +107,17 @@ export function cliHistory(agent: ScreenAgent, rows: string[], screen: AgentScre
 }
 // Codex does not echo a slash command into its history: what a command printed is what came in under the last row
 // the history had when it was sent. Output taller than the screen pushes that row out of sight, and then all of the
-// history on screen is the command's; a screen drawn anew (/clear) starts with Codex's banner, and nothing is taken.
+// history on screen is the command's. Newer Codex also prints the command on a row of its own, which marks the start
+// when the history changed meanwhile (a startup tip that went away). A screen drawn anew (/clear) starts with Codex's
+// banner, and nothing is taken; /status repeats that banner inside its card, so the echo is looked for first.
 const codexBanner = (row: string) => /^\s*>_ OpenAI Codex\b/.test(row);
-function rowsSince(before: readonly string[], rows: string[], end: number): string[] | null {
+function rowsSince(before: readonly string[], rows: string[], end: number, command: string): string[] | null {
   const last = before.filter(row => row.trim()).slice(-2);
   if (!last.length) return null;
   const found = anchored(last, rows, end);
-  if (found || rows.slice(0, end).some(codexBanner)) return found;
+  if (found) return found;
+  for (let index = end - 1; index >= 0; index--) if (command.trim() && rows[index].trim() === command.trim()) return trimRows(rows.slice(index, end));
+  if (rows.slice(0, end).some(codexBanner)) return null;
   return trimRows(rows.slice(0, end));
 }
 function anchored(last: string[], rows: string[], end: number): string[] | null {
@@ -160,7 +164,7 @@ export function extractCliPanelRows(agent: ScreenAgent, rows: string[], screen: 
     if (popup.length) return squeeze(popup);
   }
   if (echo < 0 && agent === 'codex' && before) {
-    const since = withoutEcho(rowsSince(before, rows, input?.start ?? end), command);
+    const since = withoutEcho(rowsSince(before, rows, input?.start ?? end, command), command);
     if (since) return squeeze(since);
     // A full-screen view (the /diff pager) replaced everything that was there: all of it is the command's.
     if (!input && rows.some(row => /\bq close\b|to scroll\b/i.test(row))) return squeeze(trimRows(rows.slice(0, end)));
@@ -192,7 +196,7 @@ export function extractCliOutputRows(agent: ScreenAgent, rows: string[], screen:
   if (!input) return [];
   const echo = echoRow(agent, rows, command, input.start);
   // Without the echo, using old conversation text would fabricate command output; Codex's is what came in since.
-  if (echo < 0) return agent === 'codex' && before ? withoutEcho(rowsSince(before, rows, input.start), command) ?? [] : [];
+  if (echo < 0) return agent === 'codex' && before ? withoutEcho(rowsSince(before, rows, input.start, command), command) ?? [] : [];
   return trimRows(rows.slice(echo + 1, input.start));
 }
 

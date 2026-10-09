@@ -4,7 +4,7 @@
 export type CliBlock =
   | { kind: 'tabs'; items: string[] }
   | { kind: 'heading'; text: string }
-  | { kind: 'pairs'; pairs: [string, string][] }
+  | { kind: 'pairs'; pairs: [string, string, number?][] }
   | { kind: 'meter'; percent: number; label: string }
   | { kind: 'hint'; text: string }
   | { kind: 'text'; lines: string[] };
@@ -12,6 +12,8 @@ export type CliBlock =
 const FRAME = /^\s*[╭╰├┌└][─━═┬┴┼╌\s]*[╮╯┤┐┘]\s*$|^\s*[─━═╌▔▁]{3,}\s*$/;
 const SIDES = (row: string) => row.replace(/^\s*[│┃]\s?/, '').replace(/\s?[│┃]\s*$/, '');
 const METER = /^\s*([█▉▊▋▌▍▎▏▓▒░]+)\s+(\d{1,3})%\s*(.*)$/;
+// A bar as a value (Codex's "Weekly limit:  [███████░] 96% left (resets …)"): drawn in its row of the table.
+const VALUE_METER = /^\[([█▉▊▋▌▍▎▏▓▒░]+)\]\s+(\d{1,3})%\s*(.*)$/;
 const PAIR = /^\s*([^\s:/][^:]{0,40}?):\s+(\S.*)$/;
 const COLUMNS = /^\s*(\S(?:.*?\S)?)\s{3,}(\S(?:.*\S)?)\s*$/;
 const HINT = /^\s*(?:(?:esc|enter|tab|space|ctrl\+\w+|shift\+\w+|[↑↓←→]+|\w)\s+(?:to\s+)?[\w/ ]+?)(?:\s+·\s+(?:esc|enter|tab|space|ctrl\+\w+|shift\+\w+|[↑↓←→]+|\w)\s+(?:to\s+)?[\w/ ]+?)*\s*$/i;
@@ -37,7 +39,10 @@ export function renderCliRows(raw: readonly string[]): CliBlock[] {
     if (!blocks.length && TABS.test(row)) { push({ kind: 'tabs', items: text.split(/\s{2,}/) }); continue; }
     if (text.length <= 100 && HINT.test(text) && /\b(?:esc|enter|tab|to)\b/i.test(text)) { push({ kind: 'hint', text }); continue; }
     const pair = PAIR.exec(row) ?? columns(row);
-    if (pair && !/^https?$/i.test(pair[1])) { push({ kind: 'pairs', pairs: [[pair[1].trim(), (pair[2] ?? '').trim()]] }); continue; }
+    if (pair && !/^https?$/i.test(pair[1])) {
+      const value = (pair[2] ?? '').trim(), bar = VALUE_METER.exec(value);
+      push({ kind: 'pairs', pairs: [bar ? [pair[1].trim(), `${bar[2]}% ${bar[3]}`.trim(), Math.min(100, Number(bar[2]))] : [pair[1].trim(), value]] }); continue;
+    }
     // A short line that opens a group (after a blank, with something below it) names what follows.
     if (text.length <= 48 && !/[.。,，;；:：]$/.test(text) && !rows[index - 1]?.trim() && next(index)) { push({ kind: 'heading', text }); continue; }
     push({ kind: 'text', lines: [text] });

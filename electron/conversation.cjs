@@ -9,7 +9,23 @@ const { claudeAction, codexActions } = require('./agent-actions.cjs');
 const TEXT_LIMIT = 20000;
 // Wrappers the agents put around a prompt that are not what the user typed.
 const WRAPPERS = /<(system-reminder|environment_context|user_instructions|command-name|command-message|command-args|local-command-stdout|local-command-stderr|local-command-caveat|task-notification|user-prompt-submit-hook)\b[^>]*>[\s\S]*?<\/\1>/g;
-const clean = text => String(text || '').replace(WRAPPERS, '').trim();
+// Claude marks where a pasted image went ("[Image #2]"); the image itself is shown, so the mark goes.
+const clean = text => String(text || '').replace(WRAPPERS, '').replace(/\[Image #\d+\]\s?/g, '').trim();
+// Images the user attached to a message, as data URLs the reading view shows: at most four, none over about 2 MB.
+const IMAGE_LIMIT = 2_800_000;
+function images(parts) {
+  const found = [];
+  for (const part of Array.isArray(parts) ? parts : []) {
+    if (found.length >= 4) break;
+    if (part?.type === 'image' && part.source?.type === 'base64' && /^image\/[\w.+-]+$/.test(part.source.media_type || '') && typeof part.source.data === 'string' && part.source.data.length <= IMAGE_LIMIT) found.push(`data:${part.source.media_type};base64,${part.source.data}`);
+    else {
+      const url = part?.image_url?.url ?? part?.image_url ?? part?.url;
+      if (['image', 'input_image'].includes(part?.type) && typeof url === 'string' && /^data:image\/[\w.+-]+;base64,/.test(url) && url.length <= IMAGE_LIMIT) found.push(url);
+    }
+  }
+  return found;
+}
+const withImages = (entry, parts) => { const attached = images(parts); return attached.length ? { ...entry, images: attached } : entry; };
 const bounded = text => text.length > TEXT_LIMIT ? `${text.slice(0, TEXT_LIMIT)}\n\n…` : text;
 const brief = action => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object });
 
@@ -51,7 +67,8 @@ function claudeConversation(log, record, cwd) {
   const queued = record?.type === 'attachment' && record.attachment?.type === 'queued_command' && record.attachment.commandMode !== 'bash' ? record.attachment : null;
   if (queued && !record.isSidechain) {
     const text = clean(typeof queued.prompt === 'string' ? queued.prompt : Array.isArray(queued.prompt) ? queued.prompt.filter(block => block?.type === 'text').map(block => block.text).join('\n') : '');
-    if (text) log.put({ id: `u:${record.uuid || record.timestamp}`, at: Date.parse(record.timestamp) || Date.now(), role: 'user', text: bounded(text) });
+    const entry = withImages({ id: `u:${record.uuid || record.timestamp}`, at: Date.parse(record.timestamp) || Date.now(), role: 'user', text: bounded(text) }, queued.prompt);
+    if (text || entry.images) log.put(entry);
     return;
   }
   if (!record || record.isSidechain || !record.message || record.isMeta) return;
@@ -62,7 +79,8 @@ function claudeConversation(log, record, cwd) {
       return;
     }
     const text = clean(typeof content === 'string' ? content : Array.isArray(content) ? content.filter(block => block.type === 'text').map(block => block.text).join('\n') : '');
-    if (text) log.put({ id: `u:${base}`, at, role: 'user', text: bounded(text) });
+    const entry = withImages({ id: `u:${base}`, at, role: 'user', text: bounded(text) }, content);
+    if (text || entry.images) log.put(entry);
     return;
   }
   if (record.type !== 'assistant' || !Array.isArray(content)) return;
@@ -84,8 +102,10 @@ function codexConversation(log, record, cwd) {
   if (record.type === 'session_meta') { log.reset(); return; }
   if (record.type === 'event_msg') {
     if (payload.type === 'item_completed' && ['UserMessage', 'AgentMessage'].includes(payload.item?.type)) {
-      const text = codexMessage(payload.item);
-      if (text) log.put({ id: `${payload.item.type === 'UserMessage' ? 'u' : 'a'}:${payload.item.id || at}`, at, role: payload.item.type === 'UserMessage' ? 'user' : 'assistant', text: bounded(text) });
+      const text = codexMessage(payload.item), user = payload.item.type === 'UserMessage';
+      const entry = { id: `${user ? 'u' : 'a'}:${payload.item.id || at}`, at, role: user ? 'user' : 'assistant', text: bounded(text) };
+      const shown = user ? withImages(entry, payload.item.content) : entry;
+      if (text || shown.images) log.put(shown);
     } else if (['user_message', 'agent_message'].includes(payload.type) && typeof payload.message === 'string' && clean(payload.message)) {
       log.put({ id: `${payload.type[0]}:${at}:${payload.message.length}`, at, role: payload.type === 'user_message' ? 'user' : 'assistant', text: bounded(clean(payload.message)) });
     } else if (['task_complete', 'turn_completed', 'turn_aborted', 'turn_interrupted'].includes(payload.type)) log.settle();

@@ -40,8 +40,8 @@ export function isRoundComplete(project: Project) {
   return project.codexActive && project.codexActivity === 'complete' && !project.unread && !project.error;
 }
 
-export function ProjectPanel({ project, index, hidden, focused, navTarget, navPosition, fontSize, now, activityOpen, onToggleActivity, onFocus, onAction, onError, onOpenLink, onRevealProject, dragging, dropTarget }: {
-  project: Project; index: number; hidden: boolean; focused: boolean; fontSize: number; now: number;
+export function ProjectPanel({ project, index, hidden, focused, navTarget, navPosition, fontSize, codexDirect, now, activityOpen, onToggleActivity, onFocus, onAction, onError, onOpenLink, onRevealProject, dragging, dropTarget }: {
+  project: Project; index: number; hidden: boolean; focused: boolean; fontSize: number; codexDirect: boolean; now: number;
   navTarget?: number; navPosition?: string;
   // The activity pane (what the agent is doing, step by step) shows beside the terminal of an expanded project.
   activityOpen: boolean; onToggleActivity: () => void;
@@ -106,7 +106,7 @@ export function ProjectPanel({ project, index, hidden, focused, navTarget, navPo
       {!multiple && stopped && hasTerminal && <button className="text-button panel-action" aria-label={t('重新启动')} onClick={() => onAction(api.startTerminal(first.id))}><Play size={12} weight="fill" /><span>{t('重启')}</span></button>}
       {!multiple && first.codexActive && <span className="session-label"><span className="session-dot" />{agentName(first.agent).toUpperCase()}</span>}
       {!multiple && <VoiceButton terminalId={first.id} sessionId={first.sessionId} name={project.name} onError={onError} />}
-      {currentTerminal.sessionId && currentTerminal.codexActive && <IconButton label={readingOn ? t('切换到终端') : t('阅读视图：按文档排版显示对话')} className={readingOn ? 'is-active' : ''} onClick={() => setReading(currentTerminal.id, !readingOn)}>{readingOn ? <TerminalIcon size={16} /> : <Article size={16} />}</IconButton>}
+      {currentTerminal.sessionId && currentTerminal.codexActive && !currentTerminal.direct && <IconButton label={readingOn ? t('切换到终端') : t('阅读视图：按文档排版显示对话')} className={readingOn ? 'is-active' : ''} onClick={() => setReading(currentTerminal.id, !readingOn)}>{readingOn ? <TerminalIcon size={16} /> : <Article size={16} />}</IconButton>}
       {focused && <IconButton label={activityOpen ? t('隐藏活动栏') : t('显示活动栏：它正在做什么')} className={activityOpen ? 'is-active' : ''} onClick={onToggleActivity}><ListChecks size={16} /></IconButton>}
       {!focused && <IconButton label={t('全屏查看 {name}', { name: project.name })} onClick={() => onFocus(project.id)}><ArrowsOutSimple size={16} /></IconButton>}
       <div className="panel-menu-anchor" ref={menu}>
@@ -120,7 +120,7 @@ export function ProjectPanel({ project, index, hidden, focused, navTarget, navPo
         </div>}
       </div>
     </header>
-    <ProjectTerminals project={project} focused={focused} fontSize={fontSize} activeId={activeTerminalId} setActiveId={setActiveTerminalId} onAction={onAction} onError={onError} onOpenLink={onOpenLink} />
+    <ProjectTerminals project={project} focused={focused} fontSize={fontSize} codexDirect={codexDirect} activeId={activeTerminalId} setActiveId={setActiveTerminalId} onAction={onAction} onError={onError} onOpenLink={onOpenLink} />
     {showActivity && <ActivityPane project={project} terminal={currentTerminal} />}
     {project.error && <div className="panel-error"><Info size={13} /><span>{t(project.error)}</span></div>}
   </article>;

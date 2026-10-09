@@ -31,9 +31,9 @@ export function usePendingPrompts(id: string, sessionId: string | null, entries:
   // Derive before paint so an incoming record never renders alongside its echo.
   const state = useMemo(() => reconcilePendingPrompts(snapshot, sessionId, entries, Date.now()), [snapshot, sessionId, entries]);
   useLayoutEffect(() => { update(slot, state); }, [slot, state]);
-  const echo = (text: string) => {
+  const echo = (text: string, images: string[] = []) => {
     const promptId = `pending:${crypto.randomUUID()}`;
-    update(slot, addPendingPrompt(reconcilePendingPrompts(slot.state, sessionId, entries, Date.now()), promptId, text, Date.now()));
+    update(slot, addPendingPrompt(reconcilePendingPrompts(slot.state, sessionId, entries, Date.now()), promptId, text, Date.now(), images));
     return promptId;
   };
   return { pending: state.prompts, echo, cancelEcho: (promptId: string) => update(slot, removePendingPrompt(slot.state, promptId)) };

@@ -1,11 +1,21 @@
 // Renderer echoes are replaced only by newly observed user records, one record per send.
 export const PENDING_PROMPT_TIMEOUT = 20_000;
 type UserRecord = { id: string; role: string; text?: string };
-export type PendingPrompt = { id: string; role: 'user'; text: string; at: number; sending: boolean };
+export type PendingPrompt = { id: string; role: 'user'; text: string; at: number; sending: boolean; images?: string[] };
 export type PendingPrompts = { sessionId: string | null; prompts: readonly PendingPrompt[]; seen: readonly string[] };
 
 export const normalizePrompt = (text: string) => text.trim().replace(/\s+/g, ' ');
 export const isTypedCommand = (text: string) => /^[\/!]/.test(text) && !/[\r\n]/.test(text);
+
+// Whether what the CLI's input holds is this message: its input wraps lines, puts "[Image #1]" before pasted pictures
+// and shows a long paste as "[Pasted text #1 +12 lines]".
+const squash = (text: string) => text.replace(/\[Image #\d+\]/g, '').replace(/\s+/g, '');
+export function sameMessage(message: string, draft: string) {
+  if (!draft.trim()) return false;
+  if (/^\s*(?:\[Image #\d+\]\s*)*\[Pasted text #\d+/.test(draft)) return true;
+  const sent = squash(message), held = squash(draft).replace(/…$/, '');
+  return !!held && !!sent && (sent.startsWith(held.slice(0, 24)) || held.startsWith(sent.slice(0, 24)));
+}
 
 export function createPendingPrompts(sessionId: string | null, entries: readonly UserRecord[] = []): PendingPrompts {
   return { sessionId, prompts: [], seen: entries.filter(entry => entry.role === 'user').map(entry => entry.id) };
@@ -34,9 +44,9 @@ export function reconcilePendingPrompts(state: PendingPrompts, sessionId: string
   return changed ? { ...state, prompts, seen: [...seen] } : state;
 }
 
-export function addPendingPrompt(state: PendingPrompts, id: string, text: string, now: number): PendingPrompts {
+export function addPendingPrompt(state: PendingPrompts, id: string, text: string, now: number, images: string[] = []): PendingPrompts {
   if (!normalizePrompt(text) || isTypedCommand(text)) return state;
-  return { ...state, prompts: [...state.prompts, { id, role: 'user', text, at: now, sending: true }] };
+  return { ...state, prompts: [...state.prompts, { id, role: 'user', text, at: now, sending: true, ...(images.length ? { images } : {}) }] };
 }
 
 export function removePendingPrompt(state: PendingPrompts, id: string): PendingPrompts {

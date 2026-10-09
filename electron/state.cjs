@@ -16,11 +16,11 @@ function cleanHistory(input) {
   }).slice(0, HISTORY_LIMIT).map(item => ({ path: item.path, name: String(item.name || path.basename(item.path) || item.path).slice(0, 120), lastOpenedAt: Number.isSafeInteger(item.lastOpenedAt) ? item.lastOpenedAt : 0 }));
 }
 
-// Which coding agent a terminal restores (Codex unless recorded as Claude Code), and whether its last
-// Claude turn was left unfinished. Only non-default values are stored.
-const agentFields = restore => ({ ...(restore?.agent === 'claude' ? { agent: 'claude' } : {}), ...(restore?.interrupted === true ? { interrupted: true } : {}) });
+// Which coding agent a terminal restores (Codex unless recorded as Claude Code), whether its last Claude turn was
+// left unfinished, and whether Codex ran connected directly (no terminal). Only non-default values are stored.
+const agentFields = restore => ({ ...(restore?.agent === 'claude' ? { agent: 'claude' } : {}), ...(restore?.interrupted === true ? { interrupted: true } : {}), ...(restore?.direct === true ? { direct: true } : {}) });
 
-const defaults = { surface: 'glass', glassBackground: 'theme', glassTransparency: null, terminalRenderer: 'gpu', autoSave: true, activityPane: true, notifications: true, sound: true, announce: true, announcePhrase: '', language: 'zh', shortcuts: {}, guideVersion: '', shell: 'powershell', closeToTray: true, explorerCollapsed: false, fontSize: 12, terminalFontWeight: 400, terminalFontFamily: '', terminalCjkFontFamily: '', restoreSessions: true, focusAnimation: 'smooth', theme: 'daylight', voiceModel: DEFAULT_VOICE_MODEL };
+const defaults = { codexDirect: false, surface: 'glass', glassBackground: 'theme', glassTransparency: null, terminalRenderer: 'gpu', autoSave: true, activityPane: true, notifications: true, sound: true, announce: true, announcePhrase: '', language: 'zh', shortcuts: {}, guideVersion: '', shell: 'powershell', closeToTray: true, explorerCollapsed: false, fontSize: 12, terminalFontWeight: 400, terminalFontFamily: '', terminalCjkFontFamily: '', restoreSessions: true, focusAnimation: 'smooth', theme: 'daylight', voiceModel: DEFAULT_VOICE_MODEL };
 
 // Keyboard shortcuts the user changed, by action; defaults live in the window (src/features/shortcuts/shortcuts.ts).
 // "Ctrl+Shift+F": Ctrl, Alt and Shift in that order, then one letter, digit, F-key or punctuation key.
@@ -70,7 +70,7 @@ function cleanSettings(input = {}) {
     guideVersion: typeof input.guideVersion === 'string' && /^\d+\.\d+\.\d+(-[\w.-]+)?$/.test(input.guideVersion) ? input.guideVersion : '',
     // Spoken completion phrase; empty uses the built-in phrases. {项目} or {project} is the project name.
     announcePhrase: typeof input.announcePhrase === 'string' ? input.announcePhrase.replace(/[\0-\x1f\x7f]/g, ' ').trim().slice(0, 80) : defaults.announcePhrase,
-    ...Object.fromEntries(['notifications', 'sound', 'announce', 'closeToTray', 'explorerCollapsed', 'restoreSessions', 'autoSave', 'activityPane'].map(key => [key, typeof input[key] === 'boolean' ? input[key] : defaults[key]])),
+    ...Object.fromEntries(['notifications', 'sound', 'announce', 'closeToTray', 'explorerCollapsed', 'restoreSessions', 'autoSave', 'activityPane', 'codexDirect'].map(key => [key, typeof input[key] === 'boolean' ? input[key] : defaults[key]])),
   };
 }
 
@@ -177,6 +177,7 @@ class WorkspaceStore {
     else if (/^[a-f\d-]{36}$/i.test(patch.threadId || '')) next.threadId = patch.threadId;
     if (patch.agent === 'codex' || patch.agent === 'claude') { delete next.agent; delete next.interrupted; Object.assign(next, agentFields({ ...record.restore, agent: patch.agent })); }
     if (typeof patch.interrupted === 'boolean') { delete next.interrupted; Object.assign(next, agentFields({ interrupted: patch.interrupted })); }
+    if (typeof patch.direct === 'boolean') { delete next.direct; Object.assign(next, agentFields({ direct: patch.direct })); }
     const wasClosed = project.primaryTerminalClosed;
     if (record === project) {
       if (patch.terminal === true) project.primaryTerminalClosed = false;

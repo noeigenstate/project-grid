@@ -33,3 +33,9 @@ test('box frames go, their content stays, and links are not taken for labels', (
   ]);
   assert.deepEqual(blocks, [{ kind: 'heading', text: 'Update available!' }, { kind: 'text', lines: ['See full release notes:', 'https://example.com/notes'] }]);
 });
+
+test("Codex's bar given as a value is drawn in its table row", () => {
+  assert.deepEqual(renderCliRows(['  Context window:      100% left (0 used / 1M)', '  Weekly limit:        [███████████████████░] 96% left (resets 19:14 on 14 Oct)']), [{ kind: 'pairs', pairs: [
+    ['Context window', '100% left (0 used / 1M)'], ['Weekly limit', '96% left (resets 19:14 on 14 Oct)', 96],
+  ] }]);
+});

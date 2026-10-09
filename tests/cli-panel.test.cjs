@@ -337,6 +337,16 @@ test('a Codex picker drawn under the input (/copy) fills the card and closes wit
   assert.equal(cliCloseKey('codex', picker, inspect('codex', picker), '/copy'), '\x1b');
 });
 
+test('Codex /status, whose card repeats the banner, is found by its echo when the history above changed meanwhile', () => {
+  const banner = ['>_ OpenAI Codex (v0.162.0)', '   ~\\work\\demo', '   permissions: YOLO mode', ''];
+  const sent = [...banner, '  Tip: try /review', '', ...input('codex', '/status')];
+  const before = cliHistory('codex', sent, inspect('codex', sent));
+  const card = ['  >_ OpenAI Codex (v0.162.0)', '  Model:               GPT-6.1-Sol (reasoning high)', '  Weekly limit:        [███████████████████░] 96% left'];
+  const printed = [...banner, '/status', ...card, '', ...input('codex')];
+  assert.deepEqual(extractCliOutputRows('codex', printed, inspect('codex', printed), '/status', before), card);
+  assert.deepEqual(extractCliPanelRows('codex', printed, inspect('codex', printed), '/status', before), card);
+});
+
 test('the command line newer Codex prints above its output is not repeated in the result', () => {
   const sent = ['• MAIN-1', '', ...input('codex', '/status')];
   const before = cliHistory('codex', sent, inspect('codex', sent));

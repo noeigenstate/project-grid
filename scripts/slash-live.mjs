@@ -117,8 +117,7 @@ async function dismiss() {
     if (!s.codexActive) return 'exited';
     if (v.composer && v.enabled && !v.choice && !v.panel && s.codexActivity !== 'working') return 'ready';
     const target = terminal.locator(v.panel ? '.reading-cli-panel' : '.reading-choice:not(.reading-sessions)').first();
-    if (v.panel) await target.getByRole('button', { name: '关闭', exact: true }).click().catch(() => {});
-    else if (v.choice) { await target.focus().catch(() => {}); await page.keyboard.press('Escape'); }
+    if (v.panel || v.choice) { await target.focus().catch(() => {}); await page.keyboard.press('Escape'); }
     else if (s.codexActivity === 'working') { await composer.focus(); await page.keyboard.press('Escape'); }
     else await write('\x1b');
     await sleep(1200);

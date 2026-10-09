@@ -10,6 +10,8 @@ const { createGitRuntime } = require('./features/git/runtime.cjs');
 const { registerGitIpc } = require('./features/git/ipc.cjs');
 const { registerUpdatesIpc } = require('./features/updates/ipc.cjs');
 const { registerAgentsIpc } = require('./features/agents/ipc.cjs');
+const { registerDirectIpc } = require('./features/agents/direct-ipc.cjs');
+const { CodexDirect } = require('./features/agents/codex-direct.cjs');
 const { registerNoticesIpc } = require('./features/notices/ipc.cjs');
 const { registerVoiceIpc } = require('./features/voice/ipc.cjs');
 const { createIpcAdapter } = require('./shared/ipc.cjs');
@@ -123,7 +125,10 @@ function publicState() {
           // What the round was asked to do, in a few words, for the activity overview.
           task: s?.codexActive ? s.lastTask || '' : '',
           // The prompts sent and not finished yet: the ones being worked on, then the ones waiting.
-          prompts: s?.codexActive ? s.promptQueue.list() : [] };
+          prompts: s?.codexActive ? s.promptQueue.list() : [],
+          // Codex connected directly: no terminal; the reading view is the whole card, with the question or approval
+          // Codex waits on and the model it runs.
+          direct: !!s?.direct, card: s?.direct ? s.card || null : null, agentInfo: s?.direct ? { model: s.info?.model || '', effort: s.info?.effort || '' } : null };
       });
       const first = terminals[0];
       const activeCodex = terminals.filter(item => item.codexActive);
@@ -632,6 +637,60 @@ function startTerminal(id) {
   broadcast();
 }
 
+// Codex connected directly (Settings › 编码助手): no shell and no screen to read. Its app-server reports the
+// conversation, the steps and when a round starts and ends; the session keeps the fields a terminal's agent has, so
+// the lights, the activity pane, completion alerts and restoring work the same.
+function startDirect(id, threadId = store.findTerminal(id)?.record.restore?.threadId || null) {
+  const project = findProject(id);
+  if (project.kind === 'ssh') throw new Error('SSH 项目暂不支持 Codex 直连。');
+  const old = sessions.get(id);
+  if (old && old.status !== 'exited') return;
+  if (old) disposeTerminal(id);
+  if (!fs.existsSync(project.path)) throw new Error('项目目录不存在，请重新添加。');
+  const cwd = store.findTerminal(id)?.record.restore?.cwd || project.path;
+  const s = { terminalId: id, projectId: project.id, sessionId: randomUUID(), status: 'starting', ready: true, direct: true, shellKind: 'codex',
+    codexActive: true, agent: 'codex', codexActivity: 'unknown', activitySince: Date.now(), activityInputAt: 0, card: null, info: {},
+    seq: 0, chunks: [], bytes: 0, flush() {}, error: null, submissions: new SubmissionTracker(), gate: { input() {}, output() {}, dispose() {} } };
+  s.actions = new ActionLog(change => publishAction(s, change));
+  s.promptQueue = new PromptQueue(() => { if (sessions.get(id) === s) scheduleState(); });
+  s.conversation = new ConversationLog(change => {
+    publishConversation(s, change);
+    const entry = change.entry;
+    if (entry?.role === 'user' && entry.at >= s.activitySince - 1000) s.promptQueue.start(entry.text, entry.at, entry.id);
+    if (entry?.role === 'assistant') noteReply(s, { text: entry.text });
+  });
+  const live = () => sessions.get(id) === s;
+  s.codex = new CodexDirect({ cwd, env: createTerminalEnvironment(withoutAppImage(process.env), ''), conversation: s.conversation, actions: s.actions, version: app.getVersion(),
+    turn: (state, turnId) => {
+      if (!live()) return;
+      if (state !== 'working') s.promptQueue.finish(Date.now());
+      applyActivity(project, s, { threadId: s.codex.threadId, turnId: state === 'complete' ? turnId : null, state, updatedAt: Date.now(), prompt: s.lastPrompt });
+    },
+    card: card => { if (!live()) return; s.card = card; s.needsInput = card ? { message: card.kind === 'question' ? t('等待你回答问题') : t('等待你确认'), since: Date.now() } : null; broadcast(); },
+    info: info => {
+      if (!live()) return;
+      s.info = { ...s.info, ...info };
+      if (info.threadId) store.setRestore(id, { codex: true, direct: true, threadId: info.threadId });
+      scheduleState();
+    },
+    exit: error => { if (!live() || s.status === 'exited') return; s.status = 'exited'; s.codexActive = false; s.codexActivity = 'unknown'; s.card = null; s.error = quitting ? null : error?.message || null; broadcast(); } });
+  s.terminal = { write() {}, resize() {}, kill: () => s.codex.dispose() };
+  sessions.set(id, s);
+  store.setRestore(id, { terminal: true, codex: true, direct: true });
+  startupErrors.delete(id);
+  s.codex.start(threadId).then(() => { if (live()) { s.status = 'shell'; broadcast(); } }, error => {
+    if (!live()) return;
+    s.status = 'exited'; s.codexActive = false; s.error = t('无法启动 Codex 直连：{message}', { message: error.message }); s.codex.dispose(); broadcast();
+  });
+  captureBranch(project);
+  broadcast();
+}
+// A terminal remembered as Codex connected directly comes back that way while the setting is on.
+function startSession(id) {
+  const restore = store.findTerminal(id)?.record.restore;
+  return store.settings.codexDirect && restore?.direct ? startDirect(id) : startTerminal(id);
+}
+
 function disposeTerminal(id) {
   const s = sessions.get(id);
   if (!s) return;
@@ -696,7 +755,8 @@ function registerIpc() {
     summaryDirectory: () => path.join(app.getPath('userData'), 'summaries'), fetcher: (url, options) => electronNet.fetch(url, options),
     summarizeRound, modelSummary, listModels, connection, SUMMARY_TARGETS });
   registerEditorIpc({ handle, listen });
-  registerTerminalIpc({ handle, listen, findProject, getSession: id => sessions.get(id), hasSession: id => sessions.has(id), startTerminal,
+  registerDirectIpc({ handle, findProject, getSession: id => sessions.get(id), startDirect: (id, threadId) => startDirect(id, threadId) });
+  registerTerminalIpc({ handle, listen, findProject, getSession: id => sessions.get(id), hasSession: id => sessions.has(id), startTerminal: startSession,
     addTerminal: id => store.addTerminal(id), removeTerminal: id => store.removeTerminal(id), confirmTerminalClose, forgetRestorePlan: id => restorePlans.delete(id),
     disposeTerminal, clearStartupError: id => startupErrors.delete(id), broadcast, getProjectById: id => store.projects.find(p => p.id === id),
     acknowledgeProject: id => store.acknowledge(id), expectCompletion: id => store.expectCompletion(id), scheduleState, warmSpeech, applyActivity, pollAfterSubmission, send,
@@ -869,7 +929,7 @@ if (!app.requestSingleInstanceLock()) {
         if (record.restore === null || record.restore.codex) restorePlans.set(record.id, { codex: record.restore?.codex === true, cwd: record.restore?.cwd });
         const timer = setTimeout(() => {
           if (quitting || !store.settings.restoreSessions || !store.findTerminal(record.id) || record.restore?.terminal === false) return;
-          try { startTerminal(record.id); } catch (error) { restorePlans.delete(record.id); startupErrors.set(record.id, error.message); broadcast(); }
+          try { startSession(record.id); } catch (error) { restorePlans.delete(record.id); startupErrors.set(record.id, error.message); broadcast(); }
         }, index * 300);
         timer.unref?.();
       });
