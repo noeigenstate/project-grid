@@ -30,7 +30,7 @@ export function styleTerminal(terminal: Terminal): IDisposable {
   const draw = () => {
     const colors = terminalDecorationColors(document.documentElement.dataset.theme);
     const buffer = terminal.buffer.active;
-    if (buffer.type !== 'normal') { clear(); return; }
+    if (buffer.type !== 'normal' || ['mono-amber', 'mono-amber-dark'].includes(document.documentElement.dataset.theme || '')) { clear(); return; }
     const cellBuffer = buffer.getNullCell();
     const wanted: { row: number; x: number; width: number; foregroundColor: string }[] = [];
     let previousBlank = false;

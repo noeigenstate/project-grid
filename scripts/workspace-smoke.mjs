@@ -16,7 +16,7 @@ const output = await testRun('workspace'), dataDir = path.join(output, 'profile'
 const project = { id: randomUUID(), name: '文件与语音', path: path.join(output, 'project'), kind: 'local', restore: { terminal: false, codex: false } };
 await fs.mkdir(project.path, { recursive: true }); await fs.mkdir(dataDir); await fs.mkdir(path.join(output, 'external'));
 await fs.writeFile(path.join(project.path, 'source.txt'), 'FILE_CLIPBOARD_CONTENT');
-await fs.writeFile(path.join(project.path, 'microphone-check.html'), '<button id="check">Check microphone</button><output id="result"></output><script>document.querySelector("#check").onclick=async()=>{try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(track=>track.stop());document.querySelector("#result").textContent="ALLOWED"}catch{document.querySelector("#result").textContent="BLOCKED"}}</script>');
+await fs.writeFile(path.join(project.path, 'microphone-check.html'), '<button id="check">Check microphone</button><output id="result"></output><script>document.querySelector("#check").onclick=async()=>{document.querySelector("#result").textContent="CHECKING";try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});stream.getTracks().forEach(track=>track.stop());document.querySelector("#result").textContent="ALLOWED"}catch{document.querySelector("#result").textContent="BLOCKED"}}</script>');
 await fs.writeFile(path.join(output, 'external', 'external.txt'), 'PASTE_IN_CONTENT');
 await fs.mkdir(path.join(output, 'external', '外部文件夹'));
 await fs.writeFile(path.join(output, 'external', '外部文件夹', 'nested.txt'), 'NESTED_PASTE_CONTENT');
@@ -179,7 +179,13 @@ try {
   assert.equal(await tree.evaluate(element => element === document.activeElement), true, 'Escape closes the menu even without tree focus, then returns keyboard focus');
   await page.getByRole('treeitem', { name: 'microphone-check.html', exact: true }).click();
   const isolated = page.frameLocator('iframe[title="HTML 页面预览"]');
-  await isolated.getByRole('button', { name: 'Check microphone' }).click(); await isolated.getByText('BLOCKED', { exact: true }).waitFor();
+  try {
+    await isolated.getByRole('button', { name: 'Check microphone' }).click(); await isolated.getByText('BLOCKED', { exact: true }).waitFor();
+  } catch (error) {
+    const frame = page.frames().find(frame => frame.url().startsWith('project-preview://'));
+    console.error('HTML permission check:', frame ? await frame.evaluate(() => ({ ready: document.readyState, handler: typeof document.querySelector('#check')?.onclick, result: document.querySelector('#result')?.textContent })).catch(() => 'frame unavailable') : 'frame not found');
+    throw error;
+  }
   console.log('PASS: compact explorer, create/rename/delete, native Explorer copy-out and clipboard paste-in');
   if (await page.getByRole('button', { name: '返回终端', exact: true }).count()) await page.getByRole('button', { name: '返回终端', exact: true }).click();
   const microphone = page.getByRole('button', { name: `语音输入 ${project.name}`, exact: true });

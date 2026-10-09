@@ -28,6 +28,9 @@
     "test:gpu-terminal": "node scripts/gpu-terminal-smoke.mjs",
     "test:editor-terminals": "node scripts/editor-terminals-smoke.mjs",
     "test:themes-markdown": "node scripts/themes-markdown-smoke.mjs",
+    "test:monochrome": "node scripts/monochrome-smoke.mjs",
+    "test:glass-transparency": "node scripts/glass-transparency-smoke.mjs",
+    "test:desktop-glass": "node scripts/desktop-glass-smoke.mjs",
     "test:visual": "node scripts/visual-smoke.mjs",
     "test:navigation": "node scripts/navigation-smoke.mjs",
     "test:clipboard": "node scripts/clipboard-smoke.mjs",
@@ -42,7 +45,10 @@
     "dist:mac": "node -e \"require('electron')\" && npm run build && electron-builder --mac --arm64 --publish never",
     "pack:mac": "node -e \"require('electron')\" && npm run build && electron-builder --mac dir --arm64",
     "dist:linux": "node -e \"require('electron')\" && npm run build && electron-builder --linux --publish never",
-    "pack:linux": "node -e \"require('electron')\" && npm run build && electron-builder --linux dir"
+    "pack:linux": "node -e \"require('electron')\" && npm run build && electron-builder --linux dir",
+    "test:readability": "node scripts/readability-smoke.mjs",
+    "test:appearance": "node scripts/appearance-smoke.mjs",
+    "test:question-appearance": "node scripts/question-appearance-smoke.mjs"
   },
   "dependencies": {
     "electron-updater": "6.8.9",

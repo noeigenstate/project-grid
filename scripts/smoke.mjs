@@ -390,7 +390,7 @@ try {
 
   const clickTerminalText = async (text, control = true) => {
     // xterm reuses row elements when output scrolls, so the row found a moment ago may already hold
-    // the next line. Locate and measure again until both steps see the same text.
+    // the next line. Prompt output can also scroll a link after measuring it: re-measure and hover together.
     const row = panel.locator('.xterm-rows > div').filter({ hasText: text }).last();
     const screen = panel.locator('.xterm-screen');
     let position = null;

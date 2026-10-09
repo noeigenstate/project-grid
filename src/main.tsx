@@ -7,6 +7,11 @@ import './shared/styles/polish.css';
 import './shared/styles/typography.css';
 import './shared/styles/interaction.css';
 import './shared/styles/clarity.css';
+import './shared/styles/monochrome.css';
+import './shared/styles/monochrome-dark.css';
+import './shared/styles/glass-transparency.css';
+import './shared/styles/desktop-glass.css';
+import './features/terminal/terminal-font.css';
 import { restoreTheme } from './shared/themes';
 import './shared/platform';
 

@@ -2,7 +2,7 @@
    Tint and blur belong to the backdrop; all content stays at full opacity. */
 :root {
   color: #ffffff; background: #283e38;
-  --glass: rgba(9, 24, 34, .44);
+  --glass: rgba(9, 24, 34, var(--glass-alpha, .44));
   --glass-strong: rgba(15, 31, 42, .72);
   --glass-solid: #1b303d;
   --glass-border: rgba(240, 250, 255, .34);
@@ -93,7 +93,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
   content: ''; position: absolute; inset: 0; z-index: 2; padding: 1px; pointer-events: none; border-radius: calc(var(--glass-radius) - 1px);
   background: var(--glass-rim); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude;
 }
-.panel-terminal-area { background: rgba(3, 14, 23, .3); }
+.panel-terminal-area { background: rgba(3, 14, 23, var(--glass-alpha, .3)); }
 .project-panel > :last-child { border-radius: 0 0 calc(var(--glass-radius) - 1px) calc(var(--glass-radius) - 1px); }
 .terminal-grid { display: grid; grid-template-columns: repeat(var(--terminal-columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--terminal-rows), minmax(0, 1fr)); }
 /* Splits are divided only by the 1px gaps between them; nothing is drawn along the card's own rounded edge. */
@@ -141,7 +141,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 .terminal-host .xterm-rows .xterm-decoration-top.xterm-fg-257:not(.xterm-cursor-block) { color: #fff; }
 .terminal-host ::-webkit-scrollbar-track, .terminal-host ::-webkit-scrollbar-corner { background: transparent; }
 .terminal-empty { color: #a2b8d1; }.terminal-empty p { color: #d0dfee; }.terminal-empty > span { color: #9aadbf; }
-.project-panel.has-unread { background: var(--glass-sheen), rgba(38, 19, 40, .46); }
+.project-panel.has-unread { background: var(--glass-sheen), rgba(38, 19, 40, var(--glass-alpha, .46)); }
 .has-unread .panel-header { background: linear-gradient(170deg, #ffdfec12, #ffbbca03), #3617251f; border-color: #ffd9e438; }
 /* One vector edge, one shared breath. Only decorative opacity is animated;
    terminal text never inherits a filter, scale or animated shadow. */
@@ -156,7 +156,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 .project-panel.attention-active {
   --edge-gradient: radial-gradient(ellipse 48px 32px at top left, #d8f9ff, transparent), radial-gradient(ellipse 48px 32px at top right, #ffd3ed, transparent), radial-gradient(ellipse 48px 32px at bottom left, #c5c9ff, transparent), radial-gradient(ellipse 48px 32px at bottom right, #ffe7b3, transparent), linear-gradient(112deg, #3882f6 0%, #8b5cf6 40%, #ec4899 76%, #f59e0b 100%);
 }
-.project-panel.round-complete { background: var(--glass-sheen), rgba(12, 40, 33, .46); }
+.project-panel.round-complete { background: var(--glass-sheen), rgba(12, 40, 33, var(--glass-alpha, .46)); }
 .round-complete .panel-header { background: linear-gradient(170deg, #b7ffe918, #ffffff03), #0b2c1e26; }
 .status-badge { gap: 8px; }
 .status-button { font: inherit; font-size: 12px; padding: 5px 2px; background: transparent; border: 0; border-radius: 3px; }
@@ -284,7 +284,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; color: #e7f1fa; }
 
 /* A project gets its own explorer only while focused. */
-.focus-sidebar { display: flex; flex-direction: column; width: 284px; flex: 0 0 284px; min-height: 0; margin: var(--layout-gap) 0 var(--layout-gap) var(--layout-gap); border-radius: var(--glass-radius); background: var(--glass-sheen), rgba(9, 29, 37, .54); border: 1px solid var(--glass-hairline); box-shadow: var(--glass-lift); text-shadow: 0 1px 0 #00101b66; transition: width .18s ease, flex-basis .18s ease; }
+.focus-sidebar { display: flex; flex-direction: column; width: 284px; flex: 0 0 284px; min-height: 0; margin: var(--layout-gap) 0 var(--layout-gap) var(--layout-gap); border-radius: var(--glass-radius); background: var(--glass-sheen), rgba(9, 29, 37, var(--glass-alpha, .54)); border: 1px solid var(--glass-hairline); box-shadow: var(--glass-lift); text-shadow: 0 1px 0 #00101b66; transition: width .18s ease, flex-basis .18s ease; }
 /* Sidebar: a Finder-like column. Project title on top, a Files | Git switch, a light tree. */
 .explorer-navigation { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 10px 10px 0; }
 .explorer-back { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 7px; border: 0; border-radius: 4px; background: transparent; color: var(--sidebar-ink); font-size: 12px; font-weight: 600; white-space: nowrap; }
@@ -349,7 +349,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 
 /* File previews share the same surface; terminals keep their original session. */
 .file-preview { position: absolute; inset: 0; z-index: 5; }
-.file-preview { display: flex; flex: 1; min-height: 0; min-width: 0; flex-direction: column; margin: var(--layout-gap); background: var(--glass-sheen), rgba(10, 26, 38, .54); border: 1px solid var(--glass-hairline); border-radius: var(--glass-radius); box-shadow: var(--glass-lift); overflow: hidden; }
+.file-preview { display: flex; flex: 1; min-height: 0; min-width: 0; flex-direction: column; margin: var(--layout-gap); background: var(--glass-sheen), rgba(10, 26, 38, var(--glass-alpha, .54)); border: 1px solid var(--glass-hairline); border-radius: var(--glass-radius); box-shadow: var(--glass-lift); overflow: hidden; }
 .file-tabs { display: flex; height: 39px; flex-shrink: 0; border-bottom: 1px solid #e4f0ff1b; background: #d1e5ff06; }
 .terminal-tab { display: flex; gap: 8px; align-items: center; padding: 0 16px; border: 0; border-right: 1px solid #dcefff17; background: transparent; color: #acbfd7; font-size: 11px; }
 .terminal-tab:hover { background: #e0f0ff0b; color: #edf6ff; }
@@ -473,7 +473,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
    round; the terminal gives it room and refits. */
 .panel-header .icon-button.is-active { color: #f1f7ff; background: #edfbff1f; }
 .project-panel.has-activity .panel-terminal-area { margin-right: 340px; }
-.activity-pane { position: absolute; top: var(--panel-header-height); right: 0; bottom: 0; width: 340px; z-index: 1; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(220, 237, 255, .14); background: rgba(4, 16, 26, .3); border-radius: 0 0 calc(var(--glass-radius) - 1px) 0; text-shadow: var(--text-shadow); }
+.activity-pane { position: absolute; top: var(--panel-header-height); right: 0; bottom: 0; width: 340px; z-index: 1; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid rgba(220, 237, 255, .14); background: rgba(4, 16, 26, var(--glass-alpha, .3)); border-radius: 0 0 calc(var(--glass-radius) - 1px) 0; text-shadow: var(--text-shadow); }
 .activity-header { display: flex; align-items: baseline; gap: 8px; padding: 11px 14px 7px; font-size: 12px; }.activity-header span { color: #a9bfd6; font-size: 11px; }
 .activity-now { display: flex; align-items: center; gap: 7px; margin: 0 10px 8px; padding: 7px 10px; border-radius: 4px; font-size: 12px; color: #d6e6f5; background: rgba(255, 255, 255, .06); }
 .activity-now > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

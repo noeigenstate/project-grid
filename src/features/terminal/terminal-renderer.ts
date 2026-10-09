@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { IDisposable, Terminal } from '@xterm/xterm';
 import { WebglAddon } from '@xterm/addon-webgl';
+import { keepDomSelectionCleared } from './terminal-selection';
 
 // Which renderer draws the terminals. The GPU renderer (WebGL) draws text from a glyph atlas: a working agent
 // redraws its screen ten times a second, and with the DOM renderer every redraw is rows of HTML to lay out
@@ -17,8 +18,14 @@ export const terminalRenderer = () => current;
 // Chromium keeps at most 16 WebGL contexts in a window and drops the oldest beyond that. Twelve terminals draw
 // on the GPU; any more draw with the DOM renderer, so no visible terminal loses its context to another.
 const GPU_LIMIT = 12;
-const GPU_TEXT_WEIGHT = 350;
 let active = 0;
+// The weight chosen for terminal text (Settings, 400 by default). The GPU renderer draws it 50 lighter; see below.
+const chosenWeight = new WeakMap<Terminal, number>(), drawnOnGpu = new WeakSet<Terminal>();
+const weightFor = (terminal: Terminal) => (chosenWeight.get(terminal) ?? 400) - (drawnOnGpu.has(terminal) ? 50 : 0);
+export function setTerminalWeight(terminal: Terminal, weight: number) {
+  chosenWeight.set(terminal, weight);
+  terminal.options.fontWeight = weightFor(terminal);
+}
 
 // The GPU renderer draws a background rectangle for each run of cells whose background field is not zero. Dim,
 // italic and underline-style text keep flags in that field too, so such text with the default background got a
@@ -53,10 +60,9 @@ function attachGpuRenderer(terminal: Terminal, lost: () => void): IDisposable | 
   // WebGL rasterizes glyphs over the transparent background, where their antialiased edges add up to visibly heavier
   // strokes than the DOM renderer draws at the same weight. A slightly lighter weight of the variable terminal font
   // makes the two look alike; the DOM renderer gets its own weight back when the GPU one is released.
-  const weight = terminal.options.fontWeight;
-  terminal.options.fontWeight = GPU_TEXT_WEIGHT;
+  drawnOnGpu.add(terminal); terminal.options.fontWeight = weightFor(terminal);
   let released = false;
-  const release = () => { if (released) return; released = true; active--; try { addon.dispose(); } catch { /* Already gone with its terminal. */ } try { terminal.options.fontWeight = weight; } catch { /* Disposed. */ } };
+  const release = () => { if (released) return; released = true; active--; drawnOnGpu.delete(terminal); try { addon.dispose(); } catch { /* Already gone with its terminal. */ } try { terminal.options.fontWeight = weightFor(terminal); } catch { /* Disposed. */ } };
   addon.onContextLoss(() => { release(); lost(); });
   return { dispose: release };
 }
@@ -65,6 +71,7 @@ function attachGpuRenderer(terminal: Terminal, lost: () => void): IDisposable | 
 // few times, a moment later. Switch it on right after the terminal opens, before any output is parsed: starting
 // it takes the window a moment, and answers the terminal owes the shell must not wait behind that.
 export function gpuRenderer(terminal: Terminal) {
+  keepDomSelectionCleared(terminal);
   let gpu: IDisposable | null = null, wanted = false, retries = 0, timer = 0;
   const attach = () => { timer = 0; if (wanted && !gpu) gpu = attachGpuRenderer(terminal, () => { gpu = null; if (wanted && retries++ < 3) timer = window.setTimeout(attach, 2000); }); };
   return {

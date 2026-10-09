@@ -1,0 +1,703 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-09T05:04:44.928Z",
+  "baseCommit": "7be8797ad4da6887281f7334c0701c55321d2884",
+  "featureCodeCommit": "af333d80e21c40a02ecf001a75041b3c39086ea4",
+  "environment": {
+    "platform": "Windows 10 Pro",
+    "build": 19045,
+    "node": "22.15.0",
+    "electron": "44.3.0",
+    "packageVersion": "0.6.12"
+  },
+  "build": {
+    "typecheck": "passed",
+    "bundle": "passed",
+    "preExistingLargeChunkWarning": true
+  },
+  "unit": {
+    "total": 450,
+    "passed": 446,
+    "failed": 0,
+    "skipped": 4
+  },
+  "gui": {
+    "baseline": [
+      {
+        "script": "test:appearance",
+        "exit": 0
+      },
+      {
+        "script": "test:monochrome",
+        "exit": 0
+      },
+      {
+        "script": "test:glass-transparency",
+        "exit": 0
+      },
+      {
+        "script": "test:desktop-glass",
+        "exit": 0
+      },
+      {
+        "script": "test:readability",
+        "exit": 0
+      },
+      {
+        "script": "test:themes-markdown",
+        "exit": 0
+      },
+      {
+        "script": "test:gpu-terminal",
+        "exit": 0
+      },
+      {
+        "script": "test:editor-terminals",
+        "exit": 0
+      },
+      {
+        "script": "test:material",
+        "exit": 0
+      },
+      {
+        "script": "test:composer",
+        "exit": 0
+      },
+      {
+        "script": "test:reading",
+        "exit": 0
+      },
+      {
+        "script": "test:completion",
+        "exit": 0
+      },
+      {
+        "script": "test:git",
+        "exit": 0
+      },
+      {
+        "script": "test:navigation",
+        "exit": 0
+      },
+      {
+        "script": "test:motion",
+        "exit": 0
+      },
+      {
+        "script": "test:desktop",
+        "exit": 0
+      },
+      {
+        "script": "test:question-appearance",
+        "exit": 0
+      },
+      {
+        "script": "test:monochrome-dark",
+        "exit": 0
+      },
+      {
+        "script": "test:appearance-packaged",
+        "exit": 0
+      }
+    ],
+    "affectedFollowup": [
+      {
+        "script": "test:appearance",
+        "exit": 0
+      },
+      {
+        "script": "test:desktop-glass",
+        "exit": 0
+      },
+      {
+        "script": "test:glass-transparency",
+        "exit": 0
+      },
+      {
+        "script": "test:readability",
+        "exit": 0
+      },
+      {
+        "script": "test:monochrome",
+        "exit": 0
+      },
+      {
+        "script": "test:question-appearance",
+        "exit": 0
+      },
+      {
+        "script": "test:monochrome-dark",
+        "exit": 0
+      }
+    ],
+    "finalMonochrome": {
+      "light": [
+        "GPU terminal renders without recreating its session",
+        "theme switches preserve terminal identity, 16/256-colour ANSI text and unsent input; original colours restore",
+        "neutral working activity outline and readable fullscreen titlebar",
+        "working is neutral, unread completion amber, reading headings and code are monochrome",
+        "Git additions and removals retain explicit prefixes and distinct neutral surfaces; solid mode works",
+        "selected theme survives restart"
+      ],
+      "dark": [
+        "GPU terminal renders without recreating its session",
+        "theme switches preserve terminal identity, 16/256-colour ANSI text and unsent input; original colours restore",
+        "neutral working activity outline and readable fullscreen titlebar",
+        "working is neutral, unread completion amber, reading headings and code are monochrome",
+        "Git additions and removals retain explicit prefixes and distinct neutral surfaces; solid mode works",
+        "selected theme survives restart"
+      ]
+    },
+    "sourceMatrix": {
+      "cases": [
+        "daylight/gpu/glass",
+        "daylight/gpu/desktop-glass",
+        "daylight/gpu/solid",
+        "daylight/dom/glass",
+        "daylight/dom/desktop-glass",
+        "daylight/dom/solid",
+        "forest/gpu/glass",
+        "forest/gpu/desktop-glass",
+        "forest/gpu/solid",
+        "forest/dom/glass",
+        "forest/dom/desktop-glass",
+        "forest/dom/solid",
+        "mountain-blue/gpu/glass",
+        "mountain-blue/gpu/desktop-glass",
+        "mountain-blue/gpu/solid",
+        "mountain-blue/dom/glass",
+        "mountain-blue/dom/desktop-glass",
+        "mountain-blue/dom/solid",
+        "wild-red/gpu/glass",
+        "wild-red/gpu/desktop-glass",
+        "wild-red/gpu/solid",
+        "wild-red/dom/glass",
+        "wild-red/dom/desktop-glass",
+        "wild-red/dom/solid",
+        "mono-amber/gpu/glass",
+        "mono-amber/gpu/desktop-glass",
+        "mono-amber/gpu/solid",
+        "mono-amber/dom/glass",
+        "mono-amber/dom/desktop-glass",
+        "mono-amber/dom/solid",
+        "mono-amber-dark/gpu/glass",
+        "mono-amber-dark/gpu/desktop-glass",
+        "mono-amber-dark/gpu/solid",
+        "mono-amber-dark/dom/glass",
+        "mono-amber-dark/dom/desktop-glass",
+        "mono-amber-dark/dom/solid"
+      ],
+      "checks": [
+        "six themes × renderers × linked materials",
+        "native/theme background selection remembered through solid mode",
+        "truecolor program surfaces preserved",
+        "font, session, host and draft preserved",
+        "recommendations touch appearance only",
+        "file preview on all themes",
+        "English settings",
+        "restart and no font downloads"
+      ],
+      "contentOpacity": "1 in all tested combinations"
+    },
+    "finalPackagedMatrix": {
+      "cases": [
+        "daylight/gpu/glass",
+        "daylight/gpu/desktop-glass",
+        "daylight/gpu/solid",
+        "daylight/dom/glass",
+        "daylight/dom/desktop-glass",
+        "daylight/dom/solid",
+        "forest/gpu/glass",
+        "forest/gpu/desktop-glass",
+        "forest/gpu/solid",
+        "forest/dom/glass",
+        "forest/dom/desktop-glass",
+        "forest/dom/solid",
+        "mountain-blue/gpu/glass",
+        "mountain-blue/gpu/desktop-glass",
+        "mountain-blue/gpu/solid",
+        "mountain-blue/dom/glass",
+        "mountain-blue/dom/desktop-glass",
+        "mountain-blue/dom/solid",
+        "wild-red/gpu/glass",
+        "wild-red/gpu/desktop-glass",
+        "wild-red/gpu/solid",
+        "wild-red/dom/glass",
+        "wild-red/dom/desktop-glass",
+        "wild-red/dom/solid",
+        "mono-amber/gpu/glass",
+        "mono-amber/gpu/desktop-glass",
+        "mono-amber/gpu/solid",
+        "mono-amber/dom/glass",
+        "mono-amber/dom/desktop-glass",
+        "mono-amber/dom/solid",
+        "mono-amber-dark/gpu/glass",
+        "mono-amber-dark/gpu/desktop-glass",
+        "mono-amber-dark/gpu/solid",
+        "mono-amber-dark/dom/glass",
+        "mono-amber-dark/dom/desktop-glass",
+        "mono-amber-dark/dom/solid"
+      ],
+      "checks": [
+        "six themes × renderers × linked materials",
+        "native/theme background selection remembered through solid mode",
+        "truecolor program surfaces preserved",
+        "font, session, host and draft preserved",
+        "recommendations touch appearance only",
+        "file preview on all themes",
+        "English settings",
+        "restart and no font downloads"
+      ],
+      "contentOpacity": "1 in all tested combinations"
+    },
+    "recommendations": [
+      {
+        "theme": "daylight",
+        "fontSize": 12,
+        "transparency": null,
+        "renderer": "gpu"
+      },
+      {
+        "theme": "forest",
+        "fontSize": 12,
+        "transparency": null,
+        "renderer": "gpu"
+      },
+      {
+        "theme": "mountain-blue",
+        "fontSize": 12,
+        "transparency": null,
+        "renderer": "gpu"
+      },
+      {
+        "theme": "wild-red",
+        "fontSize": 12,
+        "transparency": null,
+        "renderer": "gpu"
+      },
+      {
+        "theme": "mono-amber",
+        "fontSize": 16,
+        "transparency": 25,
+        "renderer": "dom"
+      },
+      {
+        "theme": "mono-amber-dark",
+        "fontSize": 16,
+        "transparency": 20,
+        "renderer": "dom"
+      }
+    ]
+  },
+  "nativeBlur": {
+    "backend": "windows-compat",
+    "checks": [
+      "real behind-window content is blurred; compositor pixels differ from blur-off control",
+      "material switches preserve terminal and draft; panel alpha changes without another blur; GPU, settings, resizing, expanded file view and reduced transparency work",
+      "desktop glass and panel transparency survive restart",
+      "ordinary windows retain the original material until the user reopens the app"
+    ],
+    "sharpness": [
+      0.48833333333333334,
+      2.0004
+    ],
+    "maximized": true,
+    "fullScreen": false
+  },
+  "fonts": {
+    "checks": [
+      "opaque outlined cursor bitmap retained through surface changes; terminal mouse protocol and links retain original cursors",
+      "actual Latin/CJK platform families recorded; GPU and DOM live changes; missing and empty families fall back to original fonts",
+      "GPU/DOM weight 400/500/600 actual raster and standard restoration; live setting preserves session, host and unsent draft; 0 opaque/100 transparent; content opacity stays 1",
+      "font families, weight and transparency persist on restart",
+      "ordinary windows keep the stock system text cursor"
+    ],
+    "defaultFamilies": {
+      "latin": [
+        {
+          "familyName": "Cascadia Code",
+          "postScriptName": "CascadiaCodeRoman",
+          "isCustomFont": false,
+          "glyphCount": 18
+        }
+      ],
+      "chinese": [
+        {
+          "familyName": "Microsoft YaHei UI",
+          "postScriptName": "MicrosoftYaHeiUI",
+          "isCustomFont": false,
+          "glyphCount": 8
+        }
+      ]
+    },
+    "comparisons": [
+      {
+        "renderer": "gpu",
+        "latin": "Cascadia Code",
+        "chinese": "Microsoft YaHei UI",
+        "actual": {
+          "latin": [
+            {
+              "familyName": "Cascadia Code",
+              "postScriptName": "CascadiaCodeRoman",
+              "isCustomFont": false,
+              "glyphCount": 18
+            }
+          ],
+          "chinese": [
+            {
+              "familyName": "Microsoft YaHei UI",
+              "postScriptName": "MicrosoftYaHeiUI",
+              "isCustomFont": false,
+              "glyphCount": 8
+            }
+          ]
+        }
+      },
+      {
+        "renderer": "gpu",
+        "latin": "Consolas",
+        "chinese": "Microsoft YaHei UI",
+        "actual": {
+          "latin": [
+            {
+              "familyName": "Consolas",
+              "postScriptName": "Consolas",
+              "isCustomFont": false,
+              "glyphCount": 18
+            }
+          ],
+          "chinese": [
+            {
+              "familyName": "Microsoft YaHei UI",
+              "postScriptName": "MicrosoftYaHeiUI",
+              "isCustomFont": false,
+              "glyphCount": 8
+            }
+          ]
+        }
+      },
+      {
+        "renderer": "gpu",
+        "latin": "Cascadia Code",
+        "chinese": "Noto Sans SC",
+        "actual": {
+          "latin": [
+            {
+              "familyName": "Cascadia Code",
+              "postScriptName": "CascadiaCodeRoman",
+              "isCustomFont": false,
+              "glyphCount": 18
+            }
+          ],
+          "chinese": [
+            {
+              "familyName": "Noto Sans SC",
+              "postScriptName": "Noto-Sans-SC",
+              "isCustomFont": false,
+              "glyphCount": 8
+            }
+          ]
+        }
+      },
+      {
+        "renderer": "dom",
+        "latin": "Cascadia Code",
+        "chinese": "Microsoft YaHei UI",
+        "actual": {
+          "latin": [
+            {
+              "familyName": "Cascadia Code",
+              "postScriptName": "CascadiaCodeRoman",
+              "isCustomFont": false,
+              "glyphCount": 18
+            }
+          ],
+          "chinese": [
+            {
+              "familyName": "Microsoft YaHei UI",
+              "postScriptName": "MicrosoftYaHeiUI",
+              "isCustomFont": false,
+              "glyphCount": 8
+            }
+          ]
+        }
+      },
+      {
+        "renderer": "dom",
+        "latin": "Consolas",
+        "chinese": "Microsoft YaHei UI",
+        "actual": {
+          "latin": [
+            {
+              "familyName": "Consolas",
+              "postScriptName": "Consolas",
+              "isCustomFont": false,
+              "glyphCount": 18
+            }
+          ],
+          "chinese": [
+            {
+              "familyName": "Microsoft YaHei UI",
+              "postScriptName": "MicrosoftYaHeiUI",
+              "isCustomFont": false,
+              "glyphCount": 8
+            }
+          ]
+        }
+      },
+      {
+        "renderer": "dom",
+        "latin": "Cascadia Code",
+        "chinese": "Noto Sans SC",
+        "actual": {
+          "latin": [
+            {
+              "familyName": "Cascadia Code",
+              "postScriptName": "CascadiaCodeRoman",
+              "isCustomFont": false,
+              "glyphCount": 18
+            }
+          ],
+          "chinese": [
+            {
+              "familyName": "Noto Sans SC",
+              "postScriptName": "Noto-Sans-SC",
+              "isCustomFont": false,
+              "glyphCount": 8
+            }
+          ]
+        }
+      }
+    ],
+    "licenseMetadata": [
+      {
+        "filename": "CascadiaCode.ttf",
+        "sha256": "cfb6a8d474018fe46d53a427e5fbee44b998822d0d3d8772914bd712cfc55ac4",
+        "family": [
+          "Cascadia Code"
+        ],
+        "hasOflDescription": true,
+        "licenseUrls": [
+          "https://scripts.sil.org/OFL"
+        ]
+      },
+      {
+        "filename": "NotoSansSC-VF.ttf",
+        "sha256": "763146584cf0710223441356b4395e279021b0806c196614377a7a0174ae074a",
+        "family": [
+          "Noto Sans SC"
+        ],
+        "hasOflDescription": true,
+        "licenseUrls": [
+          "http://scripts.sil.org/OFL"
+        ]
+      }
+    ]
+  },
+  "packaging": {
+    "fontFiles": [],
+    "externalFonts": [],
+    "testArtifacts": [],
+    "roots": [
+      "LICENSE",
+      "assets",
+      "dist",
+      "electron",
+      "package.json",
+      "node_modules"
+    ],
+    "archiveSizeBytes": 6622877,
+    "nativeHelperIncluded": true,
+    "nativeModuleIncluded": true,
+    "licenseIncluded": true,
+    "packageVersion": "0.6.12",
+    "configuration": "Independent local whitelist; production build configuration unchanged"
+  },
+  "screenshots": {
+    "files": [
+      "images/appearance-light-overview.png",
+      "images/appearance-light-reading.png",
+      "images/appearance-light-git.png",
+      "images/appearance-dark-overview.png",
+      "images/appearance-dark-reading.png",
+      "images/appearance-dark-git.png"
+    ],
+    "mode": "Theme background",
+    "content": "Isolated demo projects and test conversations; not desktop blur hardware evidence"
+  },
+  "boundaries": [
+    "Windows 10 / older Windows 11 compatibility path is experimental; native fullscreen unsupported",
+    "Windows 11 22H2+ / macOS native material APIs unit-tested; hardware validation pending",
+    "Linux font order tested; hardware visual validation pending",
+    "Original physical pointer disappearance not fully reproduced",
+    "Package audit covers independent whitelist build, not production release configuration",
+    "Baseline suite precedes final targeted appearance changes; followups and final packaged matrix recorded separately"
+  ],
+  "cloudCiDiagnosis": {
+    "originalPrRun": 37887112177,
+    "baseMainRun": 37877212188,
+    "cloudUnit": {
+      "windows": {
+        "total": 450,
+        "passed": 446,
+        "skipped": 4,
+        "failed": 0
+      },
+      "macos": {
+        "total": 450,
+        "passed": 444,
+        "skipped": 6,
+        "failed": 0
+      },
+      "linuxX64": {
+        "total": 450,
+        "passed": 445,
+        "skipped": 5,
+        "failed": 0
+      },
+      "linuxArm64": {
+        "total": 450,
+        "passed": 445,
+        "skipped": 5,
+        "failed": 0
+      }
+    },
+    "linux": "Same failure on main: LICENSE missing from expected root whitelist; strict check corrected",
+    "macos": "PR signing skipped by electron-builder; configuration deliberately unchanged",
+    "windows": "Cloud BLOCKED wait timed out twice; exact root cause not reproduced",
+    "localMediaProbe": [
+      {
+        "before": {
+          "ready": "complete",
+          "handler": "function",
+          "secure": true
+        }
+      },
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "after": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED",
+          "clicks": 1
+        }
+      }
+    ],
+    "localRepeatedMediaProbe": [
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "run": 0,
+        "state": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED"
+        }
+      },
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "run": 1,
+        "state": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED"
+        }
+      },
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "run": 2,
+        "state": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED"
+        }
+      },
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "run": 3,
+        "state": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED"
+        }
+      },
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "run": 4,
+        "state": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED"
+        }
+      },
+      {
+        "console": "Permissions policy violation: microphone is not allowed in this document."
+      },
+      {
+        "run": 5,
+        "state": {
+          "ready": "complete",
+          "handler": "function",
+          "result": "BLOCKED"
+        }
+      }
+    ],
+    "localPackageRoots": [
+      "LICENSE",
+      "assets",
+      "dist",
+      "electron",
+      "node_modules",
+      "package.json"
+    ],
+    "secondRun": {
+      "run": 37897225888,
+      "head": "2c6695c450ee3cbde874b47b9f2610abaf94c68b",
+      "results": {
+        "linuxSsh": "passed",
+        "linuxX64": "passed",
+        "linuxArm64": "passed",
+        "macos": "failed: PR signing skipped",
+        "windows": "failed: OSC 8 REPORT_LINK hover timeout; workspace permission test not reached",
+        "release": "skipped as expected"
+      },
+      "controlledLinkProbe": {
+        "window": {
+          "width": 1024,
+          "height": 768
+        },
+        "beforePrompt": {
+          "x": 3.5234375,
+          "y": 621
+        },
+        "afterPrompt": {
+          "x": 3.5234375,
+          "y": 603
+        },
+        "shellReadyBefore": false,
+        "shiftPixels": -18,
+        "oldCoordinatesHoveredLink": false,
+        "remeasuredCoordinatesHoveredLink": true,
+        "ctrlClickOpenedPreview": true
+      },
+      "followup": {
+        "desktopSmoke": "passed against independent packaged app",
+        "applicationCode": "unchanged",
+        "macosSigning": "unchanged",
+        "permissionAssertion": "BLOCKED unchanged; CHECKING marker and failure diagnostics added"
+      }
+    }
+  }
+}

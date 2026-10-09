@@ -17,6 +17,7 @@ const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, Notificati
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
+const { desktopGlassKind, desktopGlassOptions, applyDesktopGlass } = require('./desktop-glass.cjs');
 const { execFile } = require('node:child_process');
 const { execFileSync } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
@@ -79,6 +80,8 @@ const { translate } = require('./i18n.cjs');
 // Text shown by the main process follows the language chosen in settings (Chinese source -> locales/en.json).
 const t = (text, values) => translate(store?.settings.language, text, values);
 let window, tray, store, eventServer, sshAuth, updateManager, quitting = false, updatesIpc;
+const desktopGlassBackend = desktopGlassKind();
+let desktopGlassWindow = false, desktopGlassActive = false;
 const sessions = new Map();
 const { setBranch, captureBranch, getBranch, forgetBranch, remoteBranch } = createGitRuntime({ getProjects: () => store.projects, execFile, broadcast });
 const projectGit = new ProjectGit(id => remoteFor(id));
@@ -138,6 +141,7 @@ function publicState() {
       };
     }),
     settings: store.settings,
+    desktopGlass: { supported: !!desktopGlassBackend, compatibility: desktopGlassBackend === 'windows-compat', active: desktopGlassActive, restart: store.settings.surface === 'glass' && store.settings.glassBackground === 'desktop' && !!desktopGlassBackend && !desktopGlassWindow, failed: desktopGlassWindow && !desktopGlassActive },
     warning: store.warning,
     platform: process.platform,
     // Linux: the shell new local terminals use and whether zsh is installed, for the choice in Settings.
@@ -780,14 +784,20 @@ if (!app.requestSingleInstanceLock()) {
       } catch { return new Response(t('文件不存在、超出项目范围，或预览已关闭。'), { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } }); }
     });
     registerIpc();
+    desktopGlassWindow = store.settings.surface === 'glass' && store.settings.glassBackground === 'desktop' && !!desktopGlassBackend;
     window = new BrowserWindow({
       width: 1500, height: 940, minWidth: 820, minHeight: 560,
       title: t('Project Grid · 项目矩阵'), backgroundColor: '#101216',
+      ...(desktopGlassWindow ? desktopGlassOptions(desktopGlassBackend) : {}),
       // macOS keeps its own window buttons over the title bar; Windows draws them in the page.
       ...(process.platform === 'darwin' ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 12 } } : { frame: false }),
       show: false, icon: path.join(root, 'assets/icon.png'),
       webPreferences: { preload: path.join(__dirname, 'preload.cjs'), nodeIntegration: false, nodeIntegrationInSubFrames: false, contextIsolation: true, sandbox: true, spellcheck: false, backgroundThrottling: false },
     });
+    if (desktopGlassWindow) {
+      try { await applyDesktopGlass(window, runtimeDir, desktopGlassBackend); desktopGlassActive = true; }
+      catch { window.setBackgroundColor('#101216'); }
+    }
     if (process.platform === 'win32') window.setAppDetails({ appId: appUserModelId, appIconPath: shellIcon, appIconIndex: 0,
       relaunchCommand: app.isPackaged ? `"${process.execPath}"` : `"${process.execPath}" "${root}"`,
       relaunchDisplayName: process.env.PROJECT_GRID_DATA_DIR ? 'Project Grid Test' : !app.isPackaged ? 'Project Grid Dev' : installed ? 'Project Grid' : 'Project Grid Portable',

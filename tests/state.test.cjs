@@ -181,7 +181,7 @@ test('saved forest and other theme choices survive loading and unrelated setting
 });
 
 test('settings reject invalid layout and font values', () => {
-  assert.deepEqual(cleanSettings({ columns: 999, fontSize: -2, notifications: 'yes', sound: false }), { fontSize: 12, focusAnimation: 'smooth', theme: 'daylight', language: 'zh', surface: 'glass', terminalRenderer: 'gpu', shortcuts: {}, guideVersion: '', shell: 'powershell', announcePhrase: '', notifications: true, sound: false, announce: true, closeToTray: true, explorerCollapsed: false, restoreSessions: true, autoSave: true, activityPane: true, voiceModel: 'sensevoice',
+  assert.deepEqual(cleanSettings({ columns: 999, fontSize: -2, notifications: 'yes', sound: false }), { fontSize: 12, terminalFontWeight: 400, terminalFontFamily: '', terminalCjkFontFamily: '', focusAnimation: 'smooth', theme: 'daylight', language: 'zh', surface: 'glass', glassBackground: 'theme', glassTransparency: null, terminalRenderer: 'gpu', shortcuts: {}, guideVersion: '', shell: 'powershell', announcePhrase: '', notifications: true, sound: false, announce: true, closeToTray: true, explorerCollapsed: false, restoreSessions: true, autoSave: true, activityPane: true, voiceModel: 'sensevoice',
     summary: { mode: 'fast', cloud: { provider: 'openai', protocol: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4o-mini' }, local: { provider: 'ollama', protocol: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'qwen2.5:1.5b' } } });
   const summary = cleanSettings({ summary: { mode: 'local', local: { provider: 'vllm', baseUrl: ' http://10.0.0.5:8000/v1 ', model: 'Qwen/Qwen2.5-1.5B-Instruct' }, cloud: { provider: 'custom', protocol: 'anthropic', baseUrl: 'https://gateway.example/api', model: '' } } }).summary;
   assert.deepEqual(summary, { mode: 'local', cloud: { provider: 'custom', protocol: 'anthropic', baseUrl: 'https://gateway.example/api', model: '' }, local: { provider: 'vllm', protocol: 'openai', baseUrl: 'http://10.0.0.5:8000/v1', model: 'Qwen/Qwen2.5-1.5B-Instruct' } });
@@ -315,4 +315,54 @@ test('each terminal remembers whether Claude Code or Codex ran, and an unfinishe
   assert.deepEqual(reopened.findTerminal(split).record.restore, { terminal: true, codex: true, cwd: project.path });
   reopened.setRestore(split, { agent: 'other', interrupted: 'yes' });
   assert.equal(new WorkspaceStore(file).findTerminal(split).record.restore.agent, undefined, 'unknown agents are ignored');
+});
+
+test('glass transparency is optional, validated and preserved across material changes and restart', t => {
+  const { store, file } = fixture(t);
+  assert.equal(store.settings.glassTransparency, null);
+  for (const value of [0, 37, 100]) {
+    store.updateSettings({ glassTransparency: value });
+    assert.equal(new WorkspaceStore(file).settings.glassTransparency, value);
+  }
+  store.updateSettings({ surface: 'solid', glassTransparency: 72 });
+  store.updateSettings({ surface: 'glass' });
+  assert.equal(new WorkspaceStore(file).settings.glassTransparency, 72);
+  store.updateSettings({ glassTransparency: null });
+  assert.equal(new WorkspaceStore(file).settings.glassTransparency, null);
+  for (const value of [-1, 101, 0.5, '50', true, NaN, Infinity, undefined]) {
+    assert.equal(cleanSettings({ glassTransparency: value }).glassTransparency, null);
+  }
+});
+
+test('desktop glass is opt-in and persisted separately from the theme', t => {
+  const { store, file } = fixture(t);
+  assert.equal(store.settings.surface, 'glass');
+  store.updateSettings({ surface: 'desktop-glass', theme: 'mono-amber' });
+  const saved = new WorkspaceStore(file);
+  assert.equal(saved.settings.surface, 'glass'); assert.equal(saved.settings.glassBackground, 'desktop'); assert.equal(saved.settings.theme, 'mono-amber');
+  saved.updateSettings({ surface: 'solid' }); assert.equal(new WorkspaceStore(file).settings.glassBackground, 'desktop');
+  saved.updateSettings({ surface: 'glass' }); assert.equal(saved.settings.glassBackground, 'desktop'); assert.equal(saved.settings.theme, 'mono-amber');
+  saved.updateSettings({ glassBackground: 'theme', theme: 'mono-amber-dark' }); assert.equal(new WorkspaceStore(file).settings.theme, 'mono-amber-dark');
+  assert.equal(cleanSettings({ glassBackground: 'unknown' }).glassBackground, 'theme');
+});
+
+test('terminal weight is optional, validated and persisted without changing font size', t => {
+  const { store, file } = fixture(t);
+  assert.equal(store.settings.terminalFontWeight, 400);
+  for (const value of [400, 500, 600]) { store.updateSettings({ terminalFontWeight: value }); assert.equal(new WorkspaceStore(file).settings.terminalFontWeight, value); }
+  assert.equal(store.settings.fontSize, 12);
+  for (const value of [0, 700, '600', NaN, undefined]) assert.equal(cleanSettings({ terminalFontWeight: value }).terminalFontWeight, 400);
+});
+
+
+test('terminal families are optional, sanitized and persisted independently', t => {
+  const { store, file } = fixture(t);
+  assert.equal(store.settings.terminalFontFamily, ''); assert.equal(store.settings.terminalCjkFontFamily, '');
+  store.updateSettings({ terminalFontFamily: ' Consolas ', terminalCjkFontFamily: ' Noto Sans SC ' });
+  const saved = new WorkspaceStore(file);
+  assert.equal(saved.settings.terminalFontFamily, 'Consolas'); assert.equal(saved.settings.terminalCjkFontFamily, 'Noto Sans SC');
+  saved.updateSettings({ terminalFontFamily: '' }); assert.equal(saved.settings.terminalCjkFontFamily, 'Noto Sans SC');
+  for (const value of [true, 42, null, undefined, 'x'.repeat(81), 'bad\nfont', 'bad\0font']) {
+    for (const key of ['terminalFontFamily', 'terminalCjkFontFamily']) assert.equal(cleanSettings({ [key]: value })[key], '');
+  }
 });

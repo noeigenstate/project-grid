@@ -29,8 +29,36 @@ export const daylightTerminalTheme: ITheme = {
 // terminal's options.
 export const terminalOptions = { fontWeight: '400', fontWeightBold: '700', minimumContrastRatio: 4.5 } as const;
 
+const monochrome: ITheme = {
+  background: '#f4f5f600', foreground: '#17191d', cursor: '#17191d', cursorAccent: '#f4f5f6',
+  selectionBackground: '#cdd1d6', selectionForeground: '#17191d',
+  black: '#17191d', red: '#a33d00', green: '#34383e', yellow: '#34383e',
+  blue: '#34383e', magenta: '#34383e', cyan: '#454a51', white: '#f2f3f5',
+  brightBlack: '#5a6069', brightRed: '#a33d00', brightGreen: '#34383e', brightYellow: '#34383e',
+  brightBlue: '#34383e', brightMagenta: '#34383e', brightCyan: '#454a51', brightWhite: '#ffffff',
+  scrollbarSliderBackground: '#35394033', scrollbarSliderHoverBackground: '#35394055', scrollbarSliderActiveBackground: '#35394077',
+  extendedAnsi: Array.from({ length: 240 }, (_, index) => {
+    const value = index + 16;
+    let gray;
+    if (value >= 232) gray = 8 + (value - 232) * 10;
+    else {
+      const n = value - 16, steps = [0, 95, 135, 175, 215, 255];
+      gray = Math.round(steps[Math.floor(n / 36)] * .2126 + steps[Math.floor(n / 6) % 6] * .7152 + steps[n % 6] * .0722);
+    }
+    return '#' + gray.toString(16).padStart(2, '0').repeat(3);
+  }),
+};
+
+const monochromeDark: ITheme = {
+  ...monochrome, background: '#15171a00', foreground: '#f1f2f4', cursor: '#f1f2f4', cursorAccent: '#15171a',
+  selectionBackground: '#444a54', selectionForeground: '#f1f2f4',
+  black: '#15171a', red: '#ffad70', green: '#d0d3d9', yellow: '#d0d3d9', blue: '#d0d3d9', magenta: '#d0d3d9', cyan: '#bfc4ce', white: '#f1f2f4',
+  brightBlack: '#bcc0c7', brightRed: '#ffad70', brightGreen: '#d0d3d9', brightYellow: '#d0d3d9', brightBlue: '#d0d3d9', brightMagenta: '#d0d3d9', brightCyan: '#bfc4ce', brightWhite: '#ffffff',
+  scrollbarSliderBackground: '#ffffff33', scrollbarSliderHoverBackground: '#ffffff55', scrollbarSliderActiveBackground: '#ffffff77',
+};
+
 export function terminalTheme(theme: string | undefined): ITheme {
-  return { ...(theme === 'daylight' ? daylightTerminalTheme : darkTerminalTheme) };
+  return { ...(theme === 'mono-amber-dark' ? monochromeDark : theme === 'mono-amber' ? monochrome : theme === 'daylight' ? daylightTerminalTheme : darkTerminalTheme) };
 }
 
 export function terminalDecorationColors(theme: string | undefined) {

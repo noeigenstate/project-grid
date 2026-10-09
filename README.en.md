@@ -80,7 +80,8 @@ When a round finishes, a natural voice tells you which project finished what. Wa
 - **Pick up where you left off**: on start, your terminals and Codex / Claude Code sessions come back, and an interrupted task is told to continue.
 - **SSH projects**: reuse your VS Code Remote-SSH hosts; terminal, files, Git and previews all go over SSH without copying the project down.
 - **Files at hand**: file tree, an auto-saving editor, previews for images, web pages, video and Markdown; open a path in the terminal with `Ctrl+click` on Windows and Linux or `⌘+click` on macOS.
-- **Beautiful and legible**: a liquid-glass interface with three nature themes; switch to the solid surface for the sharpest text.
+- **Beautiful and legible**: the liquid-glass interface retains its nature themes; switch to the solid surface for the sharpest text.
+- **Optional monochrome appearance**: light Monochrome Amber and dark White, Black & Amber, adjustable terminal fonts, weight and background transparency, and explicitly applied theme recommendations. Supported systems can use desktop glass. [Guide and examples](docs/appearance-increment.md#english).
 - **Chinese and English, rebindable shortcuts, automatic updates on Windows**, and an in-app tutorial the first time you open it.
 
 ## Get started

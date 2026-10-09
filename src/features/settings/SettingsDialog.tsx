@@ -10,6 +10,8 @@ import { ShortcutSettings } from '../shortcuts/ShortcutSettings';
 import { AgentsSettings } from '../agents/AgentsSettings';
 import { SummarySettings } from '../notices/SummarySettings';
 import { isMac, isLinux } from '../../shared/platform';
+import { recommendedAppearance } from '../../shared/theme-presets';
+import { TerminalFontSettings } from './TerminalFontSettings';
 
 const api = window.projectGrid;
 
@@ -35,9 +37,9 @@ function AnnounceSettings({ settings, update }: { settings: Settings; update: (p
     </div>}
   </div>;
 }
-export function SettingsDialog({ settings, localShell, agents, onAgents, initialSection, updates, onCheckUpdate, onInstallUpdate, onDownloadPage, onGuide, close, update, quit }: {
+export function SettingsDialog({ settings, desktopGlass, localShell, agents, onAgents, initialSection, updates, onCheckUpdate, onInstallUpdate, onDownloadPage, onGuide, close, update, quit }: {
   localShell: Workspace['localShell']; agents: AgentsState | null; onAgents: (state: AgentsState) => void; initialSection: string;
-  settings: Settings; close: () => void; update: (patch: Partial<Settings>) => void; quit: () => void; onGuide: () => void;
+  desktopGlass?: Workspace['desktopGlass']; settings: Settings; close: () => void; update: (patch: Partial<Settings>) => void; quit: () => void; onGuide: () => void;
   updates: AppUpdateState | null; onCheckUpdate: () => void; onInstallUpdate: () => void; onDownloadPage: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -53,6 +55,7 @@ export function SettingsDialog({ settings, localShell, agents, onAgents, initial
     { id: 'about', title: t('更新与关于'), hint: t('版本与更新'), icon: <Info size={17} /> },
   ];
   const current = sections.find(section => section.id === activeSection) || sections[0];
+  const preset = recommendedAppearance(settings.theme, !!desktopGlass?.supported);
   const choose = (id: string) => { setActiveSection(id); pane.current?.scrollTo({ top: 0 }); };
   useEffect(() => { dialog.current?.showModal(); }, []);
   // Up and down move between categories while the sidebar has focus.
@@ -82,9 +85,16 @@ export function SettingsDialog({ settings, localShell, agents, onAgents, initial
       </div></fieldset>
       <label className="setting-row"><span><Globe size={19} /><span><b>{t('语言')}</b><small>{t('界面、提示与语音播报的语言')}</small></span></span><select aria-label={t('语言')} value={settings.language} onChange={event => update({ language: event.target.value as Settings['language'] })}><option value="zh">中文</option><option value="en">English</option></select></label>
       <label className="setting-row"><span><Monitor size={19} /><span><b>{t('界面材质')}</b><small>{t('实色：面板不透明，文字用 ClearType 渲染，最锐利，也更省显卡；玻璃：透出壁纸')}</small></span></span><select aria-label={t('界面材质')} value={settings.surface} onChange={event => update({ surface: event.target.value as Settings['surface'] })}><option value="glass">{t('液态玻璃')}</option><option value="solid">{t('实色（更清晰）')}</option></select></label>
+      {settings.surface === 'glass' && <label className="setting-row"><span><Monitor size={19} /><span><b>{t('玻璃背景')}</b><small>{t('主题背景使用应用内壁纸；桌面背景模糊窗口背后的内容')}</small></span></span><select aria-label={t('玻璃背景')} value={settings.glassBackground} onChange={event => update({ glassBackground: event.target.value as Settings['glassBackground'] })}><option value="theme">{t('主题背景')}</option><option value="desktop" disabled={!desktopGlass?.supported}>{t('桌面背景')}</option></select></label>}
+      {settings.surface === 'glass' && settings.glassBackground === 'desktop' && <p className="settings-note">{t(desktopGlass?.restart ? '重新打开应用后启用桌面磨玻璃；切换设置不会中断当前会话。' : desktopGlass?.active ? '窗口背后的内容由系统模糊；每个面板只叠加可调的透明底色。' : '系统磨玻璃暂不可用，继续使用应用内背景。')}{desktopGlass?.compatibility && <> {t('此系统的实验材质支持最大化，暂不支持系统全屏。')}</>}</p>}
+      <label className="setting-row"><span><Monitor size={19} /><span><b>{t('玻璃透明度')}</b><small>{t('越高越通透；只影响背景，文字保持清晰')}</small></span></span><select aria-label={t('玻璃透明度模式')} disabled={settings.surface === 'solid'} value={settings.glassTransparency === null ? 'theme' : 'custom'} onChange={event => update({ glassTransparency: event.target.value === 'theme' ? null : 50 })}><option value="theme">{t('跟随主题')}</option><option value="custom">{t('自定义')}</option></select></label>
+      {settings.glassTransparency !== null && <label className="setting-row glass-transparency-row"><span><b>{t('背景透明度')}</b></span><span className="glass-transparency-control"><input aria-label={t('背景透明度')} type="range" min="0" max="100" step="1" value={settings.glassTransparency} disabled={settings.surface === 'solid'} onChange={event => update({ glassTransparency: Number(event.target.value) })} /><output>{settings.glassTransparency}%</output><small className="glass-transparency-endpoints">{t('0% 不透明 · 100% 最透明')}</small></span></label>}
       <label className="setting-row"><span><Cpu size={19} /><span><b>{t('终端渲染')}</b><small>{t('GPU 加速：用显卡绘制终端文字，助手工作时处理器占用低得多；如果终端显示异常，改用兼容模式')}</small></span></span><select aria-label={t('终端渲染')} value={settings.terminalRenderer} onChange={event => update({ terminalRenderer: event.target.value as Settings['terminalRenderer'] })}><option value="gpu">{t('GPU 加速')}</option><option value="dom">{t('兼容模式')}</option></select></label>
       <label className="setting-row"><span><ArrowsOutSimple size={19} /><span><b>{t('界面动画')}</b><small>{t('窗口平滑放大与呼吸灯；默认不受 Windows“动画效果”开关影响')}</small></span></span><select aria-label={t('界面动画')} value={settings.focusAnimation} onChange={e => update({ focusAnimation: e.target.value as Settings['focusAnimation'] })}><option value="smooth">{t('开启')}</option><option value="system">{t('跟随系统')}</option><option value="off">{currentLanguage() === 'en' ? 'Off' : '关闭'}</option></select></label>
       <label className="setting-row"><span><TerminalIcon size={19} /><span><b>{t('终端字号')}</b><small>{t('全屏与网格共用字号')}</small></span></span><select aria-label={t('终端字号')} value={settings.fontSize} onChange={e => update({ fontSize: Number(e.target.value) })}>{[10, 11, 12, 13, 14, 16, 18, 20].map(n => <option key={n} value={n}>{n} px</option>)}</select></label>
+      <label className="setting-row"><span><TerminalIcon size={19} /><span><b>{t('终端字重')}</b><small>{t('背景透明时可提高字重；不改变终端内容和字号')}</small></span></span><select aria-label={t('终端字重')} value={settings.terminalFontWeight} onChange={event => update({ terminalFontWeight: Number(event.target.value) as Settings['terminalFontWeight'] })}><option value="400">{t('标准')}</option><option value="500">{t('中等')}</option><option value="600">{t('更醒目')}</option></select></label>
+      <TerminalFontSettings settings={settings} update={update} />
+      <div className="setting-row"><span><Palette size={19} /><span><b>{t('主题推荐配置')}</b><small>{t('只调整外观；手动修改和切换主题不会自动覆盖你的配置')}</small><small>{t('{size}px · {weight} · {renderer} · {background}', { size: preset.fontSize, weight: t(preset.terminalFontWeight === 400 ? '标准' : '中等'), renderer: t(preset.terminalRenderer === 'gpu' ? 'GPU 加速' : '兼容模式'), background: t(preset.glassBackground === 'desktop' ? '桌面背景' : '主题背景') })}</small></span></span><button className="button secondary" onClick={() => update(preset)}>{t('应用推荐配置')}</button></div>
       </section>
       <section className="settings-section" id="settings-notifications" aria-label={t('提醒')} hidden={current.id !== 'notifications'}>
       <label className="setting-row"><span><Bell size={19} /><span><b>{t('桌面通知')}</b><small>{t('一轮结束时发送系统通知')}</small></span></span><input type="checkbox" checked={settings.notifications} onChange={e => update({ notifications: e.target.checked })} /></label>

@@ -20,7 +20,7 @@ function cleanHistory(input) {
 // Claude turn was left unfinished. Only non-default values are stored.
 const agentFields = restore => ({ ...(restore?.agent === 'claude' ? { agent: 'claude' } : {}), ...(restore?.interrupted === true ? { interrupted: true } : {}) });
 
-const defaults = { surface: 'glass', terminalRenderer: 'gpu', autoSave: true, activityPane: true, notifications: true, sound: true, announce: true, announcePhrase: '', language: 'zh', shortcuts: {}, guideVersion: '', shell: 'powershell', closeToTray: true, explorerCollapsed: false, fontSize: 12, restoreSessions: true, focusAnimation: 'smooth', theme: 'daylight', voiceModel: DEFAULT_VOICE_MODEL };
+const defaults = { surface: 'glass', glassBackground: 'theme', glassTransparency: null, terminalRenderer: 'gpu', autoSave: true, activityPane: true, notifications: true, sound: true, announce: true, announcePhrase: '', language: 'zh', shortcuts: {}, guideVersion: '', shell: 'powershell', closeToTray: true, explorerCollapsed: false, fontSize: 12, terminalFontWeight: 400, terminalFontFamily: '', terminalCjkFontFamily: '', restoreSessions: true, focusAnimation: 'smooth', theme: 'daylight', voiceModel: DEFAULT_VOICE_MODEL };
 
 // Keyboard shortcuts the user changed, by action; defaults live in the window (src/features/shortcuts/shortcuts.ts).
 // "Ctrl+Shift+F": Ctrl, Alt and Shift in that order, then one letter, digit, F-key or punctuation key.
@@ -46,12 +46,18 @@ function cleanSummarySettings(input) {
 function cleanSettings(input = {}) {
   return {
     fontSize: Number.isInteger(input.fontSize) && input.fontSize >= 10 && input.fontSize <= 20 ? input.fontSize : defaults.fontSize,
+    terminalFontWeight: [400, 500, 600].includes(input.terminalFontWeight) ? input.terminalFontWeight : defaults.terminalFontWeight,
+    terminalFontFamily: typeof input.terminalFontFamily === 'string' && input.terminalFontFamily.length <= 80 && !/[\u0000-\u001f\u007f]/.test(input.terminalFontFamily) ? input.terminalFontFamily.trim() : defaults.terminalFontFamily,
+    terminalCjkFontFamily: typeof input.terminalCjkFontFamily === 'string' && input.terminalCjkFontFamily.length <= 80 && !/[\u0000-\u001f\u007f]/.test(input.terminalCjkFontFamily) ? input.terminalCjkFontFamily.trim() : defaults.terminalCjkFontFamily,
     focusAnimation: ['smooth', 'system', 'off'].includes(input.focusAnimation) ? input.focusAnimation : defaults.focusAnimation,
-    theme: ['daylight', 'forest', 'mountain-blue', 'wild-red'].includes(input.theme) ? input.theme : defaults.theme,
+    theme: ['daylight', 'forest', 'mountain-blue', 'wild-red', 'mono-amber', 'mono-amber-dark'].includes(input.theme) ? input.theme : defaults.theme,
     language: ['zh', 'en'].includes(input.language) ? input.language : defaults.language,
     // glass: translucent panes over the wallpaper. solid: opaque panes, on which Windows draws text with
     // ClearType and nothing is blurred behind them.
     surface: input.surface === 'solid' ? 'solid' : 'glass',
+    // Keep the selected background when toggling solid/glass; migrate the local preview setting.
+    glassBackground: input.glassBackground === 'desktop' || input.surface === 'desktop-glass' ? 'desktop' : 'theme',
+    glassTransparency: Number.isInteger(input.glassTransparency) && input.glassTransparency >= 0 && input.glassTransparency <= 100 ? input.glassTransparency : defaults.glassTransparency,
     terminalRenderer: input.terminalRenderer === 'dom' ? 'dom' : 'gpu',
     summary: cleanSummarySettings(input.summary),
     // The offline recognizer for dictation (voice.cjs).

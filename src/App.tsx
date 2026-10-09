@@ -11,6 +11,7 @@ import { useProjectFocusMotion } from './features/workspace/useProjectFocusMotio
 import { applyTheme } from './shared/themes';
 import { applyMotion } from './shared/motion';
 import { setTerminalRenderer } from './features/terminal/terminal-renderer';
+import { terminalFontFamily } from './features/terminal/terminal-font';
 import { VoiceOverlay } from './features/voice/VoiceButton';
 import { announce } from './features/notices/announce';
 import { applyLanguage, t } from './shared/i18n';
@@ -48,8 +49,17 @@ export function App() {
   useEffect(() => { if (workspace) applyTheme(workspace.settings.theme); }, [workspace?.settings.theme]);
   useEffect(() => { applyMotion(workspace?.settings.focusAnimation || 'smooth'); }, [workspace?.settings.focusAnimation]);
   // The surface (glass or solid) is a mode of the whole stylesheet, like the theme.
-  useEffect(() => { document.documentElement.dataset.surface = workspace?.settings.surface || 'glass'; }, [workspace?.settings.surface]);
+  useEffect(() => { const surface = workspace?.settings.surface || 'glass'; document.documentElement.dataset.surface = surface === 'glass' && workspace?.settings.glassBackground === 'desktop' && workspace?.desktopGlass?.active ? 'desktop-glass' : surface; }, [workspace?.settings.surface, workspace?.settings.glassBackground, workspace?.desktopGlass?.active]);
+  useEffect(() => { document.documentElement.dataset.desktopGlassCompatibility = String(!!workspace?.desktopGlass?.compatibility && (!!workspace?.desktopGlass?.active || !!workspace?.desktopGlass?.failed)); }, [workspace?.desktopGlass?.compatibility, workspace?.desktopGlass?.active, workspace?.desktopGlass?.failed]);
+  useEffect(() => {
+    const value = workspace?.settings.glassTransparency;
+    document.documentElement.dataset.glassTransparency = value == null ? 'theme' : 'custom';
+    if (workspace?.settings.surface !== 'solid' && value != null) document.documentElement.style.setProperty('--glass-alpha', String(1 - value / 100));
+    else document.documentElement.style.removeProperty('--glass-alpha');
+  }, [workspace?.settings.glassTransparency, workspace?.settings.surface]);
   useEffect(() => { setTerminalRenderer(workspace?.settings.terminalRenderer || 'gpu'); }, [workspace?.settings.terminalRenderer]);
+  useEffect(() => { document.documentElement.dataset.terminalWeight = String(workspace?.settings.terminalFontWeight || 400); }, [workspace?.settings.terminalFontWeight]);
+  useEffect(() => { document.documentElement.dataset.terminalFontFamily = terminalFontFamily(workspace?.settings.terminalFontFamily, workspace?.settings.terminalCjkFontFamily); }, [workspace?.settings.terminalFontFamily, workspace?.settings.terminalCjkFontFamily]);
   const [agents, setAgents] = useState<AgentsState | null>(null);
   // Native full screen (F11, or an expanded project): the title bar gets out of the way.
   const [fullScreen, setFullScreen] = useState(false);
@@ -299,7 +309,7 @@ export function App() {
     {error && <div className="error-toast" role="alert"><Info size={18} /><span>{error}</span><IconButton label={t('关闭提示')} onClick={() => setError(null)}><X size={16} /></IconButton></div>}
     {guide === 'tour' && <GuideTour projects={projects} focusedId={focusedId} withAdd={tourWithAdd.current} onClose={() => { setGuide(null); if (settings.guideVersion !== workspace.version) setPreference({ guideVersion: workspace.version }); }} />}
     {guide && guide !== 'tour' && <UsageGuide version={workspace.version} start={guide} onTour={startTour} onClose={() => { setGuide(null); if (settings.guideVersion !== workspace.version) setPreference({ guideVersion: workspace.version }); }} />}
-    {settingsOpen && <SettingsDialog settings={settings} localShell={workspace.localShell ?? null} agents={agents} onAgents={setAgents} initialSection={settingsSection} updates={updates} onGuide={() => { setSettingsOpen(false); setSettingsSection('appearance'); startTour(); }} onCheckUpdate={() => { perform(api.checkForUpdates()); }} onInstallUpdate={() => { perform(api.installUpdate()); }} onDownloadPage={() => { perform(api.openDownloadPage()); }} close={() => { setSettingsOpen(false); setSettingsSection('appearance'); }} update={setPreference} quit={() => perform(api.quit())} />}
+    {settingsOpen && <SettingsDialog settings={settings} desktopGlass={workspace.desktopGlass} localShell={workspace.localShell ?? null} agents={agents} onAgents={setAgents} initialSection={settingsSection} updates={updates} onGuide={() => { setSettingsOpen(false); setSettingsSection('appearance'); startTour(); }} onCheckUpdate={() => { perform(api.checkForUpdates()); }} onInstallUpdate={() => { perform(api.installUpdate()); }} onDownloadPage={() => { perform(api.openDownloadPage()); }} close={() => { setSettingsOpen(false); setSettingsSection('appearance'); }} update={setPreference} quit={() => perform(api.quit())} />}
     {addOpen && <AddProjectDialog onClose={() => setAddOpen(false)} onAdded={() => setQuery('')} onError={reportError} />}
     {sshAuth[0] && <SSHAuthDialog key={sshAuth[0].id} request={sshAuth[0]} />}
     <VoiceOverlay />
