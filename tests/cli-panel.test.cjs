@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
-const { isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
+const { cliHistory, isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
 const fixture = name => fs.readFileSync(path.join(__dirname, 'fixtures/screens', name + '.txt'), 'utf8').split('\n');
 const inspect = (agent, rows) => parseAgentScreen(agent, rows);
 const footer = agent => agent === 'claude' ? ['  ⏺ Opus 5.5 · demo · ctx 4%   ● high · /effort', '  ⏸ manual mode on · ← for agents'] : ['  GPT-6.1-Sol high · C:\\work\\demo · 90% left', '? for shortcuts'];
@@ -275,4 +275,33 @@ test('Claude is not idle while its spinner runs, even with an empty input; a fin
   assert.equal(isCliIdle('claude', thinking, inspect('claude', thinking)), false);
   const done = ['❯ fix it', '⏺ Fixed.', '✻ Worked for 25s', '', ...input('claude')];
   assert.equal(isCliIdle('claude', done, inspect('claude', done)), true);
+});
+
+test('a command sent while the agent is not drawing yet (updating itself in the shell) shows nothing of the shell', () => {
+  const shell = ['  PROJECT GRID', '  Type codex to start, or codex resume to continue a session.', '', 'PS C:\work> codex resume 01a1', 'Updating Codex via `powershell ...`', '==> Downloading Codex CLI'];
+  assert.deepEqual(extractCliPanelRows('codex', shell, inspect('codex', shell), '/model'), []);
+});
+
+test('a Codex command shows only what it printed since it was sent, never the banner above it', () => {
+  const banner = ['>_ OpenAI Codex (v0.162.0)', '   ~\work\demo', '   permissions: YOLO mode', ''];
+  const sent = [...banner, '• Earlier answer', '', ...input('codex', '/copy')];
+  const before = cliHistory('codex', sent, inspect('codex', sent));
+  const printed = [...banner, '• Earlier answer', '', '• Copied the last message to the clipboard.', '', ...input('codex')];
+  assert.deepEqual(extractCliPanelRows('codex', printed, inspect('codex', printed), '/copy', before), ['• Copied the last message to the clipboard.']);
+  assert.deepEqual(extractCliOutputRows('codex', printed, inspect('codex', printed), '/copy', before), ['• Copied the last message to the clipboard.']);
+  // Nothing printed yet: an empty card, not the banner.
+  const quiet = [...banner, '• Earlier answer', '', ...input('codex')];
+  assert.deepEqual(extractCliPanelRows('codex', quiet, inspect('codex', quiet), '/copy', before), []);
+  // A screen drawn anew shares no row with what was there: nothing is taken from it.
+  const fresh = [...banner, ...input('codex')];
+  assert.deepEqual(extractCliOutputRows('codex', fresh, inspect('codex', fresh), '/clear', before), []);
+});
+
+test('Codex output taller than the screen is all the command\'s; a screen drawn anew under the banner gives nothing', () => {
+  const sent = ['• Earlier answer', '', ...input('codex', '/status')];
+  const before = cliHistory('codex', sent, inspect('codex', sent));
+  const tall = ['│ Model: gpt-6.1-sol │', '│ Directory: C:\\work │', '╰────────────────────╯', '', ...input('codex')];
+  assert.deepEqual(extractCliOutputRows('codex', tall, inspect('codex', tall), '/status', before), ['│ Model: gpt-6.1-sol │', '│ Directory: C:\\work │', '╰────────────────────╯']);
+  const cleared = ['>_ OpenAI Codex (v0.162.0)', '   ~\\work', '', ...input('codex')];
+  assert.deepEqual(extractCliOutputRows('codex', cleared, inspect('codex', cleared), '/clear', before), []);
 });

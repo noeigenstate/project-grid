@@ -23,6 +23,9 @@ class SubmissionTracker {
   write(data) {
     let submitted = false;
     this.sent = [];
+    // Escape pressed on its own (to interrupt, or to close a dialog) is a key, not the start of what is typed next:
+    // only a sequence's own tail ([, ], P, O, or Enter for Alt+Enter) continues it.
+    if (this.escape === '\x1b' && !/^[[\]PO\r]/.test(data)) this.escape = '';
     const enter = () => {
       if (this.hasText || this.history) { submitted = true; this.sent.push(this.history ? '' : this.text.trim()); }
       this.characters = 0; this.hasText = false; this.history = false; this.text = '';

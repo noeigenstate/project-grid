@@ -375,3 +375,11 @@ test('a command restored at a prompt waits for that prompt\'s question and answe
   assert.deepEqual(written.slice(9), ['codex\r'], 'an answer that never comes holds it no longer than patience');
   gate.dispose();
 });
+
+test('a lone Escape (interrupt or close) does not swallow the first key of the next command', () => {
+  const tracker = new SubmissionTracker();
+  tracker.write('\x1b');
+  assert.equal(tracker.write('/daemon'), false);
+  assert.equal(tracker.write('\r'), true);
+  assert.deepEqual(tracker.sent, ['/daemon']);
+});

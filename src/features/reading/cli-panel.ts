@@ -68,9 +68,45 @@ export function hasCliInput(agent: ScreenAgent, rows: string[], screen: AgentScr
   return !!cliInputArea(agent, rows, screen);
 }
 
+// A dialog of the CLI is open in place of its input, with no work under way: keys sent now would land in it.
+export function cliDialogOpen(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
+  return !cliInputArea(agent, rows, screen) && !(agent === 'claude' && claudeWorking(rows)) && rows.some(row => row.trim());
+}
+
+// The key that closes what a command left open: q for a pager (Codex's /diff), Escape for a dialog, nothing when
+// the CLI is back at its input (Escape there would start editing the last message in Codex).
+export function cliCloseKey(agent: ScreenAgent, rows: string[], screen: AgentScreen): string | null {
+  if (rows.some(row => /\bq close\b/i.test(row))) return 'q';
+  return cliDialogOpen(agent, rows, screen) ? '\x1b' : null;
+}
+
 // At its prompt with nothing typed: a command the reading view sent has finished.
 export function isCliIdle(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
   return isAtPrompt(agent, rows, screen) && !cliInputDraft(agent, rows, screen);
+}
+
+// The conversation above the CLI's input, as it stood when a command was sent.
+export function cliHistory(agent: ScreenAgent, rows: string[], screen: AgentScreen): string[] {
+  return trimRows(rows.slice(0, cliInputArea(agent, rows, screen)?.start ?? rows.length));
+}
+// Codex does not echo a slash command into its history: what a command printed is what came in under the last row
+// the history had when it was sent. Output taller than the screen pushes that row out of sight, and then all of the
+// history on screen is the command's; a screen drawn anew (/clear) starts with Codex's banner, and nothing is taken.
+const codexBanner = (row: string) => /^\s*>_ OpenAI Codex\b/.test(row);
+function rowsSince(before: readonly string[], rows: string[], end: number): string[] | null {
+  const last = before.filter(row => row.trim()).slice(-2);
+  if (!last.length) return null;
+  const found = anchored(last, rows, end);
+  if (found || rows.slice(0, end).some(codexBanner)) return found;
+  return trimRows(rows.slice(0, end));
+}
+function anchored(last: string[], rows: string[], end: number): string[] | null {
+  for (let index = end - 1; index >= 0; index--) {
+    if (rows[index].trimEnd() !== last.at(-1)!.trimEnd()) continue;
+    if (last.length === 2 && rows.slice(0, index).filter(row => row.trim()).at(-1)?.trimEnd() !== last[0].trimEnd()) continue;
+    return trimRows(rows.slice(index + 1, end));
+  }
+  return null;
 }
 
 function echoRow(agent: ScreenAgent, rows: string[], command: string, end: number) {
@@ -81,7 +117,7 @@ function echoRow(agent: ScreenAgent, rows: string[], command: string, end: numbe
   return -1;
 }
 
-export function extractCliPanelRows(agent: ScreenAgent, rows: string[], screen: AgentScreen, command: string): string[] {
+export function extractCliPanelRows(agent: ScreenAgent, rows: string[], screen: AgentScreen, command: string, before?: readonly string[]): string[] {
   const input = cliInputArea(agent, rows, screen);
   // A panel can replace the entire input area. Only recognizable status rows are
   // cut in that case; keyboard hints belong to the panel and must remain visible.
@@ -100,12 +136,22 @@ export function extractCliPanelRows(agent: ScreenAgent, rows: string[], screen: 
   }
   const echo = echoRow(agent, rows, command, input?.row ?? end);
   let start = echo + 1;
+  if (echo < 0 && agent === 'codex' && before) {
+    const since = rowsSince(before, rows, input?.start ?? end);
+    if (since) return squeeze(since);
+    // A full-screen view (the /diff pager) replaced everything that was there: all of it is the command's.
+    if (!input && rows.some(row => /\bq close\b|to scroll\b/i.test(row))) return squeeze(trimRows(rows.slice(0, end)));
+    return [];
+  }
   if (echo < 0) {
     // The composer rules are below the panel, not its upper boundary.
     const boundary = input?.start ?? end;
     for (let index = boundary - 1; index >= 0; index--) {
       if (panelEdge(rows[index])) { start = index + 1; break; }
     }
+    // With neither the agent's input nor its banner on screen, the agent is not drawing yet (still starting, or
+    // updating itself in the shell): nothing on screen is the command's.
+    if (start === 0 && !input && !rows.some(row => /Claude Code v\d|OpenAI Codex/.test(row))) return [];
   }
   // If the command is still in the live composer, do not mirror its echo. Claude keeps a submitted command there
   // while its hooks run (about a second); above it is only old conversation or the welcome banner, so there is
@@ -118,12 +164,13 @@ export function extractCliPanelRows(agent: ScreenAgent, rows: string[], screen: 
   return squeeze(trimRows(withoutBanner(agent, rows.slice(start, end))));
 }
 
-export function extractCliOutputRows(agent: ScreenAgent, rows: string[], screen: AgentScreen, command: string): string[] {
+export function extractCliOutputRows(agent: ScreenAgent, rows: string[], screen: AgentScreen, command: string, before?: readonly string[]): string[] {
   const input = cliInputArea(agent, rows, screen);
   if (!input) return [];
   const echo = echoRow(agent, rows, command, input.start);
-  // Without the echo, using old conversation text would fabricate command output.
-  return echo < 0 ? [] : trimRows(rows.slice(echo + 1, input.start));
+  // Without the echo, using old conversation text would fabricate command output; Codex's is what came in since.
+  if (echo < 0) return agent === 'codex' && before ? rowsSince(before, rows, input.start) ?? [] : [];
+  return trimRows(rows.slice(echo + 1, input.start));
 }
 
 export type CliCommand = {
@@ -131,6 +178,8 @@ export type CliCommand = {
   observed: boolean; idleSince: number | null; output: string[];
   // The last dialog drawn in the input's place: what such a command showed, kept once it is closed.
   dialog: string[];
+  // The history above the input when the command was sent.
+  before?: string[];
 };
 export type CliResult = Pick<CliCommand, 'id' | 'command' | 'at' | 'anchor'> & { rows: string[] };
 export type CliOutputEntry = ConversationEntry & { cliOutput?: string[] };
@@ -151,7 +200,7 @@ export function advanceCliCommand(command: CliCommand, agent: ScreenAgent, rows:
   if (!next.observed || !idle) next.idleSince = null;
   else {
     next.idleSince ??= now;
-    next.output = extractCliOutputRows(agent, rows, screen, command.command);
+    next.output = extractCliOutputRows(agent, rows, screen, command.command, command.before);
   }
   return { command: next, done: next.idleSince !== null && now - next.idleSince >= 400 };
 }

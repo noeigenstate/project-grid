@@ -7,7 +7,7 @@ import { actionText, stepVerb } from '../agents/ActivityPane';
 import { dictateInto } from '../voice/voice-input';
 import { useScreen } from '../terminal/terminal-screen';
 import { parseAgentScreen } from '../agents/agent-screen';
-import { cliInputDraft, isAtPrompt } from './cli-panel';
+import { cliCloseKey, cliHistory, cliInputDraft, isAtPrompt } from './cli-panel';
 import { ReadingWelcome } from './ReadingWelcome';
 import { ReadingChoice } from './ReadingChoice';
 import { ReadingQuestion } from './ReadingQuestion';
@@ -126,7 +126,8 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   // a message typed here would land in the question, so the box waits and the terminal shows the question instead.
   const unreadQuestion = !screen.choice && !!visibleScreen?.rows.some(row => /\benter to submit (?:answer|all)\b/i.test(row) || /^\s*Enter to select\b.*\bEsc to cancel\b/i.test(row));
   useEffect(() => { if (unreadQuestion && !cli.busy) onShowTerminal(); }, [unreadQuestion, cli.busy]);
-  const inputBlocked = hasChoice || cli.busy || unreadQuestion;
+  // A slash command never holds the message box; only a question or permission on screen does.
+  const inputBlocked = hasChoice || unreadQuestion;
   const conversation = conversationKey(terminal.id, terminal.sessionId);
   const { stuck, unseen, toBottom, ready, holdPosition } = useStickToBottom(scroller, content, visibleEntries, conversation);
   useLayoutEffect(() => { if (caret.current !== null) { input.current?.setSelectionRange(caret.current, caret.current); caret.current = null; } });
@@ -194,7 +195,15 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const deliver = async (text: string) => {
     if (inputBlocked || (!text && !images) || !terminal.sessionId) return;
     if (usesSessionPicker(terminal, text)) { choiceVisible.current = true; restoreComposer.current = document.activeElement === input.current; edit(''); setSessionsOpen(true); return; }
-    const typed = isTypedCommand(text), sessionId = terminal.sessionId;
+    const typed = isTypedCommand(text), sessionId = terminal.sessionId, agentKind = terminal.agent === 'claude' ? 'claude' : 'codex';
+    // What the CLI shows above its input before the command is typed, to tell its output from what was there.
+    const shown = typed && visibleScreen ? cliHistory(agentKind, visibleScreen.rows, screen) : undefined;
+    // A command's dialog still open (Claude's /usage, /config) would take this message's keys and Enter: close it first.
+    if (cli.busy) {
+      const key = visibleScreen ? cliCloseKey(agentKind, visibleScreen.rows, screen) : null;
+      cli.cancel();
+      if (key) { window.projectGrid.writeTerminal(terminal.id, key); await new Promise(resolve => setTimeout(resolve, 150)); }
+    }
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
     const pendingId = text && !typed ? echo(text) : null;
     if (pendingId) toBottom();
@@ -216,7 +225,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     edit(''); setImages(0); toBottom();
     if (text) await new Promise(resolve => setTimeout(resolve, typed ? 150 : 400));
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
-    if (typed) cli.begin(text);
+    if (typed) cli.begin(text, shown);
     if (clears(terminal.agent, text)) { const ids = new Set(conversationEntries.map(entry => entry.id)); cleared.set(conversation, ids); setHidden(ids); }
     window.projectGrid.writeTerminal(terminal.id, '\r');
   };
@@ -224,13 +233,13 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   // Dictation into this terminal lands here while the reading view shows: the words appear at the cursor as
   // soon as they are recognised, and Enter (or the shortcut again) sends the whole message.
   useEffect(() => dictateInto(terminal.id, (text, submit) => {
-    if (choiceVisible.current || cli.busy) return;
+    if (choiceVisible.current) return;
     const node = input.current, value = node?.value ?? '', here = !!node && document.activeElement === node;
     const at = here ? node.selectionStart : value.length, end = here ? node.selectionEnd : value.length;
     const next = value.slice(0, at) + text + value.slice(end);
     if (submit) { void sendRef.current(next.trim()); return; }
     caret.current = at + text.length; edit(next); node?.focus();
-  }), [terminal.id, cli.busy]);
+  }), [terminal.id]);
   // An image pasted here goes to the agent the way it takes one in its own input: it reads the clipboard on its
   // paste key (Ctrl+V in Codex, Alt+V in Claude Code on Windows) and attaches the image to the next message.
   const pasteImage = (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -273,7 +282,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   // What the agent is doing, written at the end of the conversation the way its CLI writes it, never in a corner.
   const status = screen.choice?.kind === 'question' ? <div className="reading-status" role="status">{t('等待你回答问题')}</div>
     : terminal.needsInput !== null ? <div className="reading-status" role="status">{t('等待你确认：{message}', { message: terminal.needsInput })}</div>
-    : working ? <WorkingLine key={terminal.sessionId} agent={terminal.agent === 'claude' ? 'claude' : 'codex'} label={terminal.action ? t('正在{step}', { step: actionText(terminal.action) }) : t('{agent} 正在思考', { agent })} />
+    : working || pending.some(prompt => prompt.sending) ? <WorkingLine key={terminal.sessionId} agent={terminal.agent === 'claude' ? 'claude' : 'codex'} label={terminal.action ? t('正在{step}', { step: actionText(terminal.action) }) : t('{agent} 正在思考', { agent })} />
     : null;
   let body: ReactNode;
   if (!cli.entries.length && !pending.length) body = <ReadingWelcome agent={terminal.agent === 'claude' ? 'claude' : 'codex'} screen={screen} commands={commands} complete={complete} disabled={inputBlocked} starting={welcomeIsStarting} />;
@@ -295,7 +304,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   }}>
     <div className="reading-scroll-area">
       <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} />
-        {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} terminalId={terminal.id} onShowTerminal={onShowTerminal} />}
+        {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} terminalId={terminal.id} onShowTerminal={onShowTerminal} onClose={() => {
+          const key = visibleScreen && cliCloseKey(terminal.agent === 'claude' ? 'claude' : 'codex', visibleScreen.rows, screen);
+          if (key) window.projectGrid.writeTerminal(terminal.id, key);
+          cli.cancel(); input.current?.focus();
+        }} />}
         {status}</div></div>
       {!stuck && <div className="reading-latest">
         {unseen > 0 && <span className="reading-unseen" role="status">{t('{count} 条新消息', { count: unseen })}</span>}

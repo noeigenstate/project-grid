@@ -1,7 +1,7 @@
 // Every slash command the reading view offers, run against the real Claude Code and Codex on this machine.
 // It needs both CLIs installed and signed in, and spends a few tokens: commands that start model work are
 // interrupted as soon as the agent starts. Commands that would change the account or global settings are only
-// checked to be listed (see SKIP). Run: node scripts/slash-live.mjs [claude|codex]
+// checked to be listed (see SKIP). Run: node scripts/slash-live.mjs [claude|codex] [/a,/b]
 import { testRun } from './test-output.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -33,6 +33,7 @@ for (const name of Object.keys(env)) if (/^(CLAUDECODE|CLAUDE_CODE_|CLAUDE_EFFOR
 const SKIP = {
   '/login': 'starts a sign-in flow for the real account', '/logout': 'signs the real account out',
   '/terminal-setup': 'writes the terminal\'s own key bindings', '/statusline': 'has the agent rewrite ~/.claude settings',
+  '/side': 'opens a side conversation this test has no way to leave',
 };
 const MODEL = new Set(['/init', '/review', '/security-review', '/pr-comments', '/btw', '/compact']);
 const LAST = new Set(['/exit', '/quit']);
@@ -117,7 +118,8 @@ async function dismiss() {
     if (!s.codexActive) return 'exited';
     if (v.composer && v.enabled && !v.choice && !v.panel && s.codexActivity !== 'working') return 'ready';
     const target = terminal.locator(v.panel ? '.reading-cli-panel' : '.reading-choice:not(.reading-sessions)').first();
-    if (v.panel || v.choice) { await target.focus().catch(() => {}); await page.keyboard.press('Escape'); }
+    if (v.panel) await target.getByRole('button', { name: '关闭', exact: true }).click().catch(() => {});
+    else if (v.choice) { await target.focus().catch(() => {}); await page.keyboard.press('Escape'); }
     else if (s.codexActivity === 'working') { await composer.focus(); await page.keyboard.press('Escape'); }
     else await write('\x1b');
     await sleep(1200);
@@ -178,7 +180,9 @@ try {
   for (const agent of agents) {
     await start(agent);
     const listed = (await listAgentCommands({ agent, projectPath: project.path })).filter(command => command.source === 'builtin').map(command => command.name);
-    const order = [...listed.filter(name => !LAST.has(name)), ...listed.filter(name => LAST.has(name))];
+    // node scripts/slash-live.mjs codex /pwd,/diff runs just those.
+    const only = process.argv[3]?.split(',');
+    const order = [...listed.filter(name => !LAST.has(name)), ...listed.filter(name => LAST.has(name))].filter(name => !only || only.includes(name));
     for (const command of order) {
       if (SKIP[command]) { results.push({ agent, command, ok: null, shown: 'skipped', after: SKIP[command] }); console.log(`SKIP ${agent} ${command}: ${SKIP[command]}`); continue; }
       try { await run(agent, command); }
