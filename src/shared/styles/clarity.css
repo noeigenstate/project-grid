@@ -77,9 +77,15 @@
 :root[data-theme] .project-panel .panel-header .panel-name { font-size: max(clamp(12px, calc(9.5px + .75cqh), 13px), calc(var(--terminal-font-size, 12px) + 2px)); font-weight: 600; color: var(--accent-green); }
 :root[data-theme] .focus-mode .project-panel .panel-name { font-size: max(16px, calc(var(--terminal-font-size, 12px) + 3px)); }
 :root[data-theme] .project-panel .status-badge { font-weight: 600; }
-/* An expanded project's number and name are already at the top of the sidebar beside it; its header keeps only the
-   status and the buttons, in their places. With the sidebar collapsed to its rail the name stays. */
-:root[data-theme] .focus-mode:has(.focus-sidebar:not(.is-collapsed)) .project-panel .panel-header :is(.panel-index, .panel-name) { visibility: hidden; }
+/* An expanded project's number and name are already at the top of the sidebar beside it, so its header drops them and
+   keeps only the status and the buttons at the right. With the activity column open they sit at its top, and the
+   terminal or conversation starts at the top of the card. With the sidebar collapsed to its rail the name stays. */
+:root[data-theme] .focus-mode:has(.focus-sidebar:not(.is-collapsed)) .project-panel .panel-header { justify-content: flex-end; }
+:root[data-theme] .focus-mode:has(.focus-sidebar:not(.is-collapsed)) .project-panel .panel-header :is(.panel-index, .panel-name) { display: none; }
+@media (min-width: 1001px) {
+  :root[data-theme] .focus-mode:has(.focus-sidebar:not(.is-collapsed)) .project-panel.has-activity .panel-header { position: absolute; top: 0; right: 0; width: 340px; }
+  :root[data-theme] .focus-mode:has(.focus-sidebar:not(.is-collapsed)) .project-panel.has-activity .activity-pane { top: 0; padding-top: var(--panel-header-height); border-radius: 0 calc(var(--glass-radius) - 1px) calc(var(--glass-radius) - 1px) 0; }
+}
 :root[data-theme] :is(.search-input, .titlebar-tools > .icon-button) {
   border-color: transparent; border-radius: 999px; background: rgba(16, 20, 28, .42); backdrop-filter: blur(16px) saturate(140%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18), 0 4px 12px -4px rgba(0, 0, 0, .3);
@@ -115,8 +121,7 @@
 :root[data-theme] .reading-choice-context { background: rgba(255, 255, 255, .06); }
 :root[data-theme] .reading-choice-hint { color: var(--ink-faint); }
 /* The status line and the message box: a deeper, raised field, set 16px apart from the conversation. */
-:root[data-theme] .reading-status { color: var(--ink-secondary); padding-top: 6px; }
-:root[data-theme] .reading-status.is-working { color: #ffd27a; }
+:root[data-theme] .reading-status { color: var(--ink-secondary); }
 :root[data-theme] .reading-composer { margin: 4px 16px 16px; padding: 8px 8px 8px 16px; border-radius: 14px; background: rgba(8, 11, 17, .62); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 10px 28px -8px rgba(0, 0, 0, .45); }
 :root[data-theme] .focus-mode .reading-composer { margin: 4px 24px 20px; }
 :root[data-theme] .reading-composer:focus-within { box-shadow: inset 0 0 0 1px rgba(120, 190, 255, .5), 0 0 0 3px rgba(59, 158, 255, .18), 0 10px 28px -8px rgba(0, 0, 0, .45); }
@@ -158,19 +163,19 @@
 :root[data-theme] :is(.overview-prompts li span, .overview-group h5, .overview-task.is-quiet) { color: var(--ink-secondary); }
 
 /* Menus and dialogs float above everything as a thicker, darker glass. */
-:root[data-theme] :is(.dropdown, .settings-dialog, .tour-bubble, .reorder-hint, .project-panel > .panel-nav-hud, .voice-overlay) { background: rgba(18, 22, 30, .78); border-color: rgba(255, 255, 255, .18); box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .55); backdrop-filter: blur(28px) saturate(140%); }
+:root[data-theme] :is(.dropdown, .settings-dialog, .tour-bubble, .reorder-hint, .project-panel > .panel-nav-hud) { background: rgba(18, 22, 30, .78); border-color: rgba(255, 255, 255, .18); box-shadow: 0 16px 40px -12px rgba(0, 0, 0, .55); backdrop-filter: blur(28px) saturate(140%); }
 
 /* Solid surfaces (the setting or the system's reduced transparency): every pane, bar and menu takes its theme's
    solid ground, nothing is blurred, and the wallpaper is covered. */
 :root[data-theme][data-surface="solid"] .app-shell::before { background: transparent; backdrop-filter: none; }
 :root[data-theme][data-surface="solid"] :is(.project-panel, .focus-sidebar, .file-preview)::before { background: var(--glass-solid); backdrop-filter: none; }
-:root[data-theme][data-surface="solid"] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview, .titlebar, .app-shell.titlebar-auto .titlebar, .dropdown, .settings-dialog, .voice-overlay, .tour-bubble, .reorder-hint) { background: var(--glass-solid); backdrop-filter: none; }
+:root[data-theme][data-surface="solid"] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview, .titlebar, .app-shell.titlebar-auto .titlebar, .dropdown, .settings-dialog, .tour-bubble, .reorder-hint) { background: var(--glass-solid); backdrop-filter: none; }
 :root[data-theme][data-surface="solid"] :is(.search-input, .titlebar-tools > .icon-button) { backdrop-filter: none; }
 :root[data-theme][data-surface="solid"] .project-panel > .panel-nav-hud { background: var(--glass-solid); backdrop-filter: none; }
 @media (prefers-reduced-transparency: reduce) {
   :root[data-theme] .app-shell::before { background: transparent; backdrop-filter: none; }
   :root[data-theme] :is(.project-panel, .focus-sidebar, .file-preview)::before { background: var(--glass-solid); backdrop-filter: none; }
-  :root[data-theme] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview, .titlebar, .app-shell.titlebar-auto .titlebar, .dropdown, .settings-dialog, .voice-overlay, .tour-bubble, .reorder-hint) { background: var(--glass-solid); backdrop-filter: none; }
+  :root[data-theme] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview, .titlebar, .app-shell.titlebar-auto .titlebar, .dropdown, .settings-dialog, .tour-bubble, .reorder-hint) { background: var(--glass-solid); backdrop-filter: none; }
   :root[data-theme] :is(.search-input, .titlebar-tools > .icon-button) { background: var(--glass-solid); backdrop-filter: none; }
   :root[data-theme] .project-panel > .panel-nav-hud { background: var(--glass-solid); backdrop-filter: none; }
 }

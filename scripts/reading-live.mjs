@@ -157,8 +157,9 @@ for (const agent of agents) {
     // Reading back while a long answer streams: the view stays where the reader put it and offers a way back down.
     const scroller = terminal.locator('.reading-scroll');
     let held = null, drift = 0;
-    await turn('read back', '列出 1 到 80，每行格式为“第 N 行：一句关于终端的短句”。最后单独一行写 MARK-8。', 'MARK-8', { during: async ({ text }) => {
-      if (held === null && /第 1[0-9] 行/.test(text)) { held = await scroller.evaluate(node => { node.scrollTop = 0; return node.scrollTop; }); return; }
+    await turn('read back', '列出 1 到 80，每行格式为“第 N 行：一句关于终端的短句”。最后单独一行写 MARK-8。', 'MARK-8', { during: async ({ elapsed }) => {
+      // Earlier turns give room to scroll back even before this answer shows.
+      if (held === null && elapsed > 2500) { await scroller.hover(); for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -4000); await sleep(300); held = await scroller.evaluate(node => node.scrollTop); return; }
       if (held !== null) drift = Math.max(drift, await scroller.evaluate(node => node.scrollTop));
     } });
     if (held === null) console.log(`INFO ${agent} · read back · the answer arrived too quickly to scroll during it`);

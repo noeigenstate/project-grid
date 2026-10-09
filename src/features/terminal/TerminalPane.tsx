@@ -120,7 +120,13 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       queued = [];
     }).catch(error => { if (!disposed) { queued = []; unsubscribe(); report.current(String(error)); } });
     const input = terminal.onData(data => window.projectGrid.writeTerminal(id, data));
-    const offPaste = window.projectGrid.onTerminalPaste(packet => { if (!disposed && packet.id === id && packet.sessionId === sessionId) terminal.paste(packet.text); });
+    // Messages from the reading view and dictation. Where the program would take a pasted line break as Enter, the
+    // main process names the key that starts a new line instead, and the text is typed with it.
+    const offPaste = window.projectGrid.onTerminalPaste(packet => {
+      if (disposed || packet.id !== id || packet.sessionId !== sessionId) return;
+      if (packet.lineBreak) terminal.input(packet.text.replace(/\r\n?|\n/g, packet.lineBreak), true);
+      else terminal.paste(packet.text);
+    });
     const selection = terminal.onSelectionChange(() => { if (host.current) host.current.dataset.hasSelection = String(terminal.hasSelection()); });
     const resized = terminal.onResize(({ cols, rows }) => window.projectGrid.resizeTerminal(id, cols, rows));
     terminal.attachCustomKeyEventHandler(event => {

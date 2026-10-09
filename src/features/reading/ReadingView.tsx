@@ -87,6 +87,16 @@ function ToolGroup({ entries, live }: { entries: ConversationEntry[]; live: bool
 // and its tool calls folded between them. The real terminal stays underneath; what is written here goes to
 // it, and the toggle in the card header switches back to it at any time. autoFocus: the card is expanded and
 // this is its terminal in use, so the message box takes the keyboard (never a small card's).
+// The agent at work, as its CLI shows it: a live mark, what it is doing, how long the round has run and how to stop it.
+function WorkingLine({ agent, label }: { agent: 'claude' | 'codex'; label: string }) {
+  const [started] = useState(() => Date.now()), [now, setNow] = useState(started);
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  return <div className={`reading-status is-working is-${agent}`} role="status">
+    <i className="reading-status-mark" aria-hidden="true">{agent === 'claude' ? '✻' : '•'}</i>
+    <span>{label}…</span><small>{t('（{seconds} 秒 · Esc 中断）', { seconds: Math.floor((now - started) / 1000) })}</small>
+  </div>;
+}
+
 export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, onError, onOpenLink }: { projectId: string; terminal: ProjectTerminal; autoFocus: boolean; onShowTerminal: () => void; onError: (message: string) => void; onOpenLink: (target: string) => void }) {
   const conversationEntries = useReadingConversation(terminal.id, terminal.sessionId);
   const [hidden, setHidden] = useState(() => cleared.get(conversationKey(terminal.id, terminal.sessionId)));
@@ -260,6 +270,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     }
     if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); }
   };
+  // What the agent is doing, written at the end of the conversation the way its CLI writes it, never in a corner.
+  const status = screen.choice?.kind === 'question' ? <div className="reading-status" role="status">{t('等待你回答问题')}</div>
+    : terminal.needsInput !== null ? <div className="reading-status" role="status">{t('等待你确认：{message}', { message: terminal.needsInput })}</div>
+    : working ? <WorkingLine key={terminal.sessionId} agent={terminal.agent === 'claude' ? 'claude' : 'codex'} label={terminal.action ? t('正在{step}', { step: actionText(terminal.action) }) : t('{agent} 正在思考', { agent })} />
+    : null;
   let body: ReactNode;
   if (!cli.entries.length && !pending.length) body = <ReadingWelcome agent={terminal.agent === 'claude' ? 'claude' : 'codex'} screen={screen} commands={commands} complete={complete} disabled={inputBlocked} starting={welcomeIsStarting} />;
   else body = <>
@@ -279,18 +294,12 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (link) { event.preventDefault(); const href = link.getAttribute('href') || ''; if (href) onOpenLink(href); }
   }}>
     <div className="reading-scroll-area">
-      <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} /></div></div>
+      <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} />{status}</div></div>
       {!stuck && <div className="reading-latest">
         {unseen > 0 && <span className="reading-unseen" role="status">{t('{count} 条新消息', { count: unseen })}</span>}
         <button type="button" className="icon-button reading-jump" title={t('跳到最新消息')} aria-label={t('跳到最新消息')} onClick={() => toBottom('smooth')}><ArrowDown size={18} /></button>
       </div>}
     </div>
-    {/* Only what needs attention or is under way; an idle agent and its model and context show nothing here. */}
-    {(screen.choice?.kind === 'question' || terminal.needsInput !== null || working) && <div className={`reading-status ${working ? 'is-working' : ''}`} role="status">
-      <div className="reading-status-activity">
-        {screen.choice?.kind === 'question' ? <span>{t('等待你回答问题')}</span> : terminal.needsInput !== null ? <span>{t('等待你确认：{message}', { message: terminal.needsInput })}</span> : <><CircleNotch size={13} className="loading-spinner" /><span>{terminal.action ? t('正在{step}', { step: actionText(terminal.action) }) : t('{agent} 正在思考', { agent })}</span></>}
-      </div>
-    </div>}
     {images > 0 && <div className="reading-attachments" role="status"><ImageIcon size={14} />{t('已附加 {count} 张图片，随下一条消息发送', { count: images })}</div>}
     {screen.choice && !sessionsOpen && <div className="reading-choice-host" ref={choiceHost} onFocusCapture={() => { restoreComposer.current = true; }} onBlurCapture={event => {
       if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) restoreComposer.current = false;

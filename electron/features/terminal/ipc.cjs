@@ -1,6 +1,6 @@
 const { isLocalCommand, isTerminalResponse } = require('../../terminal-input.cjs');
 
-function registerTerminalIpc({ handle, listen, findProject, getSession, hasSession, startTerminal, addTerminal, removeTerminal, confirmTerminalClose, forgetRestorePlan, disposeTerminal, clearStartupError, broadcast, getProjectById, acknowledgeProject, expectCompletion, scheduleState, warmSpeech, applyActivity, pollAfterSubmission, send, getActiveTerminal, setActiveTerminal, setActiveFileTree, now = () => Date.now() }) {
+function registerTerminalIpc({ handle, listen, findProject, getSession, hasSession, startTerminal, addTerminal, removeTerminal, confirmTerminalClose, forgetRestorePlan, disposeTerminal, clearStartupError, broadcast, getProjectById, acknowledgeProject, expectCompletion, scheduleState, warmSpeech, applyActivity, pollAfterSubmission, send, getActiveTerminal, setActiveTerminal, setActiveFileTree, now = () => Date.now(), platform = process.platform }) {
   handle('terminal:start', startTerminal);
   handle('terminal:add', id => {
     const project = findProject(id);
@@ -65,7 +65,10 @@ function registerTerminalIpc({ handle, listen, findProject, getSession, hasSessi
     const session = getSession(id);
     if (!session || session.sessionId !== sessionId || ['starting', 'exited'].includes(session.status)) throw new Error('终端已变化或尚未就绪，请复制文字后手动粘贴。');
     if (typeof text !== 'string' || text.length > 1024 * 1024) throw new Error('无效的文字。');
-    send('terminal:paste', { id, sessionId, text });
+    // Codex on Windows takes a pasted line break as Enter, even inside a bracketed paste, and drops a bare "\n" after
+    // Chinese text; Alt+Enter is its new line.
+    const lineBreak = platform === 'win32' && session.codexActive && session.agent === 'codex' ? '\x1b\r' : null;
+    send('terminal:paste', { id, sessionId, text, lineBreak });
   });
   listen('terminal:focus', (id, focused) => { if (hasSession(id) && focused) { setActiveTerminal(id); setActiveFileTree(null); } else if (getActiveTerminal() === id) setActiveTerminal(null); });
 }

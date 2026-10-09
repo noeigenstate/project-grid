@@ -223,7 +223,12 @@ test('terminal registrar flushes attach, validates paste and resize, and changes
   const paste = h.handles.get('terminal:paste'); assert.throws(() => paste('t', 'text', 'stale'), /终端已变化/);
   session.status = 'starting'; assert.throws(() => paste('t', 'text', 'session'), /终端已变化/);
   session.status = 'shell'; assert.throws(() => paste('t', 'x'.repeat(1024 * 1024 + 1), 'session'), /无效的文字/);
-  paste('t', 'text', 'session'); assert.deepEqual(calls.at(-1), ['terminal:paste', { id: 't', sessionId: 'session', text: 'text' }]);
+  paste('t', 'text', 'session'); assert.deepEqual(calls.at(-1), ['terminal:paste', { id: 't', sessionId: 'session', text: 'text', lineBreak: null }]);
+  // Codex on Windows starts a new line with Alt+Enter; a pasted line break would submit.
+  Object.assign(session, { codexActive: true, agent: 'codex' }); paste('t', 'a\nb', 'session');
+  assert.equal(calls.at(-1)[1].lineBreak, process.platform === 'win32' ? '\x1b\r' : null);
+  session.agent = 'claude'; paste('t', 'a\nb', 'session'); assert.equal(calls.at(-1)[1].lineBreak, null);
+  Object.assign(session, { codexActive: false, agent: null });
   const count = calls.length;
   for (const [cols, rows] of [[1, 2], [501, 2], [2, 251], [2.5, 10]]) h.listeners.get('terminal:resize')('t', cols, rows);
   assert.equal(calls.length, count); h.listeners.get('terminal:resize')('t', 500, 250); assert.deepEqual(calls.at(-1), [500, 250]);

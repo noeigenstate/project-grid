@@ -119,7 +119,7 @@ type Bridge = {
   transcribe(audio: ArrayBuffer): Promise<Result<string>>;
   onVoiceState(callback: (state: VoiceState) => void): () => void;
   pasteTerminal(id: string, text: string, sessionId: string): Promise<Result<void>>;
-  onTerminalPaste(callback: (packet: { id: string; sessionId: string; text: string }) => void): () => void;
+  onTerminalPaste(callback: (packet: { id: string; sessionId: string; text: string; lineBreak: string | null }) => void): () => void;
   readFile(id: string, relativePath: string, pageIndex?: number): Promise<Result<FilePreview>>;
   saveFile(id: string, relativePath: string, pageIndex: number, revision: string, content: string): Promise<Result<FilePreview>>;
   confirmEditorClose(filename: string): Promise<Result<'save' | 'discard' | 'cancel'>>;

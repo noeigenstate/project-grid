@@ -448,7 +448,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 @media (prefers-reduced-transparency: reduce) {
   /* An expanded card's glass rule is more specific than a plain .project-panel; name it too. */
   .project-panel, .focus-mode .project-panel, .focus-sidebar, .file-preview, .titlebar, .settings-dialog, .dropdown,
-  .reorder-hint, .search-input, .button.secondary, .voice-overlay { background: var(--glass-solid); backdrop-filter: none; text-shadow: none; }
+  .reorder-hint, .search-input, .button.secondary { background: var(--glass-solid); backdrop-filter: none; text-shadow: none; }
   .project-panel.has-unread { background: #3b2b39; }.project-panel.round-complete { background: #263d35; }
   .settings-dialog::backdrop { background: #07111fc9; backdrop-filter: none; }
   .app-shell::before { backdrop-filter: none; }
@@ -456,7 +456,7 @@ kbd { border-color: #dbeeff26; color: #8ca3bd; background: #e9f4ff06; }
 /* The solid surface, chosen in Settings: the same opaque panes. On an opaque pane Windows draws text with
    ClearType (sub-pixel) instead of the grey antialiasing a translucent layer gets, so letters are at their
    sharpest; nothing is blurred behind the panes, and the wallpaper is covered by a plain dark ground. */
-:root[data-surface="solid"] :is(.project-panel, .focus-mode .project-panel, .focus-sidebar, .file-preview, .titlebar, .settings-dialog, .dropdown, .reorder-hint, .search-input, .button.secondary, .voice-overlay, .tour-bubble) { background: var(--glass-solid); backdrop-filter: none; text-shadow: none; }
+:root[data-surface="solid"] :is(.project-panel, .focus-mode .project-panel, .focus-sidebar, .file-preview, .titlebar, .settings-dialog, .dropdown, .reorder-hint, .search-input, .button.secondary, .tour-bubble) { background: var(--glass-solid); backdrop-filter: none; text-shadow: none; }
 :root[data-surface="solid"] .project-panel.has-unread { background: #3b2b39; }:root[data-surface="solid"] .project-panel.round-complete { background: #263d35; }
 :root[data-surface="solid"] .settings-dialog::backdrop { background: #07111fc9; backdrop-filter: none; }
 :root[data-surface="solid"] .app-shell { background: #0e1a22 !important; }:root[data-surface="solid"] .app-shell::before { backdrop-filter: none; }

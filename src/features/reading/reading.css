@@ -68,12 +68,17 @@
 .reading-tools li small { grid-column: 2; color: #8ea6c1; font-size: 11px; }
 .reading-tools li.reading-tool-edit b { color: #ffcf8f; }.reading-tools li.is-failed code { color: #ffb1ac; }.reading-tools li.is-running b { color: #9cdfff; }
 
-/* Status and the message box at the foot. */
-.reading-status { display: flex; flex: none; align-items: flex-end; gap: 7px; padding: 0 18px 0 18px; min-height: 30px; font-size: 12px; color: #9fb5ce; min-width: 0; overflow: hidden; white-space: nowrap; }
-.reading-status.is-working { color: #ffd88a; }
-.reading-status-activity { display: flex; flex: 1 1 auto; min-width: 0; align-self: center; align-items: center; gap: 7px; padding: 2px 0 8px; overflow: hidden; }
-.reading-status-activity > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reading-status-activity > svg { flex: none; }
+/* The agent's state, as the last line of the conversation. */
+.reading-status { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 6px; font-size: 13px; line-height: 1.5; color: #9fb5ce; min-width: 0; }
+.reading-status > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reading-status > small { flex: none; font-size: 12px; opacity: .7; font-variant-numeric: tabular-nums; }
+.reading-status-mark { flex: none; width: 14px; font-style: normal; text-align: center; }
+.reading-status.is-claude .reading-status-mark { color: #e8875f; animation: reading-mark-turn 2.4s linear infinite; }
+.reading-status.is-codex .reading-status-mark { color: #8fd0ff; animation: reading-mark-pulse 1.2s ease-in-out infinite; }
+@keyframes reading-mark-turn { to { transform: rotate(360deg); } }
+@keyframes reading-mark-pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .reading-status-mark { animation: none !important; } }
+/* The message box at the foot. */
 .reading-composer { position: relative; display: flex; align-items: flex-end; gap: 6px; margin: 0 12px 12px; padding: 6px 6px 6px 12px; border-radius: 6px; background: rgba(3, 12, 20, .5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); transition: box-shadow .16s ease; }
 .reading-commands.dropdown { position: absolute; top: auto; bottom: calc(100% + 5px); left: 0; right: 0; width: auto; z-index: 3; padding: 4px; border: 1px solid #e8f5ff80; max-height: 266px; overflow-y: auto; transform-origin: bottom center; }
 .reading-command { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 8px; border-radius: 4.5px; color: #e5f0fa; font-size: 12px; cursor: pointer; }
