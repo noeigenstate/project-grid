@@ -65,9 +65,9 @@ try {
   assert.equal(await composer.getAttribute('aria-controls'), await palette.getAttribute('id'));
   const count = await palette.getByRole('option').count();
   await waitFor(() => palette.evaluate(node => {
-    const list = node.getBoundingClientRect(), box = node.parentElement.getBoundingClientRect();
-    return Math.abs(list.width - box.width) < 1 && Math.abs(list.left - box.left) < 1 && list.bottom < box.top && list.height <= 266;
-  }), 'palette above composer, same width and at most eight visible rows');
+    const list = node.getBoundingClientRect(), box = node.parentElement.querySelector('.reading-composer').getBoundingClientRect();
+    return getComputedStyle(node).position === 'static' && Math.abs(list.width - box.width) < 1 && Math.abs(list.left - box.left) < 1 && list.bottom <= box.top && list.height <= 266;
+  }), 'command list in the page above the composer, same width and at most eight visible rows');
   assert.ok(await palette.evaluate(node => node.scrollHeight > node.clientHeight), 'command list scrolls');
   await page.screenshot({ path: path.join(output, 'all-commands.png') });
   await composer.press('ArrowUp');

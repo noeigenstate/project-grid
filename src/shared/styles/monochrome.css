@@ -192,3 +192,5 @@
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .activity-now:is(.is-working, .is-editing) { box-shadow: inset 0 0 0 1px var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-composer .reading-send:not(:disabled) { box-shadow: none; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .app-shell.titlebar-auto .titlebar { background: var(--glass-strong); box-shadow: inset 0 -1px 0 var(--theme-line); }
+/* The slash command list in the reading view sits in the page like the menus do over it. */
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-commands.is-inline { color: var(--theme-ink); background: var(--glass-strong); box-shadow: inset 0 0 0 1px var(--theme-line); }

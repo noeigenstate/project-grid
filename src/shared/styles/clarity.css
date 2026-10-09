@@ -124,6 +124,9 @@
 :root[data-theme] .reading-status { color: var(--ink-secondary); }
 :root[data-theme] .reading-composer { margin: 4px 16px 16px; padding: 8px 8px 8px 16px; border-radius: 14px; background: rgba(8, 11, 17, .62); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 10px 28px -8px rgba(0, 0, 0, .45); }
 :root[data-theme] .focus-mode .reading-composer { margin: 4px 24px 20px; }
+/* The slash command list lines up with the message box below it. */
+:root[data-theme] .reading-commands.is-inline { margin: 4px 16px 4px; border-radius: 14px; }
+:root[data-theme] .focus-mode .reading-commands.is-inline { margin: 4px 24px 4px; }
 :root[data-theme] .reading-composer:focus-within { box-shadow: inset 0 0 0 1px rgba(120, 190, 255, .5), 0 0 0 3px rgba(59, 158, 255, .18), 0 10px 28px -8px rgba(0, 0, 0, .45); }
 :root[data-theme] .reading-composer textarea { color: var(--ink); font-weight: 400; }
 :root[data-theme] .reading-composer textarea::placeholder { color: var(--ink-faint); }
