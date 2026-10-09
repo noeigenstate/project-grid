@@ -964,5 +964,6 @@
   "主题推荐配置": "Theme recommendations",
   "只调整外观；手动修改和切换主题不会自动覆盖你的配置": "Appearance only; manual changes and theme switches never automatically overwrite your settings",
   "{size}px · {weight} · {renderer} · {background}": "{size}px · {weight} · {renderer} · {background}",
-  "应用推荐配置": "Apply recommendations"
+  "应用推荐配置": "Apply recommendations",
+  "正在等待 {command} 的结果…": "Waiting for {command}…"
 }

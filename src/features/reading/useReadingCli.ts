@@ -3,7 +3,7 @@ import type { ConversationEntry } from '../../shared/types';
 import type { ScreenAgent } from '../agents/agent-screen-types';
 import { parseAgentScreen } from '../agents/agent-screen';
 import { readScreen, subscribeScreen } from '../terminal/terminal-screen';
-import { advanceCliCommand, extractCliPanelRows, isCliIdle, mergeCliResults, type CliCommand, type CliResult } from './cli-panel';
+import { advanceCliCommand, cliResultRows, extractCliPanelRows, hasCliInput, isCliIdle, mergeCliResults, type CliCommand, type CliResult } from './cli-panel';
 
 type Snapshot = { pending: CliCommand | null; panel: { command: string; rows: string[] } | null; results: CliResult[] };
 type Session = { terminalId: string; snapshot: Snapshot; listeners: Set<() => void>; stop: (() => void) | null };
@@ -32,7 +32,7 @@ function publish(session: Session, snapshot: Snapshot) {
 }
 function begin(session: Session, terminalId: string, agent: ScreenAgent, command: string, anchor: string | null) {
   session.stop?.();
-  const pending: CliCommand = { id: `cli-output-${++sequence}`, command, anchor, at: Date.now(), observed: false, idleSince: null, output: [] };
+  const pending: CliCommand = { id: `cli-output-${++sequence}`, command, anchor, at: Date.now(), observed: false, idleSince: null, output: [], dialog: [] };
   publish(session, { ...session.snapshot, pending, panel: null });
   let latest = readScreen(terminalId), subscribing = true;
   const update = (observation: boolean) => {
@@ -43,12 +43,14 @@ function begin(session: Session, terminalId: string, agent: ScreenAgent, command
     const next = advanceCliCommand(current, agent, latest.rows, screen, Date.now(), observation);
     if (next.done) {
       session.stop?.(); session.stop = null;
-      const results = next.command.output.length ? [...session.snapshot.results, { ...next.command, rows: next.command.output }].slice(-CLI_RESULT_LIMIT) : session.snapshot.results;
+      const rows = cliResultRows(next.command);
+      const results = rows.length ? [...session.snapshot.results, { ...next.command, rows }].slice(-CLI_RESULT_LIMIT) : session.snapshot.results;
       publish(session, { pending: null, panel: null, results });
     } else if (observation || next.command.idleSince !== current.idleSince) {
       const panel = screen.choice ? null : isCliIdle(agent, latest.rows, screen)
         ? session.snapshot.panel
         : next.command.observed ? { command, rows: extractCliPanelRows(agent, latest.rows, screen, command) } : null;
+      if (panel?.rows.length && !hasCliInput(agent, latest.rows, screen)) next.command.dialog = panel.rows;
       publish(session, { ...session.snapshot, pending: next.command, panel });
     }
   };

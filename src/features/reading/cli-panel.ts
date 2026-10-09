@@ -63,6 +63,11 @@ export function isAtPrompt(agent: ScreenAgent, rows: string[], screen: AgentScre
   return !!cliInputArea(agent, rows, screen)?.hasFooter;
 }
 
+// A dialog (Claude's /usage, /status, /config) takes the input's place; its content is the command's result.
+export function hasCliInput(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
+  return !!cliInputArea(agent, rows, screen);
+}
+
 // At its prompt with nothing typed: a command the reading view sent has finished.
 export function isCliIdle(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
   return isAtPrompt(agent, rows, screen) && !cliInputDraft(agent, rows, screen);
@@ -124,9 +129,19 @@ export function extractCliOutputRows(agent: ScreenAgent, rows: string[], screen:
 export type CliCommand = {
   id: string; command: string; at: number; anchor: string | null;
   observed: boolean; idleSince: number | null; output: string[];
+  // The last dialog drawn in the input's place: what such a command showed, kept once it is closed.
+  dialog: string[];
 };
 export type CliResult = Pick<CliCommand, 'id' | 'command' | 'at' | 'anchor'> & { rows: string[] };
 export type CliOutputEntry = ConversationEntry & { cliOutput?: string[] };
+
+// What a finished command leaves in the conversation: its dialog when it drew one (without the CLI's own
+// "dialog dismissed" note), else what it printed above the input.
+export function cliResultRows(command: CliCommand): string[] {
+  if (!command.dialog.length) return command.output;
+  const printed = command.output.filter(row => row.trim() && !/dialog dismissed|^\s*⎿\s*$/i.test(row));
+  return printed.length ? [...command.dialog, '', ...printed] : command.dialog;
+}
 
 // Stream observations start the idle clock; timer ticks only advance it. The
 // pre-submit snapshot must never complete a command before the CLI receives it.

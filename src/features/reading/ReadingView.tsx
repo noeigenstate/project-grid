@@ -294,7 +294,9 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (link) { event.preventDefault(); const href = link.getAttribute('href') || ''; if (href) onOpenLink(href); }
   }}>
     <div className="reading-scroll-area">
-      <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} />{status}</div></div>
+      <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} />
+        {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} terminalId={terminal.id} onShowTerminal={onShowTerminal} />}
+        {status}</div></div>
       {!stuck && <div className="reading-latest">
         {unseen > 0 && <span className="reading-unseen" role="status">{t('{count} 条新消息', { count: unseen })}</span>}
         <button type="button" className="icon-button reading-jump" title={t('跳到最新消息')} aria-label={t('跳到最新消息')} onClick={() => toBottom('smooth')}><ArrowDown size={18} /></button>
@@ -311,7 +313,6 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     }}><ReadingSessions key={`${terminal.id}-${terminal.sessionId}`} terminalId={terminal.id} onError={onError} onClose={() => setSessionsOpen(false)} onSent={text => {
       history.set(terminal.id, [...(history.get(terminal.id) || []), text].slice(-50)); setImages(0); toBottom();
     }} /></div>}
-    {!screen.choice && !sessionsOpen && cli.panel && <div className="reading-choice-host"><ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} terminalId={terminal.id} onShowTerminal={onShowTerminal} /></div>}
     <div className="reading-composer">
       {palette && <div className="dropdown reading-commands" id={listId} role="listbox" aria-label={t('命令')}>{matches.map((command, index) => <div key={command.name} id={optionId(index)} role="option" aria-selected={selection === index} className="reading-command" onMouseDown={event => event.preventDefault()} onClick={() => complete(command)}>
         <code>{command.name}</code><span>{command.source === 'builtin' ? t(command.description) : command.description}</span>{command.source !== 'builtin' && <small>{command.source === 'project' ? t('项目') : command.source === 'user' ? t('用户') : t('技能')}</small>}

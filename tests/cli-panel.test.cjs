@@ -201,7 +201,8 @@ test('renderer waits for screen output, keeps panel through 400 ms idle, then re
   const done = harness.render();
   assert.equal(done.busy, false);
   assert.equal(done.panel, null);
-  assert.deepEqual(done.entries.map(entry => entry.text ?? entry.cliOutput), ['/status', ['  Printed status']]);
+  // The dialog it drew stays as the command's result, followed by what it printed on closing.
+  assert.deepEqual(done.entries.map(entry => entry.text ?? entry.cliOutput), ['/status', ['  Status tabs', 'Esc to close', '', '  Printed status']]);
   assert.equal(harness.focused(), 1);
   assert.equal(harness.watchers.size, 0);
 });
