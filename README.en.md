@@ -57,7 +57,10 @@ The grid arranges itself as you add projects, and the card under the pointer lif
 
 Switch any Claude Code or Codex terminal to a **reading view**: headings, coloured bullets, inline code, code blocks with a Copy button, tool calls folded into one line. The box at the bottom writes straight into the real terminal underneath, and the terminal is one click away.
 
-The **activity pane** lists every step live: files edited, commands run, skills and MCP tools called (with what they are for), and below it an overview of the round: the prompts being worked on and waiting, calls made and finished, time taken and the files changed.
+- **CLI output is laid out again, too.** What slash commands such as `/usage`, `/status` and `/context` print is no longer terminal box art: frames go, figures line up in tables, usage becomes progress bars, groups get headings, all set into the conversation and kept there after the dialog closes. Type `/` for every command, `@` to mention a project file.
+- **Questions and confirmations become cards.** Permission prompts, pickers like `/model`, and questions from Claude Code (AskUserQuestion) and Codex (Plan mode) appear as cards you click; what the agent is doing is written at the end of the conversation, as in its CLI, with a timer and Esc to interrupt.
+
+The **activity pane** keeps the round's calls, completions, failures and time at the top; its live feed names each step for what it is (the command as typed, the skill used, the MCP tool called, the files created or changed), and below it are the tasks being worked on and waiting.
 
 ### ✅ Review the changes hunk by hunk
 
