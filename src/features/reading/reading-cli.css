@@ -1,11 +1,12 @@
 .reading-cli-rows { margin: 0; font: 400 11.5px/1.6 var(--font-mono); white-space: pre; overflow-x: auto; color: #cbd9e8; }
 .reading-cli-panel .reading-choice-head strong { font-family: var(--font-mono); }
-.reading-command-output { margin: 12px 0 20px; padding: 10px 12px; border-radius: 6px; background: var(--glass-sheen), rgba(3, 12, 20, .4); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.reading-command-output { margin: 4px 0 10px; padding: 0; }
 .reading-command-output .reading-choice-head { color: #9fb9d3; font-size: 11px; }
 
 /* A slash command in the conversation, laid out like the rest of the document. */
-.reading-cli-panel { margin: 4px 0 8px; padding: 12px 14px; border-radius: var(--card-radius, 10px); background: var(--card-fill, rgba(255, 255, 255, .06)); box-shadow: inset 0 0 0 1px rgba(120, 180, 255, .35); outline: none; }
-.reading-cli-panel:focus-visible, .reading-cli-panel:focus-within { box-shadow: inset 0 0 0 1px rgba(120, 180, 255, .6), 0 0 0 3px rgba(80, 150, 255, .15); }
+/* A running command takes keys, so a thin rule beside it marks the group; it has no card of its own. */
+.reading-cli-panel { margin: 4px 0 8px; padding: 2px 0 2px 14px; border-left: 2px solid rgba(120, 180, 255, .35); outline: none; }
+.reading-cli-panel:focus-visible, .reading-cli-panel:focus-within { border-left-color: rgba(120, 190, 255, .9); }
 .reading-cli-panel > .reading-choice-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .reading-cli-panel > .reading-choice-head strong { flex: 1; color: #8fc4ff; font: 600 13px var(--font-mono); }
 .cli-waiting { display: flex; align-items: center; gap: 8px; margin: 2px 0; font-size: 13px; color: var(--ink-secondary, #a9bfd6); }

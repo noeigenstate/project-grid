@@ -55,7 +55,7 @@
 .reading-plain { margin: 0; white-space: pre-wrap; }
 
 /* Tool calls: one line that unfolds, so the answers stay in view. */
-.reading-tools { border-radius: 4.5px; background: rgba(255, 255, 255, .035); }
+.reading-tools { border-radius: 0; background: none; }
 .reading-tools-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: 0; border-radius: inherit; background: transparent; color: #9fb5ce; font-size: 12px; text-align: left; }
 .reading-tools-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reading-tools-head:hover { background: rgba(255, 255, 255, .05); color: #dce9f5; }
