@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>Project Grid · Promo</title>
+<style>
+  html, body { margin: 0; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: auto; }
+</style>
+</head>
+<body>
+<canvas id="film" width="1920" height="1080"></canvas>
+<script>
+// A 30-second film drawn frame by frame from a timeline, so every render is identical: frame(i) draws the
+// moment i / 30 s and returns it as a JPEG. Open the page alone to watch it play in real time.
+const W = 1920, H = 1080, FPS = 30, LENGTH = 30;
+// ?clean leaves out the moving film grain: an animated image for the README cannot compress it.
+const CLEAN = new URLSearchParams(location.search).has('clean');
+const canvas = document.getElementById('film'), g = canvas.getContext('2d');
+const DISPLAY = '"Bahnschrift SemiBold", "Bahnschrift", "Segoe UI", sans-serif';
+const CJK = '"Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif';
+const MONO = 'Consolas, "Cascadia Mono", monospace';
+const C = { cyan: '#2ef2ff', blue: '#3c7dff', pink: '#ff3d8b', rose: '#ff6f91', violet: '#8a5bff', green: '#39ffa0', red: '#ff3b4f', ice: '#c3d6ec', ink: '#eaf6ff' };
+
+// ---------- maths ----------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = p => 1 - Math.pow(1 - p, 3);
+const easeIn = p => p * p * p;
+const easeInOut = p => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeExpo = p => p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
+const easeBack = p => { const s = 1.70158; return 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2); };
+// Rises in over [a, a+in], holds, falls out over [b-out, b].
+const window_ = (t, a, b, fadeIn = .4, fadeOut = .4) => Math.min(seg(t, a, a + fadeIn), 1 - seg(t, b - fadeOut, b));
+function rng(seed) { let s = seed >>> 0; return () => { s += 0x6D2B79F5; let r = Math.imul(s ^ (s >>> 15), 1 | s); r ^= r + Math.imul(r ^ (r >>> 7), 61 | r); return ((r ^ (r >>> 14)) >>> 0) / 4294967296; }; }
+const hash = (a, b = 0, c = 0) => { let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const noise1 = x => { const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f); return lerp(hash(i), hash(i + 1), u); };
+
+// ---------- shared layers ----------
+function makeLayer(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c; }
+const scanlines = makeLayer(W, H, (x) => { x.fillStyle = 'rgba(0,0,0,.22)'; for (let y = 0; y < H; y += 3) x.fillRect(0, y, W, 1); });
+const vignette = makeLayer(W, H, (x) => { const r = x.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .95); r.addColorStop(0, 'rgba(0,0,0,0)'); r.addColorStop(1, 'rgba(0,0,0,.78)'); x.fillStyle = r; x.fillRect(0, 0, W, H); });
+const grains = [0, 1, 2, 3].map(k => makeLayer(512, 512, (x) => { const d = x.createImageData(512, 512), r = rng(99 + k); for (let i = 0; i < d.data.length; i += 4) { const v = r() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } x.putImageData(d, 0, 0); }));
+const GLYPHS = '─│╭╮╰╯├┤┬┴┼█▓▒░▌▐■□▪◆◇●○⏺⎿❯›»01アイウエオカキクケコｱｲｳｴｵ#$%&@*+=<>/\\{}[]';
+const glyph = (a, b, c) => GLYPHS[Math.floor(hash(a, b, c) * GLYPHS.length)];
+
+// Text with a neon glow and, when glitching, red/cyan fringes pulled apart.
+function neonText(text, x, y, { size = 96, font = DISPLAY, color = C.cyan, core = C.ink, align = 'center', alpha = 1, glow = 34, split = 0, tracking = 0, weight = '' } = {}) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha; g.textAlign = align; g.textBaseline = 'middle';
+  g.font = `${weight} ${size}px ${font}`; if ('letterSpacing' in g) g.letterSpacing = `${tracking}px`;
+  if (split) {
+    g.globalCompositeOperation = 'lighter';
+    g.fillStyle = 'rgba(255,40,90,.85)'; g.fillText(text, x - split, y);
+    g.fillStyle = 'rgba(40,240,255,.85)'; g.fillText(text, x + split, y);
+    g.globalCompositeOperation = 'source-over';
+  }
+  g.shadowColor = color; g.shadowBlur = glow; g.fillStyle = color; g.fillText(text, x, y);
+  g.shadowBlur = glow * .35; g.fillStyle = core; g.fillText(text, x, y);
+  g.restore();
+}
+// A two-line caption: a large Chinese title over a tracked English line, glitching on its way in.
+function caption(t, a, b, zh, en, { y = H * .5, color = C.cyan, size = 132 } = {}) {
+  const on = window_(t, a, b, .35, .35);
+  if (on <= 0) return;
+  const entering = 1 - seg(t, a, a + .5), leaving = seg(t, b - .4, b);
+  const jitter = (entering + leaving) * 28 * (hash(Math.floor(t * 30), 7) - .5);
+  neonText(zh, W / 2 + jitter, y, { size, font: CJK, weight: '700', color, alpha: on, split: (entering + leaving) * 14 + 2, glow: 40 });
+  neonText(en, W / 2 - jitter * .5, y + size * .78, { size: size * .26, color: C.ink, core: C.ink, alpha: on * .92, tracking: 14, glow: 16, split: (entering + leaving) * 6 });
+}
+
+// ---------- 3D ----------
+const camera = { x: 0, y: 0, z: -900, f: 1100 };
+function project(x, y, z) { const d = z - camera.z; if (d <= 1) return null; const s = camera.f / d; return { x: W / 2 + (x - camera.x) * s, y: H / 2 + (y - camera.y) * s, s }; }
+
+// The neon floor: lines to the horizon and rungs that run toward the viewer.
+function floor(t, alpha, { horizon = H * .6, speed = 1, hue = 0 } = {}) {
+  if (alpha <= 0) return;
+  g.save(); g.globalAlpha = alpha;
+  const sky = g.createLinearGradient(0, 0, 0, horizon);
+  sky.addColorStop(0, 'rgba(10,8,30,0)'); sky.addColorStop(1, `rgba(${120 + hue},40,200,.35)`);
+  g.fillStyle = sky; g.fillRect(0, 0, W, horizon);
+  const sun = g.createRadialGradient(W / 2, horizon, 10, W / 2, horizon, 520);
+  sun.addColorStop(0, 'rgba(255,61,139,.55)'); sun.addColorStop(.4, 'rgba(138,91,255,.18)'); sun.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = sun; g.fillRect(0, horizon - 520, W, 1040);
+  g.beginPath(); g.rect(0, horizon, W, H - horizon); g.clip();
+  g.lineWidth = 2; g.shadowBlur = 18;
+  for (let i = -24; i <= 24; i++) {
+    g.strokeStyle = i % 4 === 0 ? 'rgba(46,242,255,.75)' : 'rgba(138,91,255,.45)'; g.shadowColor = g.strokeStyle;
+    g.beginPath(); g.moveTo(W / 2 + i * 6, horizon); g.lineTo(W / 2 + i * 260, H + 40); g.stroke();
+  }
+  for (let k = 0; k < 18; k++) {
+    const p = ((k + t * speed * 1.4) % 18) / 18, y = horizon + Math.pow(p, 2.6) * (H - horizon + 60);
+    g.strokeStyle = `rgba(255,61,139,${.25 + p * .6})`; g.shadowColor = C.pink;
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+  }
+  g.restore();
+}
+
+// A holographic pane: frame, header ticks, code rain inside. state: 0 working (blue), 1 done (pink), 2 seen (green).
+function pane(cx, cy, w, h, t, seed, { alpha = 1, state = 0, pulse = 0, rain = 1 } = {}) {
+  if (alpha <= 0 || w < 2) return;
+  const color = state === 1 ? C.pink : state === 2 ? C.green : C.blue;
+  const x = cx - w / 2, y = cy - h / 2, r = Math.min(18, w * .06);
+  g.save(); g.globalAlpha = alpha;
+  // glass
+  const fill = g.createLinearGradient(x, y, x, y + h);
+  fill.addColorStop(0, state === 1 ? `rgba(255,61,139,${.18 + pulse * .25})` : 'rgba(60,125,255,.16)');
+  fill.addColorStop(1, 'rgba(6,10,24,.72)');
+  g.fillStyle = fill; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill();
+  // rain
+  if (rain > 0 && w > 60) {
+    g.save(); g.beginPath(); g.roundRect(x, y, w, h, r); g.clip();
+    const size = Math.max(8, w / 22), cols = Math.floor(w / (size * .9)), rows = Math.ceil(h / size) + 1;
+    g.font = `${size}px ${MONO}`; g.textBaseline = 'top';
+    for (let c = 0; c < cols; c++) {
+      const speed = 3 + hash(seed, c) * 6, head = ((t * speed + hash(c, seed) * rows) % (rows + 8));
+      for (let k = 0; k < rows; k++) {
+        const dist = head - k; if (dist < 0 || dist > 9) continue;
+        const a = (1 - dist / 9) * .8 * rain;
+        g.fillStyle = dist < 1 ? `rgba(234,246,255,${a})` : state === 1 ? `rgba(255,111,145,${a * .8})` : `rgba(46,242,255,${a * .7})`;
+        g.fillText(glyph(c, k, Math.floor(t * 8 + c)), x + 8 + c * size * .9, y + k * size);
+      }
+    }
+    g.restore();
+  }
+  // rim and corner brackets
+  g.shadowColor = color; g.shadowBlur = 22 + pulse * 40; g.strokeStyle = color; g.lineWidth = 2 + pulse * 2;
+  g.beginPath(); g.roundRect(x, y, w, h, r); g.stroke();
+  g.lineWidth = 4; const b = Math.min(28, w * .12);
+  for (const [px, py, dx, dy] of [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]]) {
+    g.beginPath(); g.moveTo(px + dx * b, py); g.lineTo(px, py); g.lineTo(px, py + dy * b); g.stroke();
+  }
+  // header
+  if (w > 120) {
+    g.shadowBlur = 8; g.fillStyle = color; g.font = `${Math.max(10, w * .045)}px ${MONO}`; g.textBaseline = 'middle'; g.textAlign = 'left';
+    g.fillText(['CODEX', 'CLAUDE', 'CODEX', 'CLAUDE', 'CODEX', 'CLAUDE'][seed % 6] + ' :: ' + (0x1f00 + seed * 977).toString(16).toUpperCase(), x + 12, y + 16);
+    g.beginPath(); g.arc(x + w - 18, y + 16, 5, 0, Math.PI * 2); g.fill();
+  }
+  g.restore();
+}
+
+// Particle bursts, precomputed.
+function burst(seed, n) { const r = rng(seed); return Array.from({ length: n }, () => ({ a: r() * Math.PI * 2, v: .25 + Math.pow(r(), .6) * .95, s: 1 + r() * 4, hue: r(), life: .55 + r() * .45, spin: (r() - .5) * 2 })); }
+const BOOM = burst(7, 1100), SHARDS = burst(21, 500), WARP = burst(33, 700);
+// Each particle is a glowing streak from where it was a moment ago to where it is now.
+function drawBurst(parts, ox, oy, p, radius, colors) {
+  g.save(); g.globalCompositeOperation = 'lighter'; g.lineCap = 'round';
+  for (const q of parts) {
+    const life = clamp(p / q.life); if (life >= 1) continue;
+    const before = clamp(life - .045), a = q.a + q.spin * life * .6;
+    const d = easeExpo(life) * radius * q.v, d0 = easeExpo(before) * radius * q.v;
+    const color = colors[Math.floor(q.hue * colors.length)];
+    g.strokeStyle = color; g.shadowColor = color; g.shadowBlur = 14; g.globalAlpha = Math.pow(1 - life, 1.4);
+    g.lineWidth = q.s * (1.2 + (1 - life) * 1.6);
+    g.beginPath(); g.moveTo(ox + Math.cos(a) * d0, oy + Math.sin(a) * d0); g.lineTo(ox + Math.cos(a) * d + .1, oy + Math.sin(a) * d); g.stroke();
+  }
+  g.restore();
+}
+// The blast itself: a hot core, rays thrown out, and a pink haze that fades.
+function blast(ox, oy, p, color) {
+  if (p <= 0 || p >= 1) return;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  const core = g.createRadialGradient(ox, oy, 0, ox, oy, 900 * easeExpo(p) + 60);
+  core.addColorStop(0, `rgba(255,255,255,${(1 - p) * .95})`); core.addColorStop(.12, `rgba(255,170,210,${(1 - p) * .7})`);
+  core.addColorStop(.45, `rgba(255,61,139,${(1 - p) * .35})`); core.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = core; g.fillRect(0, 0, W, H);
+  const r = rng(77);
+  for (let i = 0; i < 26; i++) {
+    const a = r() * Math.PI * 2, len = (600 + r() * 1400) * easeExpo(clamp(p * 1.6)), width = 2 + r() * 10;
+    const grad = g.createLinearGradient(ox, oy, ox + Math.cos(a) * len, oy + Math.sin(a) * len);
+    grad.addColorStop(0, `rgba(255,255,255,${(1 - p) * .55})`); grad.addColorStop(1, 'rgba(255,61,139,0)');
+    g.strokeStyle = grad; g.lineWidth = width * (1 - p);
+    g.beginPath(); g.moveTo(ox, oy); g.lineTo(ox + Math.cos(a) * len, oy + Math.sin(a) * len); g.stroke();
+  }
+  g.restore();
+}
+function shockwave(ox, oy, p, radius, color) {
+  if (p <= 0 || p >= 1) return;
+  g.save(); g.globalCompositeOperation = 'lighter'; g.strokeStyle = color; g.shadowColor = color; g.shadowBlur = 40;
+  for (const [k, w] of [[0, 18], [.1, 8], [.22, 3]]) {
+    const q = clamp(p - k); if (q <= 0) continue;
+    g.globalAlpha = (1 - q) * .9; g.lineWidth = w * (1 - q) + 1;
+    g.beginPath(); g.ellipse(ox, oy, easeExpo(q) * radius, easeExpo(q) * radius * .42, 0, 0, Math.PI * 2); g.stroke();
+  }
+  g.restore();
+}
+
+// ---------- scenes ----------
+const GRID6 = [[-1, -.5], [0, -.5], [1, -.5], [-1, .5], [0, .5], [1, .5]];
+
+function sceneBoot(t) {
+  // A cursor, a flicker, the floor drawing itself, the name breaking up.
+  const blink = t < 1.1 && Math.floor(t * 4) % 2 === 0;
+  if (blink) { g.fillStyle = C.pink; g.shadowColor = C.pink; g.shadowBlur = 30; g.fillRect(W / 2 - 14, H / 2 - 22, 28, 44); g.shadowBlur = 0; }
+  floor(t, easeOut(seg(t, .9, 2.4)), { speed: .8 });
+  const title = window_(t, 1.6, 3.15, .2, .35);
+  if (title > 0) {
+    const tear = (1 - seg(t, 1.6, 2.1)) * 40 + seg(t, 2.8, 3.15) * 60;
+    neonText('PROJECT GRID', W / 2, H * .42, { size: 190, color: C.pink, alpha: title, split: tear + 3, tracking: 22, glow: 50 });
+    neonText('SYSTEM  //  ONLINE', W / 2, H * .42 + 130, { size: 34, color: C.cyan, alpha: title * .9, tracking: 18, glow: 18 });
+  }
+}
+
+function sceneGrid(t) {
+  const p = seg(t, 3, 8);
+  floor(t, 1 - seg(t, 7.6, 8.2) * .4, { speed: 1.2 });
+  camera.z = lerp(-1200, -950, easeInOut(p)); camera.y = lerp(-40, 0, p);
+  GRID6.forEach(([gx, gy], i) => {
+    const arrive = easeBack(seg(t, 3.2 + i * .18, 4.3 + i * .18));
+    const z = lerp(2600, 0, arrive), x = gx * 470 + Math.sin(t * .9 + i) * 6, y = gy * 300 - 60 + Math.cos(t * .8 + i) * 6;
+    const s = project(x, y, z); if (!s) return;
+    pane(s.x, s.y, 430 * s.s, 270 * s.s, t, i, { alpha: seg(t, 3.2 + i * .18, 3.6 + i * .18), pulse: .3 + .3 * Math.sin(t * 3 + i) });
+  });
+  caption(t, 5.2, 8.0, '六线并行', 'SIX MINDS.  ONE GRID.', { y: H * .86, size: 96 });
+}
+
+function sceneSignal(t) {
+  // One pane turns, breathes, and bursts: the grid calling you back.
+  const p = seg(t, 8, 12.5), boom = 10.05;
+  floor(t, .6 + .4 * (1 - seg(t, 8, 9)), { speed: 1.6, hue: 60 * seg(t, boom, boom + 1) });
+  camera.z = lerp(-950, -620, easeInOut(seg(t, 8, 10))); camera.x = lerp(0, 160, easeInOut(seg(t, 8, 10)));
+  const shake = t > boom && t < boom + .6 ? (1 - seg(t, boom, boom + .6)) * 26 : 0;
+  g.save(); g.translate((hash(Math.floor(t * 60), 3) - .5) * shake, (hash(Math.floor(t * 60), 5) - .5) * shake);
+  GRID6.forEach(([gx, gy], i) => {
+    const s = project(gx * 470, gy * 300 - 60, 0); if (!s) return;
+    const target = i === 5;
+    const breathing = target ? .5 + .5 * Math.sin((t - 8.6) * 7) : 0;
+    const state = target && t > 8.6 ? (t > boom + 1.1 ? 2 : 1) : 0;
+    pane(s.x, s.y, 430 * s.s, 270 * s.s, t, i, { state, pulse: target ? breathing * seg(t, 8.6, 9.2) + (t > boom ? 1 - seg(t, boom, boom + .8) : 0) : .2, alpha: target ? 1 : 1 - seg(t, 9.6, 10.4) * .55 });
+  });
+  const o = project(470, 240, 0);
+  if (o) {
+    blast(o.x, o.y, seg(t, boom, boom + 1.1), C.pink);
+    shockwave(o.x, o.y, seg(t, boom, boom + 1.3), 1700, C.pink);
+    shockwave(o.x, o.y, seg(t, boom + .12, boom + 1.5), 1100, C.cyan);
+    drawBurst(BOOM, o.x, o.y, seg(t, boom, boom + 1.8), 1400, [C.pink, C.rose, C.violet, C.cyan, '#ffffff']);
+  }
+  g.restore();
+  caption(t, 10.4, 12.5, '它会叫醒你', 'THE GRID CALLS YOU BACK.', { y: H * .2, color: C.pink, size: 112 });
+}
+
+// Noise to document: every glyph of a storm finds its cell in a clean layout.
+const LAYOUT = (() => {
+  const cells = [], r = rng(5), x0 = 520, y0 = 250, cw = 22, ch = 40;
+  const row = (y, from, to, kind) => { for (let c = from; c < to; c++) cells.push({ tx: x0 + c * cw, ty: y0 + y * ch, kind }); };
+  row(0, 0, 18, 'head');
+  for (const y of [2, 3, 4, 5]) { row(y, 0, 12, 'label'); row(y, 18, 18 + 6 + Math.floor(r() * 10), 'value'); }
+  for (const [y, f] of [[7, .72], [8, .41], [9, .18]]) row(y, 0, Math.round(38 * f), 'bar');
+  for (const y of [11, 12, 13]) row(y, 2, 8 + Math.floor(r() * 24), 'code');
+  const s = rng(17);
+  return cells.map(cell => ({ ...cell, sx: s() * W, sy: s() * H, a0: s() * Math.PI * 2, r0: 200 + s() * 700, w: .6 + s() * 1.4, delay: s() * .35 }));
+})();
+const STORM = (() => { const r = rng(41); return Array.from({ length: 1200 }, () => ({ a: r() * Math.PI * 2, rad: 80 + r() * 1100, w: .3 + r() * 1.6, size: 14 + Math.pow(r(), 2.2) * 64, color: [C.cyan, C.pink, C.violet, C.blue, C.ink][Math.floor(r() * 5)], out: .6 + r() * .8 })); })();
+function sceneOrder(t) {
+  const storm = seg(t, 12.5, 14.2), gather = seg(t, 14.0, 15.6), settled = seg(t, 15.3, 16.2);
+  g.save(); g.globalAlpha = .5 * (1 - settled); floor(t, 1, { speed: 2.4, hue: 30 }); g.restore();
+  g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.globalCompositeOperation = 'lighter';
+  STORM.forEach((q, i) => {
+    const appear = seg(t, 12.5 + (i % 40) * .01, 13.0 + (i % 40) * .01), scatter = easeIn(seg(t, 14.2, 15.4));
+    const ang = q.a + t * q.w * 1.3, rad = q.rad * (1 + scatter * 1.6 * q.out);
+    const x = W / 2 + Math.cos(ang) * rad * 1.45, y = H / 2 + Math.sin(ang) * rad * .62;
+    const alpha = appear * (1 - scatter) * (.25 + .55 * (q.size / 78));
+    if (alpha <= 0) return;
+    g.font = `${q.size}px ${MONO}`; g.fillStyle = q.color; g.shadowColor = q.color; g.shadowBlur = q.size * .5; g.globalAlpha = alpha;
+    g.fillText(glyph(i, Math.floor(t * 10 + i), 5), x, y);
+  });
+  g.font = `30px ${MONO}`;
+  for (let i = 0; i < LAYOUT.length; i++) {
+    const q = LAYOUT[i], k = easeInOut(clamp((gather - q.delay) / (1 - q.delay)));
+    const ang = q.a0 + t * q.w * 1.6, rad = q.r0 * (1 - storm * .25);
+    const swirlX = W / 2 + Math.cos(ang) * rad * 1.5, swirlY = H / 2 + Math.sin(ang) * rad * .7;
+    const x = lerp(swirlX, q.tx, k), y = lerp(swirlY, q.ty, k);
+    const a = (seg(t, 12.5, 13.1) * (1 - settled * .9));
+    const color = q.kind === 'head' ? C.pink : q.kind === 'bar' ? C.cyan : q.kind === 'value' ? C.ink : q.kind === 'code' ? C.green : C.violet;
+    g.fillStyle = color; g.globalAlpha = a * (.55 + .45 * k); g.shadowColor = color; g.shadowBlur = 12;
+    g.fillText(glyph(i, k > .98 ? 0 : Math.floor(t * 12), 3), x, y);
+  }
+  g.restore();
+  if (settled > 0) document_(t, settled);
+  caption(t, 13.0, 17.5, '从噪声到秩序', 'NOISE,  REWRITTEN.', { y: H * .88, color: C.violet, size: 96 });
+}
+function document_(t, a) {
+  const x0 = 500, y0 = 230, w = 920;
+  g.save(); g.globalAlpha = a;
+  g.fillStyle = 'rgba(12,16,34,.72)'; g.strokeStyle = 'rgba(138,91,255,.7)'; g.lineWidth = 2; g.shadowColor = C.violet; g.shadowBlur = 30;
+  g.beginPath(); g.roundRect(x0 - 40, y0 - 50, w + 80, 620, 22); g.fill(); g.stroke(); g.shadowBlur = 0;
+  neonText('SESSION', x0, y0, { size: 40, align: 'left', color: C.pink, glow: 18, tracking: 6 });
+  const pairs = [['TOTAL TIME', '2h 14m'], ['TOOL CALLS', '486'], ['FILES TOUCHED', '37'], ['ROUNDS', '12']];
+  pairs.forEach(([l, v], i) => {
+    const y = y0 + 80 + i * 40, on = seg(t, 15.4 + i * .08, 15.8 + i * .08);
+    g.globalAlpha = a * on; g.font = `26px ${DISPLAY}`; g.textBaseline = 'middle'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(200,190,255,.75)'; g.fillText(l, x0, y); g.fillStyle = C.ink; g.fillText(v, x0 + 400, y);
+  });
+  [[.72, C.cyan], [.41, C.blue], [.18, C.pink]].forEach(([f, color], i) => {
+    const y = y0 + 280 + i * 40, fill = easeOut(seg(t, 15.7 + i * .12, 16.6 + i * .12)) * f;
+    g.globalAlpha = a; g.fillStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.roundRect(x0, y - 7, 780, 14, 7); g.fill();
+    const grad = g.createLinearGradient(x0, 0, x0 + 780, 0); grad.addColorStop(0, color); grad.addColorStop(1, '#ffffff');
+    g.fillStyle = grad; g.shadowColor = color; g.shadowBlur = 20; g.beginPath(); g.roundRect(x0, y - 7, 780 * fill, 14, 7); g.fill(); g.shadowBlur = 0;
+    g.fillStyle = C.ink; g.font = `24px ${DISPLAY}`; g.textAlign = 'right'; g.fillText(`${Math.round(fill * 100)}%`, x0 + 900, y);
+  });
+  ['render(screen) → document', '  frames.drop(); tables.align();', '  meters.fill(); noise = 0;'].forEach((line, i) => {
+    const on = seg(t, 16.0 + i * .12, 16.3 + i * .12);
+    g.globalAlpha = a * on; g.font = `24px ${MONO}`; g.textAlign = 'left'; g.fillStyle = C.green; g.shadowColor = C.green; g.shadowBlur = 10;
+    g.fillText(line, x0 + 40, y0 + 440 + i * 36);
+  });
+  g.restore();
+}
+
+function sceneVoice(t) {
+  // A voice becomes light: an orb in two rings, waves running out on both sides.
+  const on = window_(t, 17.5, 21.6, .5, .4), cx = W / 2, cy = H * .44;
+  floor(t, .35 * on, { speed: .8, hue: -40 });
+  if (on <= 0) return;
+  const level = .35 + .65 * Math.pow(noise1(t * 6), 1.4);
+  g.save(); g.globalAlpha = on;
+  for (let ring = 0; ring < 5; ring++) {
+    const p = ((t * .7 + ring / 5) % 1);
+    g.strokeStyle = `rgba(46,242,255,${(1 - p) * .55})`; g.lineWidth = 2; g.shadowColor = C.cyan; g.shadowBlur = 20;
+    g.beginPath(); g.arc(cx, cy, 120 + p * 520, 0, Math.PI * 2); g.stroke();
+  }
+  const bars = 34;
+  for (let side of [-1, 1]) for (let i = 0; i < bars; i++) {
+    const env = Math.exp(-Math.pow((i - 8) / 9, 2)), h = (20 + 300 * env * level * (.5 + .5 * noise1(t * 9 + i * .7 + side * 3))) * seg(t, 17.6 + i * .01, 18.1 + i * .01);
+    const x = cx + side * (180 + i * 22), color = i < 6 ? C.blue : i < 14 ? C.cyan : C.violet;
+    g.fillStyle = color; g.shadowColor = color; g.shadowBlur = 18; g.globalAlpha = on * (1 - i / bars * .7);
+    g.beginPath(); g.roundRect(x - 4, cy - h / 2, 8, h, 4); g.fill();
+  }
+  g.globalAlpha = on;
+  const orb = g.createRadialGradient(cx - 40, cy - 50, 10, cx, cy, 150);
+  orb.addColorStop(0, '#8fd0ff'); orb.addColorStop(.45, '#2f6dff'); orb.addColorStop(1, '#0b2a9a');
+  g.shadowColor = C.blue; g.shadowBlur = 80 + level * 60; g.fillStyle = orb; g.beginPath(); g.arc(cx, cy, 140 + level * 10, 0, Math.PI * 2); g.fill();
+  g.shadowBlur = 0; g.strokeStyle = 'rgba(180,225,255,.9)'; g.lineWidth = 4; g.stroke();
+  // microphone glyph
+  g.fillStyle = '#f2f8ff'; g.strokeStyle = '#f2f8ff'; g.lineWidth = 9; g.lineCap = 'round';
+  g.beginPath(); g.roundRect(cx - 24, cy - 70, 48, 86, 24); g.fill();
+  g.beginPath(); g.arc(cx, cy - 6, 50, .15 * Math.PI, .85 * Math.PI); g.stroke();
+  g.beginPath(); g.moveTo(cx, cy + 44); g.lineTo(cx, cy + 70); g.moveTo(cx - 22, cy + 72); g.lineTo(cx + 22, cy + 72); g.stroke();
+  g.restore();
+  caption(t, 18.2, 21.6, '开口即指令', 'SPEAK.  IT LISTENS.', { y: H * .85, size: 96 });
+}
+
+function sceneDiff(t) {
+  // Shards of change fly in; the red ones break apart, the green ones lock into place.
+  const rows = 9, boom = 23.0;
+  floor(t, .45, { speed: 1.4, hue: 20 });
+  for (let i = 0; i < rows; i++) {
+    const red = [1, 4, 6].includes(i), side = i % 2 ? 1 : -1, y = H * .2 + i * 58;
+    const arrive = easeOut(seg(t, 21.6 + i * .07, 22.4 + i * .07)), x = lerp(W / 2 + side * 1400, W / 2, arrive), w = 520 + hash(i, 4) * 520;
+    if (red && t > boom) {
+      drawBurst(SHARDS.slice(i * 50, i * 50 + 50), x, y, seg(t, boom + i * .04, boom + 1.2 + i * .04), 700, [C.red, '#ff8a5c', C.pink]);
+      continue;
+    }
+    const lock = red ? 0 : easeOut(seg(t, boom + .1 + i * .05, boom + .5 + i * .05)), color = red ? C.red : C.green;
+    g.save(); g.globalAlpha = seg(t, 21.6 + i * .07, 21.9 + i * .07);
+    g.fillStyle = red ? 'rgba(255,59,79,.18)' : 'rgba(57,255,160,.14)'; g.strokeStyle = color; g.shadowColor = color; g.shadowBlur = 16 + lock * 30; g.lineWidth = 2;
+    g.beginPath(); g.roundRect(x - w / 2, y - 20, w, 40, 6); g.fill(); g.stroke();
+    g.font = `26px ${MONO}`; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillStyle = color;
+    g.fillText(red ? '-' : '+', x - w / 2 + 14, y);
+    for (let c = 0; c < (w - 70) / 15; c++) { g.globalAlpha = .35 + .3 * hash(i, c); g.fillText(glyph(i, c, 9), x - w / 2 + 44 + c * 15, y); }
+    if (lock > 0) { g.globalAlpha = lock; g.lineWidth = 5; g.beginPath(); g.moveTo(x + w / 2 + 24, y); g.lineTo(x + w / 2 + 36, y + 12); g.lineTo(x + w / 2 + 60, y - 14); g.stroke(); }
+    g.restore();
+  }
+  const flash = t > boom ? Math.pow(1 - seg(t, boom, boom + .35), 2) : 0;
+  if (flash > 0) { g.fillStyle = `rgba(255,120,120,${flash * .35})`; g.fillRect(0, 0, W, H); }
+  caption(t, 23.1, 25.0, '逐块取舍', 'KEEP ONLY WHAT MATTERS.', { y: H * .88, color: C.green, size: 96 });
+}
+
+function sceneScale(t) {
+  // Pull back through a city of panes, then warp.
+  const p = seg(t, 25, 28), warp = seg(t, 26.6, 28);
+  camera.x = 0; camera.y = 0; camera.z = lerp(-400, 2600, easeIn(p));
+  floor(t, .5 * (1 - warp), { speed: 4, hue: 80 });
+  const items = [];
+  for (let gx = -6; gx <= 6; gx++) for (let gy = -3; gy <= 3; gy++) for (let gz = 0; gz < 9; gz++) {
+    if (hash(gx + 20, gy + 20, gz) < .35) continue;
+    items.push({ x: gx * 520, y: gy * 330, z: gz * 700 + 300, i: Math.abs(gx * 31 + gy * 7 + gz) });
+  }
+  items.sort((a, b) => b.z - a.z);
+  for (const it of items) {
+    const s = project(it.x, it.y, it.z); if (!s || s.s > 3) continue;
+    const near = clamp(1 - (it.z - camera.z) / 6000);
+    pane(s.x, s.y, 470 * s.s, 290 * s.s, t, it.i, { alpha: near * (1 - warp * .6), state: it.i % 11 === 0 ? 1 : it.i % 7 === 0 ? 2 : 0, rain: s.s > .25 ? 1 : 0, pulse: .2 });
+  }
+  if (warp > 0) {
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (const q of WARP) {
+      const len = easeIn(warp) * 900 * q.v, d = 80 + ((q.v * 1500 + t * 2400 * q.v) % 1300);
+      const x = W / 2 + Math.cos(q.a) * d, y = H / 2 + Math.sin(q.a) * d;
+      g.strokeStyle = [C.cyan, C.pink, C.violet, '#ffffff'][Math.floor(q.hue * 4)]; g.globalAlpha = warp * .8; g.lineWidth = q.s * .8;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(q.a) * len, y + Math.sin(q.a) * len); g.stroke();
+    }
+    g.restore();
+  }
+  caption(t, 25.3, 27.4, '专注，被放大', 'FOCUS,  MULTIPLIED.', { y: H * .5, color: C.cyan, size: 124 });
+  const flash = Math.pow(seg(t, 27.6, 28), 2) * (1 - seg(t, 28, 28.4));
+  if (flash > 0) { g.fillStyle = `rgba(235,246,255,${flash})`; g.fillRect(0, 0, W, H); }
+}
+
+function sceneLogo(t) {
+  // The icon assembles: three ice squares and the pink one that lights.
+  const p = seg(t, 28, 30), cx = W / 2, cy = H * .38, s = 118, gap = 26;
+  floor(t, .55 * seg(t, 28.2, 29), { speed: .5 });
+  const cells = [[-1, -1, C.ice], [1, -1, C.ice], [-1, 1, C.ice], [1, 1, C.pink]];
+  cells.forEach(([dx, dy, color], i) => {
+    const k = easeBack(seg(t, 28.05 + i * .1, 28.6 + i * .1));
+    const x = cx + dx * (s / 2 + gap / 2) * k + dx * (1 - k) * 600, y = cy + dy * (s / 2 + gap / 2) * k + dy * (1 - k) * 400;
+    const lit = i === 3 ? .6 + .4 * Math.sin((t - 28.8) * 6) * seg(t, 28.8, 29.2) : 0;
+    g.save(); g.globalAlpha = seg(t, 28.05 + i * .1, 28.3 + i * .1);
+    g.shadowColor = i === 3 ? C.pink : C.cyan; g.shadowBlur = 30 + lit * 60; g.fillStyle = color;
+    g.beginPath(); g.roundRect(x - s / 2, y - s / 2, s, s, 10); g.fill(); g.restore();
+  });
+  const word = seg(t, 28.7, 29.2);
+  neonText('PROJECT GRID', cx, H * .64, { size: 120, color: C.pink, core: '#fff2f6', alpha: word, split: (1 - word) * 20 + 2, tracking: 26, glow: 40 });
+  neonText('项 目 矩 阵', cx, H * .64 + 92, { size: 44, font: CJK, weight: '700', color: C.cyan, alpha: seg(t, 28.9, 29.3), glow: 18 });
+  neonText('面向未来的 AI 编辑器', cx, H * .64 + 166, { size: 30, font: CJK, weight: '700', color: C.ink, alpha: seg(t, 29.1, 29.5), tracking: 6, glow: 12 });
+  neonText('BEYOND  THE  EDITOR.', cx, H * .64 + 218, { size: 24, color: C.violet, alpha: seg(t, 29.2, 29.6) * .95, tracking: 12, glow: 12 });
+}
+
+// ---------- frame ----------
+function post(t, frame) {
+  // glitch slices at scene seams
+  const seams = [3, 8, 12.5, 17.5, 21.5, 25, 28];
+  const near = Math.max(...seams.map(s => 1 - clamp(Math.abs(t - s) / .18)));
+  if (near > 0) {
+    const r = rng(frame * 13 + 1);
+    for (let k = 0; k < 8; k++) { const y = r() * H, h = 6 + r() * 60, dx = (r() - .5) * 160 * near; g.drawImage(canvas, 0, y, W, h, dx, y, W, h); }
+  }
+  if (!CLEAN) { g.globalAlpha = .07; g.globalCompositeOperation = 'overlay'; g.drawImage(grains[frame % 4], (frame * 37) % 512 - 512, (frame * 53) % 512 - 512, W + 1024, H + 1024); }
+  g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
+  g.drawImage(scanlines, 0, 0); g.drawImage(vignette, 0, 0);
+  // fade from and to black
+  const black = Math.max(1 - seg(t, 0, .25), seg(t, 29.75, 30));
+  if (black > 0) { g.fillStyle = `rgba(0,0,0,${black})`; g.fillRect(0, 0, W, H); }
+}
+function render(t, frame = Math.round(t * FPS)) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; g.shadowBlur = 0;
+  const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#03040a'); bg.addColorStop(1, '#090616');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  camera.x = 0; camera.y = 0; camera.z = -900;
+  if (t < 3.05) sceneBoot(t);
+  else if (t < 8) sceneGrid(t);
+  else if (t < 12.5) sceneSignal(t);
+  else if (t < 17.5) sceneOrder(t);
+  else if (t < 21.5) sceneVoice(t);
+  else if (t < 25) sceneDiff(t);
+  else if (t < 28) sceneScale(t);
+  else sceneLogo(t);
+  post(t, frame);
+}
+window.frame = (index, type = 'image/jpeg', fps = FPS) => { render(index / fps, Math.round(index * FPS / fps)); return canvas.toDataURL(type, .93); };
+window.FRAMES = FPS * LENGTH;
+// Watching in a browser: play in real time.
+if (!new URLSearchParams(location.search).has('render')) {
+  const start = performance.now();
+  const loop = () => { render(((performance.now() - start) / 1000) % LENGTH); requestAnimationFrame(loop); };
+  document.fonts.ready.then(loop);
+}
+</script>
+</body>
+</html>

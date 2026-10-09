@@ -200,10 +200,75 @@ Markdown（`.md`、`.markdown`、`.mdown`、`.mkd`）提供「编辑 / 预览」
 - 终端回看缓冲区在内存中，每个终端最多约 1 MiB，退出应用后释放。
 - 窗口遵循系统减少动态效果偏好，启用时保留红色状态而停止闪烁。
 
+## 安装细节
+
+### macOS 安装
+
+支持 Apple 芯片 Mac（M1 或更新型号）和 macOS 12 或更高版本。GitHub [Releases](https://github.com/noeigenstate/project-grid/releases/latest) 提供 `Project-Grid-<version>-mac-arm64.dmg`、`Project-Grid-<version>-mac-arm64.zip` 和校验文件 `SHA256SUMS-mac.txt`。
+
+推荐在终端运行以下命令安装，更新时也用同一条命令：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | bash
+```
+
+脚本下载最新版本的 ZIP，验证 SHA-256 校验和，安装到 `/Applications`（该目录不可写时改用 `~/Applications`），然后打开应用。无需管理员密码；`curl` 下载的文件不带隔离标记，因此打开时不会出现 Gatekeeper 提示。**macOS 版不会自动更新**，再次运行安装命令即可更新。
+
+可以在管道后的 `bash` 前设置这些变量：
+
+- `PROJECT_GRID_VERSION=0.6.14`：安装指定版本。
+- `PROJECT_GRID_INSTALL_DIR=~/Applications`：指定安装目录。
+- `PROJECT_GRID_OPEN=0`：安装后不打开应用。
+
+例如，安装 0.6.14：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.14 bash
+```
+
+如果已经下载了 ZIP，也可以用本地的安装脚本安装：
+
+```bash
+bash install-macos.sh ~/Downloads/Project-Grid-0.6.14-mac-arm64.zip
+```
+
+应用使用临时签名（ad-hoc），没有 Apple Developer ID，也未经过 Apple 公证。如果用浏览器下载 DMG，再将应用拖到「应用程序」，首次打开时 macOS 会提示「无法验证开发者」。在「系统设置 › 隐私与安全性」中点一次「仍要打开」，或运行：
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Project Grid.app"
+```
+
+### macOS 终端与快捷键
+
+本地终端以登录 shell 方式运行 zsh（`/bin/zsh`），照常加载你自己的 `~/.zshenv`、`~/.zprofile`、`~/.zshrc` 和 `~/.zlogin`。Project Grid 在此基础上加入提示符状态报告和 `codex` / `claude` 包装层，支持轮次状态、Claude Code hooks、完成提醒和会话恢复，不修改任何用户文件。你为 `codex` 或 `claude` 定义的别名仍然有效。SSH 项目的用法与 Windows 相同。
+
+终端中用 `⌘C` / `⌘V` / `⌘A` 复制、粘贴和全选，`Control+C` 中断命令，`⌘+点击`打开链接。`⌘Q` 退出（终端仍在运行时会先询问），`⌘H` 隐藏，`⌘M` 最小化。设置里的项目快捷键仍默认使用 Control，例如 `Control+Shift+N` 添加项目。
+
+放大项目只会在当前窗口内展开，不会切换到全屏空间（Space）。需要全屏时，使用窗口的绿色按钮或全屏快捷键。
+
+### Linux 安装
+
+支持 x64 和 arm64。GitHub [Releases](https://github.com/noeigenstate/project-grid/releases/latest) 提供 `Project-Grid-<version>-linux-x86_64.AppImage`、`Project-Grid-<version>-linux-arm64.AppImage`、同内容的 `.tar.gz` 压缩包，以及校验文件 `SHA256SUMS-linux-x64.txt` / `SHA256SUMS-linux-arm64.txt`。
+
+推荐用 AppImage，下载后无需安装：
+
+```bash
+chmod +x Project-Grid-*-linux-*.AppImage
+./Project-Grid-*-linux-*.AppImage
+```
+
+也可以解压 `.tar.gz`，运行其中的 `./project-grid`。Ubuntu 23.10 及更新版本默认禁止未登记的程序使用 Chromium 沙箱所需的用户命名空间，这时运行压缩包里的程序要加上 `--no-sandbox`；AppImage 会自动检测并处理。**Linux 版不会自动更新**，下载新版本替换即可。
+
+### Linux 终端与快捷键
+
+本地终端可在「设置 › 终端与编辑 › 终端」中选择 Bash 或 zsh，默认跟随你的登录 shell（`$SHELL`）。没装 zsh 时只能选 Bash。Bash 与普通终端一样读取 `/etc/bash.bashrc`（如有）和你自己的 `~/.bashrc`；zsh 照常加载 `~/.zshenv`、`~/.zprofile`、`~/.zshrc` 和 `~/.zlogin`。Project Grid 在此基础上加入提示符状态报告和 `codex` / `claude` 包装层，支持轮次状态、Claude Code hooks、完成提醒和会话恢复，不修改任何用户文件；你为 `codex` 或 `claude` 定义的别名仍然有效。SSH 项目的用法与 Windows 相同。
+
+快捷键与 Windows 一致：终端里选中文字后 `Ctrl+C` 复制（或 `Ctrl+Shift+C`），`Ctrl+V` 粘贴，`Ctrl+Shift+A` 全选，没有选中时 `Ctrl+C` 中断命令，`Ctrl+点击`打开链接。目录栏的文件可以和系统文件管理器（Files、Dolphin、Thunar 等）互相复制粘贴；读取剪贴板时优先使用已安装的 `wl-paste` 或 `xclip`。
+
 ## 运行条件与范围
 
-- Windows 10/11，x64；本地终端使用 Windows PowerShell 或命令提示符 (cmd)（设置中选择，新开或重启的终端生效），基于 ConPTY。
-- Codex CLI 已安装并在 PATH 中。已在本机 Codex CLI 0.154.0 上进行启动检查。
+- Windows 10/11 x64（本地终端为 Windows PowerShell 或命令提示符，基于 ConPTY）；Apple 芯片 Mac，macOS 12 或更高（zsh）；64 位 Linux 桌面，x64 或 arm64（Bash 或 zsh）。
+- Codex CLI 或 Claude Code 至少一个已安装并在 PATH 中；当前在 Codex CLI 0.162 与 Claude Code 2.1.294 上验证。
 - 支持标准 npm 安装和原生 `codex.exe`。
 - 本应用为所选目录创建独立终端。VS Code 中已经运行的终端不会被直接搬入这个窗口。
 - 完成检测适用于本应用本地终端或 SSH 项目 Bash 中的 `codex` 函数，包括 `codex resume`。直接运行绝对路径可执行文件、自定义别名或在终端里另行嵌套 SSH/WSL 不会自动接入。

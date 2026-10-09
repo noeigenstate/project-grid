@@ -102,12 +102,18 @@ try {
     call('c4', 'npm test -- checkout')]);
   await waitFor(async () => (await state(0)).codexActivity === 'working', 'storefront working');
   // Payments and dashboard: finished rounds; the dashboard has been looked at (green), payments waits (pink).
+  const finished = {
+    1: ['退款接口加幂等校验', '已完成：退款请求按 `idempotency_key` 去重，重复请求直接返回第一次的结果。\n\n- 新增 `refund_requests` 唯一索引\n- 并发重复请求的测试已补上'],
+    2: ['把日活图表改成按周汇总', '已完成：图表按 ISO 周聚合，悬停显示每日明细。\n\n- 修改 `charts/active-users.ts`\n- 快照测试已更新'],
+  };
   for (const [index, turn] of [[1, 't2'], [2, 't3']]) {
-    await rollout(index, [meta(index), event('task_started', { turn_id: turn })]);
+    await rollout(index, [meta(index), event('task_started', { turn_id: turn }), message('user', `u${index}`, finished[index][0]), message('agent', `a${index}`, finished[index][1])]);
     await waitFor(async () => (await state(index)).codexActivity === 'working', 'round started');
     await fs.appendFile(path.join(home, 'sessions', `rollout-${sessions[index].thread}.jsonl`), JSON.stringify(event('task_complete', { turn_id: turn })) + '\n');
     await waitFor(async () => (await state(index)).codexActivity === 'complete', 'round finished');
   }
+  // The docs site's Claude Code has no transcript in this demo: its card shows the terminal.
+  await panel(3).locator('.panel-header').getByRole('button', { name: '切换到终端', exact: true }).click();
   await page.evaluate(id => window.projectGrid.acknowledge(id), projects[2].id);
   await waitFor(async () => (await state(2)).unread === 0, 'dashboard viewed');
   await page.evaluate(() => document.activeElement?.blur()); await page.mouse.move(800, 2);
@@ -118,7 +124,8 @@ try {
   // The storefront, expanded: reading view with the activity pane.
   await panel(0).getByRole('button', { name: '全屏查看 商城前端', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
-  await page.getByRole('button', { name: '阅读视图：按文档排版显示对话', exact: true }).click();
+  // An agent's terminal opens in the reading view by default; switch only if it shows the terminal.
+  if (!await page.locator('.project-panel.is-focused .reading-view').count()) await page.getByRole('button', { name: '阅读视图：按文档排版显示对话', exact: true }).click();
   await page.locator('.reading-view .reading-markdown h2').waitFor();
   await page.locator('.activity-pane .overview-stats').waitFor();
   await page.mouse.move(800, 2); await page.waitForTimeout(600);
