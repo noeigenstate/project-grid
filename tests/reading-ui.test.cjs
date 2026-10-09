@@ -6,8 +6,8 @@ const Module = require('node:module');
 const ts = require('typescript');
 const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
-const { choiceKeys, selectedChoiceIndex, choiceIdentity, writeChoiceKeys } = require('../src/choice-keys.ts');
-const { parseAgentScreen } = require('../src/agent-screen.ts');
+const { choiceKeys, selectedChoiceIndex, choiceIdentity, writeChoiceKeys } = require('../src/features/reading/choice-keys.ts');
+const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
 const en = require('../electron/locales/en.json');
 
 // Components use test-only screen values until feat/screen-parser replaces the stub.
@@ -32,11 +32,12 @@ function loadUI(name, overrides = {}) {
   mod.filename = filename; mod.paths = Module._nodeModulePaths(path.dirname(filename));
   const originalRequire = mod.require.bind(mod);
   mod.require = name => {
-    if (Object.hasOwn(overrides, name)) return overrides[name];
+    const key = name.startsWith('.') ? './' + path.basename(name) : name;
+    if (Object.hasOwn(overrides, key)) return overrides[key];
     if (name === '@phosphor-icons/react') return { CircleNotch: props => React.createElement('svg', { className: props.className }) };
-    if (name === './i18n') return { currentLanguage: () => 'en', t: (text, values = {}) => (en[text] ?? text).replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match) };
-    if (name === './choice-keys') return require('../src/choice-keys.ts');
-    if (name === './reading-sessions') return require('../src/reading-sessions.ts');
+    if (key === './i18n') return { currentLanguage: () => 'en', t: (text, values = {}) => (en[text] ?? text).replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match) };
+    if (key === './choice-keys') return require('../src/features/reading/choice-keys.ts');
+    if (key === './reading-sessions') return require('../src/features/reading/reading-sessions.ts');
     return originalRequire(name);
   };
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
@@ -85,7 +86,7 @@ test('screen parser stub preserves its replacement contract', () => {
 });
 
 test('welcome renders CLI metadata and the cached agent commands without a terminal toggle', () => {
-  const { ReadingWelcome } = loadUI('ReadingWelcome.tsx');
+  const { ReadingWelcome } = loadUI('features/reading/ReadingWelcome.tsx');
   for (const agent of ['claude', 'codex']) {
     const names = agent === 'claude' ? ['/init', '/help', '/model', '/status', '/review'] : ['/init', '/model', '/status', '/review', '/permissions'];
     const commands = names.map(name => ({ name, source: 'builtin', description: '审查代码', view: 'reading' }));
@@ -99,14 +100,14 @@ test('welcome renders CLI metadata and the cached agent commands without a termi
 });
 
 test('welcome uses startup spinner and status model before a banner is available', () => {
-  const { ReadingWelcome } = loadUI('ReadingWelcome.tsx');
+  const { ReadingWelcome } = loadUI('features/reading/ReadingWelcome.tsx');
   const screen = fakeScreen({ banner: null, status: { model: 'GPT-6.1-Sol', effort: 'high', context: null, mode: null, notes: [] } });
   const html = renderToStaticMarkup(React.createElement(ReadingWelcome, { agent: 'codex', screen, commands: [], complete: () => {}, disabled: false }));
   assert.match(html, /Codex/); assert.match(html, /Starting…/); assert.match(html, /loading-spinner/); assert.match(html, /GPT-6\.1-Sol/);
 });
 
 test('welcome without a banner settles to the agent name and parsed status without a spinner', () => {
-  const { ReadingWelcome } = loadUI('ReadingWelcome.tsx');
+  const { ReadingWelcome } = loadUI('features/reading/ReadingWelcome.tsx');
   const html = renderToStaticMarkup(React.createElement(ReadingWelcome, {
     agent: 'claude', screen: fakeScreen({ banner: null }), commands: [], complete() {}, disabled: false, starting: false,
   }));
@@ -138,7 +139,7 @@ function sessionsHarness(t, initialSessions = []) {
     followAgentSession: async (id, sessionId) => { followed.push({ id, sessionId }); return { ok: true, value: true }; },
   } };
   t.after(() => { if (previous === undefined) delete globalThis.window; else globalThis.window = previous; });
-  const { ReadingSessions } = loadUI('ReadingSessions.tsx', { react: hooks });
+  const { ReadingSessions } = loadUI('features/reading/ReadingSessions.tsx', { react: hooks });
   const render = () => {
     cursor = 0;
     const root = ReadingSessions({ terminalId: 'resume-terminal', onClose: () => { closed++; }, onSent: text => sent.push(text), onError: error => errors.push(error) });
@@ -185,7 +186,7 @@ test('native session card click chooses and Esc closes without sending terminal 
 });
 
 test('choice renders context, printed numbers, details, hotkeys and CLI selection', () => {
-  const { ReadingChoice } = loadUI('ReadingChoice.tsx');
+  const { ReadingChoice } = loadUI('features/reading/ReadingChoice.tsx');
   const html = renderToStaticMarkup(React.createElement(ReadingChoice, { choice: fakeChoice(), terminalId: 'test', onError: () => {} }));
   assert.match(html, /is-permission/); assert.match(html, /Run this command\?/); assert.match(html, /\$ echo hello/);
   assert.match(html, /Commands starting with echo/); assert.match(html, /<kbd>p<\/kbd>/);
@@ -217,7 +218,7 @@ function choiceHarness(t, choice = fakeChoice()) {
   const written = [], previous = globalThis.window;
   globalThis.window = { projectGrid: { writeTerminal: (id, key) => written.push({ id, key }) } };
   t.after(() => { if (previous === undefined) delete globalThis.window; else globalThis.window = previous; });
-  const { ReadingChoice } = loadUI('ReadingChoice.tsx', { react: hooks });
+  const { ReadingChoice } = loadUI('features/reading/ReadingChoice.tsx', { react: hooks });
   const render = () => {
     cursor = 0;
     const root = ReadingChoice({ choice, terminalId: 'native-choice', onError: message => assert.fail(message) });
@@ -234,7 +235,7 @@ function choiceHarness(t, choice = fakeChoice()) {
 }
 
 test('welcome command rows call the existing completion callback with the cached command', () => {
-  const { ReadingWelcome } = loadUI('ReadingWelcome.tsx');
+  const { ReadingWelcome } = loadUI('features/reading/ReadingWelcome.tsx');
   const command = { name: '/model', source: 'builtin', description: '切换模型', view: 'terminal' };
   const picked = [];
   const root = ReadingWelcome({ agent: 'claude', screen: fakeScreen(), commands: [command], complete: value => picked.push(value), disabled: false });
@@ -277,7 +278,7 @@ test('choice Esc and cancel button each send a single Escape and wait for CLI di
 });
 
 function readingMode() {
-  return loadUI('reading-mode.ts', { react: { useSyncExternalStore: (_subscribe, snapshot) => snapshot() } });
+  return loadUI('features/reading/reading-mode.ts', { react: { useSyncExternalStore: (_subscribe, snapshot) => snapshot() } });
 }
 const terminal = (id, needsInput = 'Allow command?') => ({ id, sessionId: 'session', codexActive: true, needsInput });
 const isReading = (mode, value) => mode.readingShown(value, mode.useTerminalChoice());
@@ -351,7 +352,7 @@ test('reading view requires an active agent and a live terminal session', () => 
 });
 
 test('reading entry rendering parses only the last 40 blocks and leaves the welcome branch intact', t => {
-  const tail = require('../src/useVisibleTail.ts');
+  const tail = require('../src/features/reading/useVisibleTail.ts');
   const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
   const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis, 'window', { configurable: true, value: {} });
@@ -362,7 +363,7 @@ test('reading entry rendering parses only the last 40 blocks and leaves the welc
   });
   let entries = Array.from({ length: 400 }, (_, index) => ({ id: String(index), at: 0, role: 'assistant', text: `answer-${index}` }));
   const parsed = [], icon = () => React.createElement('svg');
-  const { ReadingView } = loadUI('ReadingView.tsx', {
+  const { ReadingView } = loadUI('features/reading/ReadingView.tsx', {
     marked: { marked: { parse: text => { parsed.push(text); return text; } } },
     dompurify: { default: () => ({ sanitize: html => html }) },
     '@phosphor-icons/react': Object.fromEntries(['ArrowDown', 'CaretDown', 'CaretRight', 'CircleNotch', 'Image', 'PaperPlaneRight', 'Stop'].map(name => [name, icon])),
@@ -374,13 +375,13 @@ test('reading entry rendering parses only the last 40 blocks and leaves the welc
     './useReadingConversation': { conversationKey: () => 'session', useReadingConversation: () => entries },
     './useVisibleTail': tail, './reading.css': {},
     './useMentions': { useMentions: () => ({ open: false }) }, './MentionPalette': { MentionPalette: () => null },
-    './pending-prompts': require('../src/pending-prompts.ts'),
+    './pending-prompts': require('../src/features/reading/pending-prompts.ts'),
     './usePendingPrompts': { usePendingPrompts: () => ({ pending: [], echo() {}, cancelEcho() {} }) },
     './PendingPromptEntries': { PendingPromptEntries: () => null },
-    './ReadingSessions': { ReadingSessions: () => null }, './reading-sessions': require('../src/reading-sessions.ts'),
+    './ReadingSessions': { ReadingSessions: () => null }, './reading-sessions': require('../src/features/reading/reading-sessions.ts'),
     './reading-welcome': { useWelcomeStarting: () => false },
     './ReadingCliPanel': { ReadingCliPanel: () => null }, './ReadingCommandOutput': { ReadingCommandOutput: () => null },
-    './cli-panel': require('../src/cli-panel.ts'),
+    './cli-panel': require('../src/features/reading/cli-panel.ts'),
     './useReadingCli': { useReadingCli: (id, session, agent, list) => ({ entries: list, busy: false, panel: null, begin() {} }) },
     './i18n': { currentLanguage: () => 'en', t: (text, values) => (en[text] ?? text).replace(/\{(\w+)\}/g, (_, name) => String(values?.[name] ?? name)) },
   });
@@ -400,8 +401,8 @@ test('reading entry rendering parses only the last 40 blocks and leaves the welc
 test('a question renders as its own card: progress, the question, options, an own answer or notes, Submit and Chat', () => {
   const icon = props => React.createElement('svg', { className: props.className });
   const icons = { CircleNotch: icon, CaretLeft: icon, CaretRight: icon, Check: icon, PaperPlaneRight: icon };
-  const { ReadingQuestion } = loadUI('ReadingQuestion.tsx', { '@phosphor-icons/react': icons, './question-keys': require('../src/question-keys.ts') });
-  const { parseAgentScreen } = require('../src/agent-screen.ts');
+  const { ReadingQuestion } = loadUI('features/reading/ReadingQuestion.tsx', { '@phosphor-icons/react': icons, './question-keys': require('../src/features/reading/question-keys.ts') });
+  const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
   const screen = name => parseAgentScreen(name.startsWith('claude') ? 'claude' : 'codex', fs.readFileSync(path.join(__dirname, 'fixtures/questions', name + '.txt'), 'utf8').split('\n')).choice;
   const render = name => renderToStaticMarkup(React.createElement(ReadingQuestion, { choice: screen(name), terminalId: 'terminal', onError: () => {} }));
   const multi = render('claude-question-multi-checked');

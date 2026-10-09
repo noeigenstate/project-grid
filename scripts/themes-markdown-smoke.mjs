@@ -10,7 +10,7 @@ import { waitFor } from './wait.mjs';
 
 const require = createRequire(import.meta.url);
 const { createSSHFixture } = require('../tests/helpers/ssh-fixture.cjs');
-const { terminalTheme } = require('../src/terminal-theme.ts');
+const { terminalTheme } = require('../src/features/terminal/terminal-theme.ts');
 // Each theme's own ANSI red, green and blue as the terminal renders them (Daylight has its own palette).
 const ansiColors = theme => ['red', 'green', 'blue'].map(key => `rgb(${terminalTheme(theme)[key].slice(1).match(/../g).map(value => parseInt(value, 16)).join(', ')})`);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

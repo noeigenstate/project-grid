@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { shouldStickToBottom, countNewEntries, scrollToLatest } = require('../src/useStickToBottom.ts');
+const { shouldStickToBottom, countNewEntries, scrollToLatest } = require('../src/features/reading/useStickToBottom.ts');
 
 const metrics = (scrollTop, scrollHeight = 1000, clientHeight = 200) => ({ scrollTop, scrollHeight, clientHeight });
 

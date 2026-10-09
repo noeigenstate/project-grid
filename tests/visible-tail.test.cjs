@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { blocks, blockId, visibleTail, prependScrollTop, VISIBLE_TAIL_PAGE } = require('../src/useVisibleTail.ts');
+const { blocks, blockId, visibleTail, prependScrollTop, VISIBLE_TAIL_PAGE } = require('../src/features/reading/useVisibleTail.ts');
 const en = require('../electron/locales/en.json');
 const message = id => ({ id: String(id), role: 'assistant', text: 'message', at: 0 });
 const messages = count => Array.from({ length: count }, (_, index) => message(index));

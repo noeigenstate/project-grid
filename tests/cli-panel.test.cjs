@@ -2,8 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseAgentScreen } = require('../src/agent-screen.ts');
-const { isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/cli-panel.ts');
+const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
+const { isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
 const fixture = name => fs.readFileSync(path.join(__dirname, 'fixtures/screens', name + '.txt'), 'utf8').split('\n');
 const inspect = (agent, rows) => parseAgentScreen(agent, rows);
 const footer = agent => agent === 'claude' ? ['  ⏺ Opus 5.5 · demo · ctx 4%   ● high · /effort', '  ⏸ manual mode on · ← for agents'] : ['  GPT-6.1-Sol high · C:\\work\\demo · 90% left', '? for shortcuts'];
@@ -158,7 +158,7 @@ test('panel keys forward navigation, editing, search, tabs and control keys', ()
 function rendererHarness(t) {
   const Module = require('node:module');
   const ts = require('typescript');
-  const filename = path.join(__dirname, '..', 'src/useReadingCli.ts');
+  const filename = path.join(__dirname, '..', 'src/features/reading/useReadingCli.ts');
   const mod = new Module(filename, module);
   mod.filename = filename; mod.paths = Module._nodeModulePaths(path.dirname(filename));
   const screens = new Map(), watchers = new Map();
@@ -168,14 +168,14 @@ function rendererHarness(t) {
     useLayoutEffect: fn => fn(), useSyncExternalStore: (_subscribe, read) => read(),
   };
   const originalRequire = mod.require.bind(mod);
-  mod.require = name => name === 'react' ? react : name === './terminal-screen' ? {
+  mod.require = name => name === 'react' ? react : name.endsWith('/terminal-screen') ? {
     readScreen: id => screens.get(id) ?? null,
     subscribeScreen: (id, fn) => {
       watchers.set(id, fn);
       if (screens.has(id)) fn(screens.get(id));
       return () => { if (watchers.get(id) === fn) watchers.delete(id); };
     },
-  } : name === './agent-screen' ? { parseAgentScreen } : name === './cli-panel' ? require('../src/cli-panel.ts') : originalRequire(name);
+  } : name.endsWith('/agent-screen') ? { parseAgentScreen } : name.endsWith('/cli-panel') ? require('../src/features/reading/cli-panel.ts') : originalRequire(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, filename);
   t.mock.timers.enable({ apis: ['Date', 'setInterval'] });
   const previousWindow = globalThis.window;

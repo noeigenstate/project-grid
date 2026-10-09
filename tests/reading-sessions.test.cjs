@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { usesSessionPicker, resumeReadingSession, sessionAge } = require('../src/reading-sessions.ts');
-const { welcomeStarting, hasStatusFooter } = require('../src/reading-welcome.ts');
+const { usesSessionPicker, resumeReadingSession, sessionAge } = require('../src/features/reading/reading-sessions.ts');
+const { welcomeStarting, hasStatusFooter } = require('../src/features/reading/reading-welcome.ts');
 
 test('only exact /resume for active Claude opens the native picker', () => {
   assert.equal(usesSessionPicker({ agent: 'claude', codexActive: true }, '/resume'), true);

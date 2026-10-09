@@ -27,7 +27,7 @@ const speech = path.join(output, 'speech.wav');
 try { await exec(powershell, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'scripts/voice-fixture.ps1'), '-Destination', speech], { windowsHide: true }); }
 catch (error) {
   if (process.argv.includes('--voice-assets')) throw error;
-  const { wavFromSamples } = require('../src/voice-audio.ts');
+  const { wavFromSamples } = require('../src/features/voice/voice-audio.ts');
   const tone = Float32Array.from({ length: 16000 * 5 }, (_, index) => Math.sin(index * Math.PI * 880 / 16000) * .08);
   await fs.writeFile(speech, Buffer.from(wavFromSamples(tone)));
   console.log('UI-only test uses a generated tone because system speech synthesis is unavailable.');

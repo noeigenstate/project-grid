@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { hookHarness } = require('./helpers/hook-harness.cjs');
-const buffer = require('../src/conversation-buffer.ts');
+const buffer = require('../src/features/reading/conversation-buffer.ts');
 const entry = id => ({ id, role: 'assistant', at: 0 });
 
 function conversationHarness(t) {
@@ -11,7 +11,7 @@ function conversationHarness(t) {
     terminalConversation: id => new Promise(resolve => requests.push({ id, resolve })),
     onTerminalConversation: callback => { subscribers.add(callback); return () => subscribers.delete(callback); },
   } } });
-  const h = hookHarness('src/useReadingConversation.ts', { './conversation-buffer': buffer });
+  const h = hookHarness('src/features/reading/useReadingConversation.ts', { './conversation-buffer': buffer });
   t.after(() => { h.dispose(); if (previous) Object.defineProperty(globalThis, 'window', previous); else delete globalThis.window; });
   return {
     requests, subscribers,

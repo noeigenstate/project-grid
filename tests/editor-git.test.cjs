@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { findConflicts, lineMarks, resolveConflict } = require('../src/editor-git.ts');
+const { findConflicts, lineMarks, resolveConflict } = require('../src/features/git/editor-git.ts');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');

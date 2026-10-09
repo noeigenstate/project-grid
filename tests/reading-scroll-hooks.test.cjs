@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { hookHarness } = require('./helpers/hook-harness.cjs');
-const { blocks } = require('../src/useVisibleTail.ts');
+const { blocks } = require('../src/features/reading/useVisibleTail.ts');
 const entries = count => Array.from({ length: count }, (_, index) => ({ id: String(index), role: 'assistant', at: 0 }));
 
 function scrollHarness(t) {
@@ -19,7 +19,7 @@ function scrollHarness(t) {
   };
   const descriptors = Object.fromEntries(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, writable: true, configurable: true });
-  const harness = hookHarness('src/useStickToBottom.ts');
+  const harness = hookHarness('src/features/reading/useStickToBottom.ts');
   t.after(() => {
     harness.dispose();
     for (const [key, descriptor] of Object.entries(descriptors)) {
@@ -88,7 +88,7 @@ test('automatic content growth interrupts a smooth latest-button jump with an in
 });
 
 test('earlier-page layout compensates scroll height and anchors streamed arrivals', t => {
-  const harness = hookHarness('src/useVisibleTail.ts'); t.after(() => harness.dispose());
+  const harness = hookHarness('src/features/reading/useVisibleTail.ts'); t.after(() => harness.dispose());
   let held = 0;
   const node = { scrollTop: 230, scrollHeight: 1000, scrollTo(options) { assert.equal(options.behavior, 'instant'); this.scrollTop = options.top; } };
   const container = { current: node }, list = blocks(entries(100));

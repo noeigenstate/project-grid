@@ -1,14 +1,14 @@
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
-import './styles.css';
-import './glass.css';
-import './themes.css';
-import './polish.css';
-import './typography.css';
-import './interaction.css';
-import './clarity.css';
-import { restoreTheme } from './themes';
-import './platform';
+import './shared/styles/styles.css';
+import './shared/styles/glass.css';
+import './shared/styles/themes.css';
+import './shared/styles/polish.css';
+import './shared/styles/typography.css';
+import './shared/styles/interaction.css';
+import './shared/styles/clarity.css';
+import { restoreTheme } from './shared/themes';
+import './shared/platform';
 
 restoreTheme();
 createRoot(document.getElementById('root')!).render(<App />);

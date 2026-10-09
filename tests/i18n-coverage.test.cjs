@@ -9,7 +9,8 @@ const { listAgentCommands } = require('../electron/agent-commands.cjs');
 // so switching to English never leaves a Chinese label behind.
 test('every interface phrase has an English translation', () => {
   const root = path.join(__dirname, '..');
-  const files = [...fs.readdirSync(path.join(root, 'src')).filter(name => /\.tsx?$/.test(name)).map(name => path.join(root, 'src', name)), path.join(root, 'electron', 'main.cjs')];
+  const files = ['src', 'electron'].flatMap(folder => fs.readdirSync(path.join(root, folder), { recursive: true })
+    .filter(name => /\.(tsx?|cjs)$/.test(name)).map(name => path.join(root, folder, name)));
   const missing = new Set();
   for (const file of files) {
     for (const match of fs.readFileSync(file, 'utf8').matchAll(/\bt\(\s*'((?:[^'\\]|\\.)*)'/g)) {
@@ -21,9 +22,9 @@ test('every interface phrase has an English translation', () => {
 });
 
 test('shortcut action names, theme names and the guide release notes are translated too', () => {
-  const shortcuts = fs.readFileSync(path.join(__dirname, '..', 'src', 'shortcuts.ts'), 'utf8');
-  const themes = fs.readFileSync(path.join(__dirname, '..', 'src', 'themes.ts'), 'utf8');
-  const guide = fs.readFileSync(path.join(__dirname, '..', 'src', 'guide.ts'), 'utf8');
+  const shortcuts = fs.readFileSync(path.join(__dirname, '..', 'src', 'features/shortcuts/shortcuts.ts'), 'utf8');
+  const themes = fs.readFileSync(path.join(__dirname, '..', 'src', 'shared/themes.ts'), 'utf8');
+  const guide = fs.readFileSync(path.join(__dirname, '..', 'src', 'features/guide/guide.ts'), 'utf8');
   const labels = [...shortcuts.matchAll(/label: '([^']+)'/g), ...themes.matchAll(/(?:name|description): '([^']+)'/g), ...guide.matchAll(/^\s*'([^']+)',$/gm)].map(match => match[1]);
   assert.ok(labels.length >= 15);
   assert.deepEqual(labels.filter(label => !Object.prototype.hasOwnProperty.call(en, label)), []);

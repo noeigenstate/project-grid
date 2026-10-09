@@ -10,18 +10,18 @@ const en = require('../electron/locales/en.json');
 const {
   normalizePrompt, isTypedCommand, createPendingPrompts, addPendingPrompt,
   reconcilePendingPrompts, removePendingPrompt, PENDING_PROMPT_TIMEOUT,
-} = require('../src/pending-prompts.ts');
+} = require('../src/features/reading/pending-prompts.ts');
 
 const user = (id, text) => ({ id, role: 'user', text });
 const add = (state, id, text, at = 1000) => addPendingPrompt(state, id, text, at);
 const sync = (state, entries, now = 1001, session = 'session') => reconcilePendingPrompts(state, session, entries, now);
 
 function pendingMarkup(prompts) {
-  const filename = path.join(__dirname, '../src/PendingPromptEntries.tsx');
+  const filename = path.join(__dirname, '../src/features/reading/PendingPromptEntries.tsx');
   const mod = new Module(filename, module);
   mod.filename = filename; mod.paths = Module._nodeModulePaths(path.dirname(filename));
   const originalRequire = mod.require.bind(mod);
-  mod.require = name => name === './i18n' ? { t: text => en[text] ?? text } : name.endsWith('.css') ? {} : originalRequire(name);
+  mod.require = name => name.endsWith('/i18n') ? { t: text => en[text] ?? text } : name.endsWith('.css') ? {} : originalRequire(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText, filename);

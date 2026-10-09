@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { terminalTheme, darkTerminalTheme, daylightTerminalTheme, terminalDecorationColors } = require('../src/terminal-theme.ts');
+const { terminalTheme, darkTerminalTheme, daylightTerminalTheme, terminalDecorationColors } = require('../src/features/terminal/terminal-theme.ts');
 
 const luminance = hex => {
   const channels = hex.slice(1, 7).match(/../g).map(value => parseInt(value, 16) / 255)

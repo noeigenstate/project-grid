@@ -4,7 +4,7 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { findLinkCandidates, readLogicalLine } = require('../src/terminal-links.ts');
+const { findLinkCandidates, readLogicalLine } = require('../src/features/terminal/terminal-links.ts');
 const { resolveTerminalLink } = require('../electron/terminal-links.cjs');
 
 test('terminal links include URLs, Markdown, quoted paths and file line references', () => {

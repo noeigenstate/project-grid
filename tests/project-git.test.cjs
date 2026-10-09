@@ -98,7 +98,7 @@ test('history pages include empty commits and graph lanes follow real parents', 
   const first = await f.history(), second = await f.history(f.dir, first.nextOffset);
   assert.equal(first.commits.length, 40); assert.equal(first.nextOffset, 40); assert.equal(second.commits.length, 2); assert.equal(second.nextOffset, null);
   assert.equal(new Set([...first.commits, ...second.commits].map(commit => commit.hash)).size, 42);
-  const { commitGraph, gitDecorations } = await import('../src/git-status.ts');
+  const { commitGraph, gitDecorations } = await import('../src/features/git/git-status.ts');
   const commit = (hash, parents) => ({ hash, parents, subject: '', author: '', date: '', refs: '' });
   const graph = commitGraph([commit('merge', ['main', 'feature']), commit('main', ['base']), commit('feature', ['base']), commit('base', []), commit('unrelated', [])]);
   assert.equal(graph.rows[0].edges.length, 2); assert.equal(graph.rows[0].incoming, false);

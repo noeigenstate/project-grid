@@ -14,4 +14,4 @@ Project Grid 参考 [Apple 的材质设计说明](https://developer.apple.com/de
 - **项目展开**：只有顶部标题栏和展开按钮响应普通单击放大；终端正文、输入区和底栏可在小窗口中直接操作。卡片从当前位置逐渐放大，约 720 毫秒内落位；返回时约 560 毫秒缩回网格。可见窗口保持正常绘制，隐藏到托盘或最小化后恢复渲染节流；动画验证不再额外添加测试专用的渲染开关。使用实际终端节点，保持会话和未发送输入；快速返回时从当前尺寸反向过渡。
 - **系统偏好**：减少动态效果时关闭 CSS 动画和过渡；减少透明度时主要表面使用独立的不透明颜色并关闭整个背景滤镜，三个主题均覆盖。
 
-实现位于 `src/LiquidGlass.tsx`、`src/glass.css` 与 `src/themes.css`。`visual-smoke` 用实际像素 A/B 核对折射是否生效；`material-smoke` 比较相同 blur/saturate 下启用/移除 SVG URL 的渲染帧间隔，覆盖 6/16 卡片及 6 个真实终端持续输出，并检查分屏、ANSI、选区、光标和三主题实色回退。帧间隔和进程工作集是受控测试指标，不等于 GPU 呈现帧率或显存。
+实现位于 `src/shared/styles/glass.css` 与 `src/shared/styles/themes.css`。`visual-smoke` 用实际像素 A/B 核对折射是否生效；`material-smoke` 比较相同 blur/saturate 下启用/移除 SVG URL 的渲染帧间隔，覆盖 6/16 卡片及 6 个真实终端持续输出，并检查分屏、ANSI、选区、光标和三主题实色回退。帧间隔和进程工作集是受控测试指标，不等于 GPU 呈现帧率或显存。

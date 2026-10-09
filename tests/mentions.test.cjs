@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { mentionToken, insertMention, mentionHighlights } = require('../src/mention-tokens.ts');
+const { mentionToken, insertMention, mentionHighlights } = require('../src/features/reading/mention-tokens.ts');
 
 test('mention tokens follow whitespace and stop at the caret, including empty queries', () => {
   assert.deepEqual(mentionToken('@', 1), { start: 0, end: 1, query: '' });

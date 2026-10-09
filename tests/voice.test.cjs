@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const { VoiceManager, downloadAsset, validateAudio, samplesFromWav, MODELS } = require('../electron/voice.cjs');
-const { wavFromSamples } = require('../src/voice-audio.ts');
+const { wavFromSamples } = require('../src/features/voice/voice-audio.ts');
 
 test('microphone encoder makes bounded mono 16 kHz WAV with safe clipping', () => {
   const samples = new Float32Array(16000); samples[0] = 2; samples[1] = -2; samples[2] = .5;

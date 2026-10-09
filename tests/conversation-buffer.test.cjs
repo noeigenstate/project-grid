@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { applyConversationPacket, createConversationBuffer } = require('../src/conversation-buffer.ts');
+const { applyConversationPacket, createConversationBuffer } = require('../src/features/reading/conversation-buffer.ts');
 const entry = (id, text = id) => ({ id, text, role: 'assistant', at: 0 });
 
 test('deltas replace entries in place, deduplicate IDs, and cap a rolling list', () => {

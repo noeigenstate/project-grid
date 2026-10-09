@@ -12,7 +12,7 @@ export async function waitFor(check, label, timeout = 25000) {
   throw new Error(`Timed out: ${label}`);
 }
 
-// Terminals refit 80 ms after their size settles (src/TerminalPane.tsx). Pointer tests that aim at
+// Terminals refit 80 ms after their size settles (src/features/terminal/TerminalPane.tsx). Pointer tests that aim at
 // terminal cells wait for that, or a late reflow can move the text under the pointer.
 export async function terminalsSettled(page) {
   await waitFor(async () => !(await page.locator('[data-fit-pending]').count()), 'terminal size settles');

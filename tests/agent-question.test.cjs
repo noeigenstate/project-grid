@@ -2,8 +2,8 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { parseAgentScreen } = require('../src/agent-screen.ts');
-const { questionKeys, questionStops } = require('../src/question-keys.ts');
+const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
+const { questionKeys, questionStops } = require('../src/features/reading/question-keys.ts');
 
 // Screens drawn by Claude Code 2.1.294 (AskUserQuestion) and Codex 0.161 (request_user_input in Plan mode).
 const read = name => fs.readFileSync(path.join(__dirname, 'fixtures/questions', name + '.txt'), 'utf8').split('\n');
@@ -123,7 +123,7 @@ test('Codex pages with Ctrl+P / Ctrl+N, and cancelling from open notes takes two
 });
 
 test('a question card keeps its identity while ticks, typed text and the cursor change, and not across pages', () => {
-  const { choiceIdentity, choiceContent } = require('../src/choice-keys.ts');
+  const { choiceIdentity, choiceContent } = require('../src/features/reading/choice-keys.ts');
   const same = ['claude-question-multi', 'claude-question-multi-checked', 'claude-question-typed', 'claude-question-submit'].map(name => choiceIdentity(parse(name)));
   assert.equal(new Set(same).size, 1);
   assert.notEqual(choiceContent(parse('claude-question-multi')), choiceContent(parse('claude-question-multi-checked')), 'a tick is new content');

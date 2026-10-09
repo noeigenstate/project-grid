@@ -36,7 +36,8 @@ function hookHarness(filename, overrides = {}) {
   const full = path.resolve(__dirname, '..', '..', filename), mod = new Module(full, module);
   mod.filename = full; mod.paths = Module._nodeModulePaths(path.dirname(full));
   const original = mod.require.bind(mod);
-  mod.require = name => name === 'react' ? hooks : Object.hasOwn(overrides, name) ? overrides[name] : original(name);
+  const key = name => name.startsWith('.') ? './' + path.basename(name) : name;
+  mod.require = name => name === 'react' ? hooks : Object.hasOwn(overrides, key(name)) ? overrides[key(name)] : original(name);
   mod._compile(ts.transpileModule(fs.readFileSync(full, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText, full);
   return {
     render(name, ...args) {

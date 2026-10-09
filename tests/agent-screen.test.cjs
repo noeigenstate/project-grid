@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 // Node 24 can require ESM TypeScript directly, erasing the type-only import.
-const { parseAgentScreen } = require('../src/agent-screen.ts');
+const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
 
 const emptyStatus = { model: null, effort: null, context: null, mode: null, notes: [] };
 const emptyScreen = { banner: null, status: emptyStatus, choice: null, overlay: 'none' };
