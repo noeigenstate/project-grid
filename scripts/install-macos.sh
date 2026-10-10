@@ -1,6 +1,6 @@
 #!/bin/bash
 # Installs or updates Project Grid on a Mac with Apple silicon, from the latest GitHub release:
-#   curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | bash
 # The build is signed ad hoc, not notarized by Apple. A file curl downloads carries no quarantine flag, so the
 # app opens directly, without Gatekeeper's "cannot verify the developer" prompt; a DMG downloaded in a browser
 # does show it. Nothing needs an administrator password.
@@ -11,7 +11,7 @@
 # A downloaded zip can be installed directly: bash install-macos.sh ~/Downloads/Project-Grid-0.6.9-mac-arm64.zip
 set -euo pipefail
 
-repo=noeigenstate/project-grid
+repo=noeigenstate/Agentrix
 app_name='Project Grid.app'
 fail() { printf 'Project Grid: %s\n' "$1" >&2; exit 1; }
 

@@ -1,6 +1,6 @@
 # PR #2 云端检查诊断
 
-对应 [首次 PR 检查](https://github.com/noeigenstate/project-grid/actions/runs/37887112177)；对照 [同一上游基线 7be8797 的主分支检查](https://github.com/noeigenstate/project-grid/actions/runs/37877212188)。四项失败来自三类问题，不能据此认定新增主题在四个平台运行失败。
+对应 [首次 PR 检查](https://github.com/noeigenstate/Agentrix/actions/runs/37887112177)；对照 [同一上游基线 7be8797 的主分支检查](https://github.com/noeigenstate/Agentrix/actions/runs/37877212188)。四项失败来自三类问题，不能据此认定新增主题在四个平台运行失败。
 
 ## 已核实的结果
 
@@ -32,7 +32,7 @@ macOS 在签名设置保持不变的情况下仍可能失败；不能将它描�
 
 ## 第二轮结果与终端测试修正
 
-第二轮 [37897225888](https://github.com/noeigenstate/project-grid/actions/runs/37897225888) 的 Linux x64、arm64 打包及桌面检查全部通过，Linux SSH 继续通过。macOS 保持原签名策略并仍在签名校验失败；发布任务正常跳过。
+第二轮 [37897225888](https://github.com/noeigenstate/Agentrix/actions/runs/37897225888) 的 Linux x64、arm64 打包及桌面检查全部通过，Linux SSH 继续通过。macOS 保持原签名策略并仍在签名校验失败；发布任务正常跳过。
 
 Windows 此轮停在更早的 smoke.mjs：REPORT_LINK 的 OSC 8 文件链接悬停超时，两次执行均相同，尚未进入 workspace-smoke.mjs 的麦克风权限检查。不能据此认定先前的权限超时已经解决。
 

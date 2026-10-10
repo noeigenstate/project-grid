@@ -8,15 +8,15 @@
 <p align="center">Codex 和 Claude Code 在一张网格里并行开发多个项目，它们干活、汇报、等你拍板。<br />Windows · macOS · Linux</p>
 
 <p align="center">
-  <a href="https://github.com/noeigenstate/project-grid/releases/latest"><img src="https://img.shields.io/github/v/release/noeigenstate/project-grid?style=flat-square&color=ff3d8b&label=release" alt="Latest release" /></a>
-  <a href="https://github.com/noeigenstate/project-grid/releases"><img src="https://img.shields.io/github/downloads/noeigenstate/project-grid/total?style=flat-square&color=2ef2ff&label=downloads" alt="Downloads" /></a>
+  <a href="https://github.com/noeigenstate/Agentrix/releases/latest"><img src="https://img.shields.io/github/v/release/noeigenstate/Agentrix?style=flat-square&color=ff3d8b&label=release" alt="Latest release" /></a>
+  <a href="https://github.com/noeigenstate/Agentrix/releases"><img src="https://img.shields.io/github/downloads/noeigenstate/Agentrix/total?style=flat-square&color=2ef2ff&label=downloads" alt="Downloads" /></a>
   <img src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-8a5bff?style=flat-square" alt="Windows, macOS, Linux" />
   <img src="https://img.shields.io/badge/Codex%20%C3%97%20Claude%20Code-3c7dff?style=flat-square" alt="Codex and Claude Code" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-39ffa0?style=flat-square" alt="MIT License" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/noeigenstate/project-grid/releases/latest"><strong>⬇️ 下载</strong></a> ·
+  <a href="https://github.com/noeigenstate/Agentrix/releases/latest"><strong>⬇️ 下载</strong></a> ·
   <a href="#下一代编辑器">理念</a> ·
   <a href="#亮点">亮点</a> ·
   <a href="#开始使用">开始使用</a> ·
@@ -88,7 +88,7 @@ Project Grid 从这里重新设计编辑器：
 
 **需要：** Windows 10 / 11 x64，Apple 芯片的 Mac（macOS 12 或更高），或 64 位 Linux 桌面（x64 / arm64）；以及 [Codex CLI](https://github.com/openai/codex) 或 [Claude Code](https://docs.anthropic.com/claude-code) 至少一个——没装也可以在「设置 › 编码助手」里一键安装。
 
-1. **安装**：从 [Releases](https://github.com/noeigenstate/project-grid/releases/latest) 下载对应平台的版本（见下）。
+1. **安装**：从 [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 下载对应平台的版本（见下）。
 2. **添加项目**：按 `Ctrl+Shift+N` 选择项目文件夹，可以一次选多个，也可以添加 SSH 远程项目。
 3. **下达指令**：在卡片的终端里运行 `codex` 或 `claude`，说出要做的事，然后去忙别的。粉色亮起时回来看结果。
 
@@ -99,7 +99,7 @@ Project Grid 从这里重新设计编辑器：
 | **Linux** | `Project-Grid-<版本>-linux-<架构>.AppImage` | `chmod +x` 后直接运行；也提供 `.tar.gz` |
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | bash
 ```
 
 指定版本、手动安装、macOS 与 Linux 的终端和快捷键细节，见 [使用文档](docs/usage.md#安装细节)。
@@ -154,12 +154,12 @@ Project Grid 本身**不收集任何数据，没有统计上报**。它只会访
 - [ ] 每一轮的结果与产物记录，方便回看
 - [ ] WSL 工作区
 
-有想法？欢迎提 [Issue](https://github.com/noeigenstate/project-grid/issues)。觉得有用的话，点个 ⭐ Star。
+有想法？欢迎提 [Issue](https://github.com/noeigenstate/Agentrix/issues)。觉得有用的话，点个 ⭐ Star。
 
 ## 参与开发
 
 ```bash
-git clone https://github.com/noeigenstate/project-grid.git
+git clone https://github.com/noeigenstate/Agentrix.git
 cd project-grid
 npm ci
 npm start              # 开发运行
@@ -178,6 +178,6 @@ Electron · React · TypeScript · xterm.js · node-pty。每个版本都通过�
 
 <p align="center">
   <strong>让 AI 去干活，让注意力回到需要你的地方。</strong><br />
-  <a href="https://github.com/noeigenstate/project-grid/releases/latest">下载体验</a> ·
-  <a href="https://github.com/noeigenstate/project-grid/issues">反馈与建议</a>
+  <a href="https://github.com/noeigenstate/Agentrix/releases/latest">下载体验</a> ·
+  <a href="https://github.com/noeigenstate/Agentrix/issues">反馈与建议</a>
 </p>

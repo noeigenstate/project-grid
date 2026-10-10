@@ -6,7 +6,7 @@ Windows 多项目终端工作台。每个目录对应一个真实终端，Codex 
 
 ## 使用
 
-从 [Releases](https://github.com/noeigenstate/project-grid/releases/latest) 下载 Windows `.exe` 即可使用。正式版本在 Releases 中长期保留，普通 CI 构建仍可从 Actions 的 Artifacts 下载。
+从 [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 下载 Windows `.exe` 即可使用。正式版本在 Releases 中长期保留，普通 CI 构建仍可从 Actions 的 Artifacts 下载。
 
 打包后的应用位于 `release/`。运行 `Project-Grid-Setup-<版本>-x64.exe` 安装，获得自动更新功能。从 0.6.12 起不再发布便携版。迁移旧版时，先等任务结束，从设置或托盘退出旧版，再运行安装包。项目列表与会话历史会保留，旧人工完成项目保持停止。
 
@@ -204,12 +204,12 @@ Markdown（`.md`、`.markdown`、`.mdown`、`.mkd`）提供「编辑 / 预览」
 
 ### macOS 安装
 
-支持 Apple 芯片 Mac（M1 或更新型号）和 macOS 12 或更高版本。GitHub [Releases](https://github.com/noeigenstate/project-grid/releases/latest) 提供 `Project-Grid-<version>-mac-arm64.dmg`、`Project-Grid-<version>-mac-arm64.zip` 和校验文件 `SHA256SUMS-mac.txt`。
+支持 Apple 芯片 Mac（M1 或更新型号）和 macOS 12 或更高版本。GitHub [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 提供 `Project-Grid-<version>-mac-arm64.dmg`、`Project-Grid-<version>-mac-arm64.zip` 和校验文件 `SHA256SUMS-mac.txt`。
 
 推荐在终端运行以下命令安装，更新时也用同一条命令：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | bash
 ```
 
 脚本下载最新版本的 ZIP，验证 SHA-256 校验和，安装到 `/Applications`（该目录不可写时改用 `~/Applications`），然后打开应用。无需管理员密码；`curl` 下载的文件不带隔离标记，因此打开时不会出现 Gatekeeper 提示。**macOS 版不会自动更新**，再次运行安装命令即可更新。
@@ -223,7 +223,7 @@ curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scri
 例如，安装 0.6.16：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.16 bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.16 bash
 ```
 
 如果已经下载了 ZIP，也可以用本地的安装脚本安装：
@@ -248,7 +248,7 @@ xattr -dr com.apple.quarantine "/Applications/Project Grid.app"
 
 ### Linux 安装
 
-支持 x64 和 arm64。GitHub [Releases](https://github.com/noeigenstate/project-grid/releases/latest) 提供 `Project-Grid-<version>-linux-x86_64.AppImage`、`Project-Grid-<version>-linux-arm64.AppImage`、同内容的 `.tar.gz` 压缩包，以及校验文件 `SHA256SUMS-linux-x64.txt` / `SHA256SUMS-linux-arm64.txt`。
+支持 x64 和 arm64。GitHub [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 提供 `Project-Grid-<version>-linux-x86_64.AppImage`、`Project-Grid-<version>-linux-arm64.AppImage`、同内容的 `.tar.gz` 压缩包，以及校验文件 `SHA256SUMS-linux-x64.txt` / `SHA256SUMS-linux-arm64.txt`。
 
 推荐用 AppImage，下载后无需安装：
 
@@ -315,7 +315,7 @@ npm run dist
 
 ## GitHub 自动构建
 
-[Windows 构建工作流](https://github.com/noeigenstate/project-grid/actions/workflows/build-windows.yml) 使用 GitHub 托管的 `windows-latest` runner，无需配置单独的 webhook 服务。
+[Windows 构建工作流](https://github.com/noeigenstate/Agentrix/actions/workflows/build-windows.yml) 使用 GitHub 托管的 `windows-latest` runner，无需配置单独的 webhook 服务。
 
 - 推送到 `main`、推送 `v*` 标签、提交面向 `main` 的 PR，或在 Actions 页面点击 **Run workflow** 都会触发。
 - 流程：`npm ci` → 单元测试 → 生成 Windows 安装版 → 校验自动更新文件 → 打包版桌面测试 → 上传可执行文件和 SHA-256 校验信息。

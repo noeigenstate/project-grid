@@ -8,15 +8,15 @@
 <p align="center">Codex and Claude Code work on many projects side by side. They build, report and wait for your call.<br />Windows · macOS · Linux</p>
 
 <p align="center">
-  <a href="https://github.com/noeigenstate/project-grid/releases/latest"><img src="https://img.shields.io/github/v/release/noeigenstate/project-grid?style=flat-square&color=ff3d8b&label=release" alt="Latest release" /></a>
-  <a href="https://github.com/noeigenstate/project-grid/releases"><img src="https://img.shields.io/github/downloads/noeigenstate/project-grid/total?style=flat-square&color=2ef2ff&label=downloads" alt="Downloads" /></a>
+  <a href="https://github.com/noeigenstate/Agentrix/releases/latest"><img src="https://img.shields.io/github/v/release/noeigenstate/Agentrix?style=flat-square&color=ff3d8b&label=release" alt="Latest release" /></a>
+  <a href="https://github.com/noeigenstate/Agentrix/releases"><img src="https://img.shields.io/github/downloads/noeigenstate/Agentrix/total?style=flat-square&color=2ef2ff&label=downloads" alt="Downloads" /></a>
   <img src="https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-8a5bff?style=flat-square" alt="Windows, macOS, Linux" />
   <img src="https://img.shields.io/badge/Codex%20%C3%97%20Claude%20Code-3c7dff?style=flat-square" alt="Codex and Claude Code" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-39ffa0?style=flat-square" alt="MIT License" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/noeigenstate/project-grid/releases/latest"><strong>⬇️ Download</strong></a> ·
+  <a href="https://github.com/noeigenstate/Agentrix/releases/latest"><strong>⬇️ Download</strong></a> ·
   <a href="#the-next-editor">Idea</a> ·
   <a href="#highlights">Highlights</a> ·
   <a href="#get-started">Get started</a> ·
@@ -88,7 +88,7 @@ Press **Ctrl+T** and talk to the current terminal; Enter sends. Recognition runs
 
 **You need:** Windows 10 / 11 x64, an Apple silicon Mac (macOS 12 or later), or a 64-bit Linux desktop (x64 / arm64); and at least one of [Codex CLI](https://github.com/openai/codex) or [Claude Code](https://docs.anthropic.com/claude-code), which you can also install from **Settings › Coding agents**.
 
-1. **Install** the build for your system from [Releases](https://github.com/noeigenstate/project-grid/releases/latest) (below).
+1. **Install** the build for your system from [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) (below).
 2. **Add projects** with `Ctrl+Shift+N`: pick one or more folders, or an SSH project.
 3. **Give instructions**: run `codex` or `claude` in a card's terminal, say what to do, and get on with something else. Come back when it turns pink.
 
@@ -99,7 +99,7 @@ Press **Ctrl+T** and talk to the current terminal; Enter sends. Recognition runs
 | **Linux** | `Project-Grid-<version>-linux-<arch>.AppImage` | `chmod +x` and run; a `.tar.gz` is also available |
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/project-grid/main/scripts/install-macos.sh | bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | bash
 ```
 
 A specific version, manual installs, and terminal and shortcut details for macOS and Linux are in the [usage guide](docs/usage.md#安装细节) (Chinese).
@@ -152,12 +152,12 @@ No. The settings for completion alerts are passed in at launch and never written
 - [ ] A record of each round's results and artifacts
 - [ ] WSL workspaces
 
-Ideas are welcome as [issues](https://github.com/noeigenstate/project-grid/issues). If it helps you, a ⭐ helps others find it.
+Ideas are welcome as [issues](https://github.com/noeigenstate/Agentrix/issues). If it helps you, a ⭐ helps others find it.
 
 ## Development
 
 ```bash
-git clone https://github.com/noeigenstate/project-grid.git
+git clone https://github.com/noeigenstate/Agentrix.git
 cd project-grid
 npm ci
 npm start              # run in development
@@ -176,6 +176,6 @@ Electron · React · TypeScript · xterm.js · node-pty. Every release passes th
 
 <p align="center">
   <strong>Let AI do the work. Keep your attention for where it is needed.</strong><br />
-  <a href="https://github.com/noeigenstate/project-grid/releases/latest">Download</a> ·
-  <a href="https://github.com/noeigenstate/project-grid/issues">Feedback</a>
+  <a href="https://github.com/noeigenstate/Agentrix/releases/latest">Download</a> ·
+  <a href="https://github.com/noeigenstate/Agentrix/issues">Feedback</a>
 </p>

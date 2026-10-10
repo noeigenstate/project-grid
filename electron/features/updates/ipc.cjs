@@ -2,7 +2,7 @@ function registerUpdatesIpc({ handle, updateManager, openExternal, getWindow, di
   let installingUpdate = false;
   handle('updates:state', () => updateManager.getState());
   handle('updates:check', () => updateManager.check());
-  handle('updates:download-page', () => openExternal('https://github.com/noeigenstate/project-grid/releases/latest'));
+  handle('updates:download-page', () => openExternal('https://github.com/noeigenstate/Agentrix/releases/latest'));
   async function installUpdate() {
     if (installingUpdate) return false;
     if (!updateManager.canInstall()) throw new Error('更新尚未下载完成。');
