@@ -14,13 +14,14 @@ export function applyConversationPacket(entries: readonly ConversationEntry[], p
 
 // The initial IPC snapshot is the base; events received while it is in flight follow it.
 // A fixed window bounds latency even when packets keep arriving during a working turn.
-export function createConversationBuffer(apply: (entries: ConversationEntry[]) => void, delay = 50) {
+const DELAY = 50;
+export function createConversationBuffer(apply: (entries: ConversationEntry[]) => void) {
   let entries: ConversationEntry[] = [], waiting = true, disposed = false;
   let queued: Pick<ConversationPacket, 'list' | 'changes'>[] = [];
   let timer: ReturnType<typeof setTimeout> | null = null;
   const schedule = () => {
     if (waiting || disposed || timer !== null) return;
-    timer = setTimeout(() => { timer = null; apply(entries); }, delay);
+    timer = setTimeout(() => { timer = null; apply(entries); }, DELAY);
   };
   return {
     snapshot(initial: ConversationEntry[]) {

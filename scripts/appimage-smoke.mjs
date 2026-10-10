@@ -21,7 +21,7 @@ const output = await testRun('appimage');
 const dataDir = path.join(output, 'user-data'), home = path.join(output, 'home'), project = path.join(output, 'projects', '中文 项目');
 for (const folder of [dataDir, home, project]) await fs.mkdir(folder, { recursive: true });
 await fs.writeFile(path.join(home, '.bashrc'), 'env > "$HOME/terminal-env.txt"\n');
-await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 1,
+await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2,
   projects: [{ id: randomUUID(), name: '中文 项目', path: project, unread: 0, seenEvents: [], lastCompletedAt: null }],
   settings: { shell: 'bash', restoreSessions: true, terminalRenderer: 'dom', notifications: false, sound: false, announce: false, closeToTray: false } }));
 

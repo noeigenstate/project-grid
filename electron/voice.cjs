@@ -45,7 +45,6 @@ const MODELS = {
 const DEFAULT_MODEL = 'sensevoice';
 const downloadBytes = id => MODELS[id].files.reduce((total, file) => total + file.size, 0);
 // Files from the previous Whisper engine, removed once so they stop occupying about 64 MB.
-const LEGACY_ENTRIES = ['runtime', 'runtime.zip', 'runtime.zip.partial', 'model.bin', 'model.bin.partial', 'recordings'];
 // A loaded model holds a few hundred MB or more. It is released after this long without dictation and loaded
 // again while the next recording is being spoken (warm).
 const IDLE_RELEASE = 5 * 60 * 1000;
@@ -131,7 +130,6 @@ class VoiceManager {
   set(id, patch) { Object.assign(this.status[id], patch); this.emit(); }
   async getState() {
     this.initialized ??= (async () => {
-      await Promise.all(LEGACY_ENTRIES.map(name => fsp.rm(path.join(this.directory, name), { recursive: true, force: true }).catch(() => {})));
       // Size is enough at startup; the full hash already ran when each file was downloaded.
       await Promise.all(Object.keys(MODELS).map(async id => {
         try { for (const file of MODELS[id].files) if ((await fsp.stat(this.file(id, file.name))).size !== file.size) return; } catch { return; }

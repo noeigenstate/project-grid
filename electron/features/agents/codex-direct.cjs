@@ -2,7 +2,7 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { codexActions } = require('../../agent-actions.cjs');
-const { generatedImage } = require('../../conversation.cjs');
+const { brief, generatedImage } = require('../../conversation.cjs');
 
 // Codex without its terminal: the reading view talks to `codex app-server` (JSON-RPC, one message per line on
 // stdio), the same protocol Codex's IDE extensions use. The answer arrives word by word, a round starts and ends
@@ -29,7 +29,6 @@ function pictures(content) {
   }
   return found;
 }
-const brief = action => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object });
 
 // What a tool item is, as the step the activity pane and the reading view name.
 function itemAction(item, at, cwd) {
@@ -228,4 +227,4 @@ class CodexDirect {
   dispose() { this.server.close(); }
 }
 
-module.exports = { CodexDirect, CodexEvents, AppServer, cardFor, replyFor, innerCommand, itemAction };
+module.exports = { CodexDirect, CodexEvents, AppServer, cardFor, replyFor, innerCommand };

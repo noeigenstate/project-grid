@@ -11,3 +11,7 @@
 .reading-pending.is-undelivered { box-shadow: inset 0 0 0 1px rgba(255, 176, 64, .55); }
 .reading-undelivered { grid-column: 2; display: flex; align-items: center; gap: 12px; margin-top: 6px; }
 .reading-undelivered small { flex: 1; font-size: 11.5px; color: #ffc46b; }
+
+/* A long message folds to three lines; its button sits under the text, in the text's column. */
+.reading-user > p.is-folded { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.reading-user-more { grid-column: 2; justify-self: start; margin-top: 4px; font-size: 12px; color: var(--accent-blue, #6fb3ff); }

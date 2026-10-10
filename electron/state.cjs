@@ -55,8 +55,8 @@ function cleanSettings(input = {}) {
     // glass: translucent panes over the wallpaper. solid: opaque panes, on which Windows draws text with
     // ClearType and nothing is blurred behind them.
     surface: input.surface === 'solid' ? 'solid' : 'glass',
-    // Keep the selected background when toggling solid/glass; migrate the local preview setting.
-    glassBackground: input.glassBackground === 'desktop' || input.surface === 'desktop-glass' ? 'desktop' : 'theme',
+    // Kept when toggling solid/glass.
+    glassBackground: input.glassBackground === 'desktop' ? 'desktop' : 'theme',
     glassTransparency: Number.isInteger(input.glassTransparency) && input.glassTransparency >= 0 && input.glassTransparency <= 100 ? input.glassTransparency : defaults.glassTransparency,
     terminalRenderer: input.terminalRenderer === 'dom' ? 'dom' : 'gpu',
     summary: cleanSummarySettings(input.summary),
@@ -84,7 +84,7 @@ class WorkspaceStore {
     if (!fs.existsSync(filename)) return;
     try {
       const value = JSON.parse(fs.readFileSync(filename, 'utf8'));
-      if (![1, 2].includes(value.version) || !Array.isArray(value.projects)) throw new Error('Unsupported workspace format');
+      if (value.version !== 2 || !Array.isArray(value.projects)) throw new Error('Unsupported workspace format');
       const ids = new Set();
       this.projects = value.projects.filter(p => {
         if (!p || typeof p.id !== 'string' || typeof p.path !== 'string' || ids.has(p.id)) return false;
@@ -96,7 +96,7 @@ class WorkspaceStore {
         id: p.id, name: String(p.name || path.basename(p.path)).slice(0, 120), path: p.path,
         kind: p.kind === 'ssh' ? 'ssh' : 'local',
         ...(p.kind === 'ssh' ? { ssh: { host: p.ssh.host, configFile: p.ssh.configFile || null } } : {}),
-        primaryTerminalClosed: typeof p.primaryTerminalClosed === 'boolean' ? p.primaryTerminalClosed : p.restore?.terminal === false && Array.isArray(p.terminals) && p.terminals.length > 0,
+        primaryTerminalClosed: p.primaryTerminalClosed === true,
         restore: p.restore && typeof p.restore === 'object' ? { terminal: p.restore.terminal === true, codex: p.restore.codex === true, cwd: typeof p.restore.cwd === 'string' && (p.kind === 'ssh' ? p.restore.cwd.startsWith('/') : path.isAbsolute(p.restore.cwd)) ? p.restore.cwd : null, ...(/^[a-f\d-]{36}$/i.test(p.restore.threadId || '') ? { threadId: p.restore.threadId } : {}), ...agentFields(p.restore) } : null,
         terminals: Array.isArray(p.terminals) ? p.terminals.filter(item => item && /^[a-f\d-]{36}$/i.test(item.id || '')).map(item => ({ id: item.id, restore: { terminal: item.restore?.terminal === true, codex: item.restore?.codex === true,
           cwd: typeof item.restore?.cwd === 'string' && (p.kind === 'ssh' ? item.restore.cwd.startsWith('/') : path.isAbsolute(item.restore.cwd)) ? item.restore.cwd : null,
@@ -106,12 +106,6 @@ class WorkspaceStore {
         completionArmed: p.completionArmed === true,
         seenEvents: Array.isArray(p.seenEvents) ? p.seenEvents.filter(x => typeof x === 'string').slice(-128) : [],
         };
-        // Older releases skipped every terminal of manually finished projects.
-        // Keep that stopped intent when removing the obsolete project flag.
-        if (p.done === true) {
-          for (const record of [project, ...project.terminals]) record.restore = { ...record.restore, terminal: false, codex: false };
-          project.completionArmed = false;
-        }
         return project;
       });
       this.settings = cleanSettings(value.settings);

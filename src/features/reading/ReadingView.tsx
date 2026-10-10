@@ -30,8 +30,9 @@ import { parseMarkdown, parsedMarkdown } from './markdown-parse';
 import { MentionPalette } from './MentionPalette';
 import { isTypedCommand, sameMessage, type PendingPrompt } from './pending-prompts';
 import { usePendingPrompts } from './usePendingPrompts';
-import { PendingPromptEntries, UserImages } from './PendingPromptEntries';
+import { PendingPromptEntries, UserImages, UserText } from './PendingPromptEntries';
 import { ReadingDirectCard } from './ReadingDirectCard';
+import { FileCards, previewable } from './FileCards';
 
 const purifier = createDOMPurify(window);
 // Switching to the CLI unmounts the composer; sent messages still belong to that terminal.
@@ -122,11 +123,13 @@ function GeneratedImage({ src, path, prompt, onError }: { src: string; path: str
   </figure>;
 }
 
-function ToolGroup({ entries, live }: { entries: ConversationEntry[]; live: boolean }) {
+function ToolGroup({ entries, live, projectId, onOpen }: { entries: ConversationEntry[]; live: boolean; projectId: string; onOpen: (file: string) => void }) {
   const running = entries.some(entry => !entry.tool?.done);
   const [open, setOpen] = useState(false);
   const failed = entries.filter(entry => entry.tool?.failed).length;
   const shown = open || (live && running);
+  // The documents, pages and videos these steps finished writing, each once.
+  const files = useMemo(() => [...new Set(entries.flatMap(entry => entry.tool?.done && !entry.tool.failed ? entry.tool.written ?? [] : []))].filter(previewable), [entries]);
   return <div className={`reading-tools ${running ? 'is-running' : ''}`}>
     <button type="button" className="reading-tools-head" aria-expanded={shown} onClick={() => setOpen(!open)}>
       {running ? <CircleNotch size={13} className="loading-spinner" /> : shown ? <CaretDown size={12} /> : <CaretRight size={12} />}
@@ -136,6 +139,7 @@ function ToolGroup({ entries, live }: { entries: ConversationEntry[]; live: bool
     {shown && <ul>{entries.map(entry => <li key={entry.id} className={`${entry.tool!.done ? '' : 'is-running'} ${entry.tool!.failed ? 'is-failed' : ''} reading-tool-${entry.tool!.kind}`}>
       <b>{stepVerb(entry.tool!)}</b><code title={entry.tool!.target}>{entry.tool!.target}</code>{entry.tool!.detail && <small>{entry.tool!.detail}</small>}
     </li>)}</ul>}
+    {files.length > 0 && <FileCards projectId={projectId} files={files} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} />}
   </div>;
 }
 
@@ -444,11 +448,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   else body = <>
     {tail.earlier > 0 && <button type="button" className="text-button reading-earlier" onClick={tail.showEarlier}>{t('显示更早的对话（{count}）', { count: tail.earlier })}</button>}
     {tail.visible.map((block, index) => block.kind === 'tools'
-    ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} />
+    ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onOpen={onOpenLink} />
     : (block.entry as CliOutputEntry).cliOutput
       ? <ReadingCommandOutput key={block.entry.id} rows={(block.entry as CliOutputEntry).cliOutput!} />
     : block.entry.role === 'user'
-      ? <div key={block.entry.id} className="reading-user"><span>{t('你')}</span><p>{block.entry.text}</p>{block.entry.images && <UserImages images={block.entry.images} />}</div>
+      ? <div key={block.entry.id} className="reading-user"><span>{t('你')}</span><UserText text={block.entry.text || ''} />{block.entry.images && <UserImages images={block.entry.images} />}</div>
       : <div key={block.entry.id} className="reading-assistant">{block.entry.text ? <Markdown text={block.entry.text} /> : null}
         {block.entry.generated && block.entry.images?.[0] && <GeneratedImage src={block.entry.images[0]} {...block.entry.generated} onError={onError} />}</div>)}
   </>;

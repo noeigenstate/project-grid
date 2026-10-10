@@ -74,7 +74,7 @@ export function hasCliInput(agent: ScreenAgent, rows: string[], screen: AgentScr
 // working line alone means it is busy answering; a dialog opened during a round keeps that line above it, and its own
 // "Esc to cancel" hint tells it apart.
 const dialogHint = (row: string) => /\besc to (?:cancel|close|exit|go back|dismiss)\b/i.test(row);
-export function cliDialogOpen(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
+function cliDialogOpen(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
   const input = cliInputArea(agent, rows, screen);
   if (agent === 'codex' && input && codexPopupBelow(rows, input).length) return true;
   if (input || !rows.some(row => row.trim())) return false;

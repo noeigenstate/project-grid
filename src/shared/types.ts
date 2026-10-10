@@ -14,6 +14,8 @@ export type Project = {
   codexActive: boolean; agent: 'codex' | 'claude' | null; codexActivity: 'unknown' | 'working' | 'complete' | 'interrupted'; shellReady: boolean; codexAvailable: boolean | null; error: string | null;
   terminals: ProjectTerminal[];
 };
+// A document, page or video an agent wrote, as its card in the reading view shows it.
+export type FileCard = { kind: 'markdown'; path: string; excerpt: string } | { kind: 'html'; path: string; picture: string | null } | { kind: 'video'; path: string; url: string };
 // A question or approval Codex, connected directly, waits on: the reading view shows it as a card.
 export type DirectCard = { kind: 'approval'; subject: 'command' | 'files'; title: string; detail: string; options: ('accept' | 'acceptForSession' | 'decline')[] }
   | { kind: 'question'; questions: { id: string; header: string; question: string; other: boolean; secret: boolean; options: { label: string; description: string }[] }[] };
@@ -45,7 +47,7 @@ export type GitCommit = { hash: string; parents: string[]; author: string; date:
 export type GitHistory = { commits: GitCommit[]; nextOffset: number | null };
 // One step an agent took (a tool call). The card shows the brief form, the activity pane the whole list.
 type AgentActionKind = 'edit' | 'command' | 'read' | 'search' | 'web' | 'skill' | 'mcp' | 'agent' | 'other';
-export type AgentActionBrief = { kind: AgentActionKind; tool: string; target: string; detail: string; done: boolean; phrase?: string; object?: string };
+export type AgentActionBrief = { kind: AgentActionKind; tool: string; target: string; detail: string; done: boolean; phrase?: string; object?: string; written?: string[] };
 export type PendingPrompt = { id: string; text: string; state: 'queued' | 'working'; at: number };
 export type AgentAction = AgentActionBrief & { id: string; at: number; description: string; failed: boolean; server?: string; files?: { path: string; change: 'add' | 'update' | 'delete' | 'write' }[] };
 export type AgentActionPacket = { id: string; list?: AgentAction[]; changes?: AgentAction[] };
@@ -141,6 +143,7 @@ type Bridge = {
   terminalCommands(id: string): Promise<Result<AgentCommand[]>>;
   agentStart(id: string): Promise<Result<boolean>>;
   agentOpenImage(file: string): Promise<Result<boolean>>;
+  fileCard(id: string, file: string): Promise<Result<FileCard>>;
   agentHistory(id: string): Promise<Result<{ claude: { id: string; at: number } | null; codex: { id: string; at: number } | null }>>;
   agentLaunch(id: string, agent: 'claude' | 'codex', mode: 'new' | 'continue'): Promise<Result<boolean>>;
   agentSend(id: string, text: string, images?: string[]): Promise<Result<boolean>>;

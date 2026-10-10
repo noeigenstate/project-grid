@@ -3,7 +3,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 
 const APP_ID = 'local.projectgrid.desktop';
-const APP_NAME = 'Agentrix', LEGACY_NAME = 'Project Grid';
+const APP_NAME = 'Agentrix';
 
 function windowsAppId({ packaged, installed, profile }) {
   if (profile) return `${APP_ID}.test.${createHash('sha256').update(path.resolve(profile)).digest('hex').slice(0, 12)}`;
@@ -65,19 +65,6 @@ function repairShortcuts({ shell, executable, iconSource, userData, programs, co
   const icon = materializeIcon(iconSource, userData);
   const read = filename => { try { return shell.readShortcutLink(filename); } catch { return null; } };
   const same = (a, b) => typeof a === 'string' && path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
-  // Older development runs used the installed application's identity. Only
-  // quarantine that exact identity on Electron shortcuts, leaving other apps alone.
-  for (const [scope, folder] of [['user', programs], ['common', commonPrograms]]) {
-    if (!folder) continue;
-    const source = path.resolve(folder, 'Electron.lnk');
-    const details = read(source);
-    if (details?.appUserModelId !== APP_ID || path.basename(details.target || '').toLowerCase() !== 'electron.exe') continue;
-    const backupFolder = path.resolve(userData, 'shortcut-backups');
-    const backup = path.join(backupFolder, `Electron-${scope}-${Date.now()}.lnk`);
-    if (path.dirname(source) !== path.resolve(folder) || path.dirname(backup) !== backupFolder) throw new Error('无效的快捷方式路径。');
-    try { fs.mkdirSync(backupFolder, { recursive: true }); fs.copyFileSync(source, backup, fs.constants.COPYFILE_EXCL); fs.unlinkSync(source); changes.push({ action: 'quarantine-development-shortcut', source, backup }); }
-    catch (error) { warnings.push(String(error.message)); }
-  }
   const ensure = (filename, create) => {
     const exists = fs.existsSync(filename), previous = exists ? read(filename) : null;
     if (!exists && !create) return;
@@ -90,19 +77,10 @@ function repairShortcuts({ shell, executable, iconSource, userData, programs, co
       changes.push({ action: exists ? 'repair-shortcut' : 'create-shortcut', path: filename });
     } catch (error) { warnings.push(String(error.message)); }
   };
-  // The app used to be called Project Grid: its shortcuts there (ours by their app id, never another app's file of
-  // that name) give way to Agentrix ones in the same places.
-  const renamed = new Set();
-  for (const folder of [programs, commonPrograms, desktop, commonDesktop]) {
-    const legacy = folder && path.join(folder, `${LEGACY_NAME}.lnk`);
-    if (!legacy || !fs.existsSync(legacy) || read(legacy)?.appUserModelId !== APP_ID) continue;
-    try { fs.unlinkSync(legacy); renamed.add(folder); changes.push({ action: 'remove-renamed-shortcut', path: legacy }); }
-    catch (error) { warnings.push(String(error.message)); }
-  }
   ensure(path.join(programs, `${APP_NAME}.lnk`), true);
-  if (commonPrograms) ensure(path.join(commonPrograms, `${APP_NAME}.lnk`), renamed.has(commonPrograms));
-  if (desktop) ensure(path.join(desktop, `${APP_NAME}.lnk`), createDesktop || renamed.has(desktop));
-  if (commonDesktop) ensure(path.join(commonDesktop, `${APP_NAME}.lnk`), renamed.has(commonDesktop));
+  if (commonPrograms) ensure(path.join(commonPrograms, `${APP_NAME}.lnk`), false);
+  if (desktop) ensure(path.join(desktop, `${APP_NAME}.lnk`), createDesktop);
+  if (commonDesktop) ensure(path.join(commonDesktop, `${APP_NAME}.lnk`), false);
   return { icon, changes, warnings };
 }
 

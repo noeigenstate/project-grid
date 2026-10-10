@@ -1,7 +1,7 @@
 // A slash command's screen, read into blocks the reading view can lay out as a document: the CLI's box frames go,
 // "Label:   value" rows and two-column listings become tables, block-character bars become meters, and key hints
 // are set apart. Anything else stays text, in its own line order.
-export type CliBlock =
+type CliBlock =
   | { kind: 'tabs'; items: string[] }
   | { kind: 'heading'; text: string }
   | { kind: 'pairs'; pairs: [string, string, number?][] }

@@ -220,44 +220,6 @@ test('SSH projects retain their host, remote path and recovery state without bec
   assert.equal(store.addSSH({ host: 'other-host', path: '~/apps/demo' }).added, true);
 });
 
-test('legacy manual completion migrates to stopped recovery without retaining the removed flag', t => {
-  const { file, projectDir } = fixture(t);
-  fs.writeFileSync(file, JSON.stringify({ version: 1, projects: [{ id: 'legacy', name: '旧项目', path: projectDir, done: true, unread: 0 }], settings: {} }));
-  const store = new WorkspaceStore(file);
-  assert.equal(store.projects[0].kind, 'local');
-  assert.deepEqual(store.projects[0].restore, { terminal: false, codex: false });
-  assert.equal('done' in store.projects[0], false);
-  assert.equal(store.settings.restoreSessions, true);
-  store.save();
-  assert.equal('done' in JSON.parse(fs.readFileSync(file, 'utf8')).projects[0], false);
-  assert.equal(new WorkspaceStore(file).projects[0].restore.terminal, false);
-});
-
-test('removing manual completion keeps every legacy local/SSH split stopped and preserves session identity', t => {
-  const { file, projectDir } = fixture(t);
-  const thread = '00000000-0000-4000-8000-000000000001';
-  const split = '00000000-0000-4000-8000-000000000002';
-  for (const kind of ['local', 'ssh']) {
-    const cwd = kind === 'ssh' ? '/srv/project' : projectDir;
-    const restore = { terminal: true, codex: true, cwd, threadId: thread };
-    fs.writeFileSync(file, JSON.stringify({ version: 2, projects: [
-      { id: 'legacy', kind, path: cwd, ...(kind === 'ssh' ? { ssh: { host: 'dev-host' } } : {}), done: true, completionArmed: true, lastCompletedAt: 1234, seenEvents: ['old-turn'], restore, terminals: [{ id: split, restore }] },
-      { id: 'ordinary', path: projectDir, restore: { terminal: true, codex: true, cwd: projectDir } },
-      { id: 'older', path: projectDir },
-    ] }));
-    const store = new WorkspaceStore(file), project = store.projects[0];
-    assert.equal(project.primaryTerminalClosed, false, 'stopped legacy primary remains available to start manually');
-    for (const record of [project, ...project.terminals]) assert.deepEqual(record.restore, { ...restore, terminal: false, codex: false });
-    assert.equal(project.completionArmed, false); assert.equal(project.lastCompletedAt, 1234); assert.deepEqual(project.seenEvents, ['old-turn']);
-    assert.equal(store.projects[1].restore.terminal, true); assert.equal(store.projects[2].restore, null);
-    store.save(); assert.equal(new WorkspaceStore(file).projects[0].terminals[0].restore.terminal, false);
-    store.setRestore(split, { terminal: true, codex: false });
-    const reopened = new WorkspaceStore(file);
-    assert.equal(reopened.projects[0].restore.terminal, false);
-    assert.deepEqual(reopened.findTerminal(split).record.restore, { ...restore, terminal: true, codex: false });
-  }
-});
-
 test('insertion reorder preserves all records and rejects stale or duplicated project lists', t => {
   const { store, project, file } = fixture(t);
   const second = store.addSSH({ host: 'two', path: '/srv/two' }).project;
@@ -337,7 +299,7 @@ test('glass transparency is optional, validated and preserved across material ch
 test('desktop glass is opt-in and persisted separately from the theme', t => {
   const { store, file } = fixture(t);
   assert.equal(store.settings.surface, 'glass');
-  store.updateSettings({ surface: 'desktop-glass', theme: 'mono-amber' });
+  store.updateSettings({ glassBackground: 'desktop', theme: 'mono-amber' });
   const saved = new WorkspaceStore(file);
   assert.equal(saved.settings.surface, 'glass'); assert.equal(saved.settings.glassBackground, 'desktop'); assert.equal(saved.settings.theme, 'mono-amber');
   saved.updateSettings({ surface: 'solid' }); assert.equal(new WorkspaceStore(file).settings.glassBackground, 'desktop');

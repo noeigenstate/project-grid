@@ -15,7 +15,7 @@ import { IconButton } from '../../shared/IconButton';
 import { relativeTime } from '../../shared/time';
 
 
-export function statusText(project: Project) {
+function statusText(project: Project) {
   if (project.codexActive && project.codexActivity === 'working') return t('正在处理');
   if (project.unread) return t('等待你查看');
   if (project.error) return t('需要检查');
@@ -26,7 +26,7 @@ export function statusText(project: Project) {
   return t('尚未启动');
 }
 
-export function agentName(agent: Project['agent']) { return agent === 'claude' ? 'Claude' : 'Codex'; }
+function agentName(agent: Project['agent']) { return agent === 'claude' ? 'Claude' : 'Codex'; }
 
 export function isRoundComplete(project: Project) {
   return project.codexActive && project.codexActivity === 'complete' && !project.unread && !project.error;

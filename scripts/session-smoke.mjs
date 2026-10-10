@@ -29,7 +29,7 @@ for (const [index, name] of ['中断的项目', '已结束这一轮', '主动关
   const directory = path.join(output, name);
   await fs.mkdir(directory);
   const id = randomUUID(); const sessionId = randomUUID();
-  projects.push({ id, name, path: directory, kind: 'local', unread: index === 0 ? 1 : 0, done: index === 3, seenEvents: [], restore: { terminal: index !== 2, codex: true, cwd: directory }, sessionId });
+  projects.push({ id, name, path: directory, kind: 'local', unread: index === 0 ? 1 : 0, seenEvents: [], restore: { terminal: index !== 2 && index !== 3, codex: index !== 3, cwd: directory }, sessionId });
   await fs.writeFile(path.join(codexHome, 'sessions', `rollout-${sessionId}.jsonl`), [
     { type: 'session_meta', payload: { id: sessionId, cwd: directory, source: 'cli' } },
     { type: 'event_msg', payload: { type: 'task_started' } },

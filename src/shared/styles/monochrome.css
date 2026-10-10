@@ -28,9 +28,9 @@
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.titlebar, .focus-sidebar, .file-preview, .project-panel, .settings-dialog, .dropdown, .voice-overlay, .tour-bubble) { color: var(--theme-ink); text-shadow: none; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .app-shell .titlebar { background: rgba(249, 250, 251, var(--glass-alpha, .52)); border-bottom: 1px solid var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.titlebar-brand, .panel-name, .tree-row, .eyebrow, .terminal-empty, .terminal-empty p, .file-preview-message, .reading-scroll, .reading-welcome, .reading-user > p, .reading-markdown, .reading-plain, .activity-item, .activity-item code, .guide-body) { color: var(--theme-ink); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.workspace-summary, .panel-meta, .panel-name small, .explorer-path, .session-label, .terminal-empty > span, .file-preview-footer, .file-preview-toolbar, .preview-readonly, .settings-note, .settings-intro, .setting-row small, .reading-welcome-directory, .reading-welcome h2 small, .reading-welcome h3, .reading-welcome-starting, .activity-empty, .activity-item time, .activity-item p) { color: var(--theme-muted); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.workspace-summary, .panel-meta, .panel-name small, .explorer-path, .session-label, .terminal-empty > span, .file-preview-footer, .file-preview-toolbar, .preview-readonly, .settings-note, .setting-row small, .reading-welcome-directory, .reading-welcome h2 small, .reading-welcome h3, .reading-welcome-starting, .activity-empty, .activity-item time, .activity-item p) { color: var(--theme-muted); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.settings-dialog, .dropdown, .voice-overlay, .tour-bubble, .activity-pane) :where(*) { color: inherit; }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.icon-button, .panel-header .icon-button, .text-button, .preview-option, .tree-tools button, .activity-icon, .reading-tools-head, .reading-welcome-commands button, .reading-welcome-commands code) { color: var(--theme-ink); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.icon-button, .panel-header .icon-button, .text-button, .preview-option, .reading-tools-head, .reading-welcome-commands button, .reading-welcome-commands code) { color: var(--theme-ink); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.icon-button:hover, .dropdown button:hover, .preview-option[aria-pressed="true"], .tree-row:hover, .reading-welcome-commands button:hover, .settings-nav button[aria-current="page"]) { color: var(--theme-ink); background: var(--theme-hover); box-shadow: none; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .brand-mark i { background: var(--theme-ink); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .brand-mark i:last-child { background: var(--mono-orange); }
@@ -38,7 +38,7 @@
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.search-input input, input, select, textarea) { color: var(--theme-ink); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) input::placeholder, :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) textarea::placeholder { color: var(--theme-muted); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(kbd, .summary-hint code) { color: var(--theme-muted); border-color: var(--theme-line); background: var(--theme-code); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.summary-fields input, .summary-fields select, .shortcut-key, .reading-input, .file-name-label input) { color: var(--theme-ink); border-color: var(--theme-line); background: var(--theme-control); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.summary-fields input, .summary-fields select, .shortcut-key, .file-name-label input) { color: var(--theme-ink); border-color: var(--theme-line); background: var(--theme-control); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .button.primary { color: #ffffff; background: #17191d; border-color: #17191d; text-shadow: none; box-shadow: none; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .button.primary:hover { color: #ffffff; background: #30343a; border-color: #30343a; filter: none; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .button.secondary { color: var(--theme-ink); background: var(--theme-control); border-color: var(--theme-line); box-shadow: none; }
@@ -60,11 +60,11 @@
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .project-panel .status-badge:is(.blue, .green) { color: var(--theme-ink); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .project-panel .status-badge:is(.red, .amber) { color: var(--mono-alert-ink); font-weight: 650; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .project-panel .status-dot { box-shadow: none; }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.terminal-error, .error-toast, .danger-text, .git-error, .summary-status.is-error, .voice-error, .activity-item.is-failed .activity-step, .activity-item.is-failed code, .activity-step em, .activity-title em) { color: var(--mono-alert-ink); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.error-toast, .terminal-error) { background: rgba(255, 107, 0, .075); border-color: rgba(255, 107, 0, .3); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.activity-item.is-running, .activity-summary, .reading-user) { background: var(--theme-hover); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.error-toast, .danger-text, .git-error, .summary-status.is-error, .activity-item.is-failed code, .activity-title em) { color: var(--mono-alert-ink); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.error-toast) { background: rgba(255, 107, 0, .075); border-color: rgba(255, 107, 0, .3); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.activity-item.is-running, .reading-user) { background: var(--theme-hover); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .activity-pane { background: rgba(244, 246, 248, var(--glass-alpha, .94)); border-color: var(--theme-line); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.activity-item.is-running .activity-step, .summary-status.is-ok, .voice-model-status.is-ready) { color: var(--theme-ink); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.summary-status.is-ok, .voice-model-status.is-ready) { color: var(--theme-ink); }
 
 /* Reading is a document, not a second set of agent brand colours. */
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-view { background: rgba(250, 251, 252, var(--glass-alpha, .52)); }
@@ -82,14 +82,12 @@
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-markdown th, .reading-markdown td, .reading-markdown hr) { border-color: var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-markdown th, .reading-code-bar) { background: var(--theme-hover); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-code { background: var(--theme-code); box-shadow: inset 0 0 0 1px var(--theme-line); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-code pre, .reading-code-bar button, .reading-tool, .reading-tool pre, .reading-tool summary, .reading-welcome h2, .reading-welcome-commands span) { color: var(--theme-ink); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-code-bar, .reading-meta, .reading-tool small, .reading-tools-count) { color: var(--theme-muted); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-code pre, .reading-code-bar button, .reading-welcome h2, .reading-welcome-commands span) { color: var(--theme-ink); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-code-bar) { color: var(--theme-muted); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-code-bar button, .reading-jump.icon-button, .reading-unseen) { background: var(--glass-strong); color: var(--theme-ink); box-shadow: inset 0 0 0 1px var(--theme-line); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-compose, .reading-choice, .reading-command, .reading-command-palette) { color: var(--theme-ink); background: var(--glass-strong); border-color: var(--theme-line); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-compose :where(*) { color: inherit; border-color: var(--theme-line); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-compose textarea { background: transparent; }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-choice, .reading-command) { color: var(--theme-ink); background: var(--glass-strong); border-color: var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-send { background: #17191d; color: #ffffff; }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-choice, .reading-command-palette) :where(*) { color: inherit; }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-choice) { color: inherit; }
 
 /* Git keeps +/−, file status letters and topology. Background texture separates
    removals from additions without needing a red/green hue distinction. */
@@ -129,13 +127,12 @@
 @media (prefers-reduced-transparency: reduce) {
   :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .app-shell .project-panel { background: var(--glass-solid); backdrop-filter: none; }
 }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.overview-task, .overview-stats b, .overview-named b, .overview-group code, .reading-composer textarea, .reading-composer, .reading-welcome h2, .reading-mode-button, .split-status, .split-status.working, .split-status.complete) { color: var(--theme-ink); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.overview-stats span, .overview-group h5, .overview-group small, .overview-named p, .reading-composer-hint, .reading-hint, .terminal-split-footer, .reading-choice-context, .reading-choice-hint) { color: var(--theme-muted); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-composer, .reading-composer textarea, .reading-choice-context, .reading-command-menu, .mention-palette) { background: var(--glass-strong); border-color: var(--theme-line); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.overview-task, .overview-stats b, .reading-composer textarea, .reading-composer, .reading-welcome h2, .split-status, .split-status.working, .split-status.complete) { color: var(--theme-ink); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.overview-stats span, .terminal-split-footer, .reading-choice-context, .reading-choice-hint) { color: var(--theme-muted); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-composer, .reading-composer textarea, .reading-choice-context) { background: var(--glass-strong); border-color: var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-composer :where(*) { color: inherit; border-color: var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .overview-stats > div { background: var(--theme-hover); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .overview-stats .is-failed b { color: var(--mono-alert-ink); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .overview-group h5 span { color: var(--theme-muted); background: var(--theme-hover); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .activity-now { color: var(--theme-ink); background: var(--theme-hover); border-color: var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .activity-now:is(.is-working, .is-editing) { color: var(--theme-ink); background: var(--theme-hover); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-composer { color: var(--theme-ink); box-shadow: inset 0 0 0 1px var(--theme-line); }
@@ -144,8 +141,7 @@
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-command code, .reading-command > span, .reading-command small, .reading-attachments) { color: var(--theme-ink); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .summary-unread .legend-red { background: var(--mono-orange); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .summary-complete .legend-green { background: var(--theme-ink); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-status, .reading-status.is-working, .reading-status-chip) { color: var(--theme-muted); }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .reading-status-chip { background: var(--theme-hover); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.reading-status, .reading-status.is-working) { color: var(--theme-muted); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.selected-file-tab, .terminal-tab, .selected-file-tab span, .file-tabs button, .file-preview-toolbar .icon-button) { color: var(--theme-ink); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .selected-file-tab { background: var(--theme-control); border-color: var(--theme-line); box-shadow: inset 0 -2px #34383e; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .theme-check { color: #ffffff; }

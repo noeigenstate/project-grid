@@ -100,6 +100,7 @@ contextBridge.exposeInMainWorld('agentrix', {
   agentStart: id => ipcRenderer.invoke('agent:start', id),
   agentHistory: id => ipcRenderer.invoke('agent:history', id),
   agentOpenImage: file => ipcRenderer.invoke('agent:open-image', file),
+  fileCard: (id, file) => ipcRenderer.invoke('project:card', id, file),
   agentLaunch: (id, agent, mode) => ipcRenderer.invoke('agent:launch', id, agent, mode),
   agentSend: (id, text, images) => ipcRenderer.invoke('agent:send', id, text, images),
   agentInterrupt: id => ipcRenderer.invoke('agent:interrupt', id),

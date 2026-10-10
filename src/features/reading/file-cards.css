@@ -1,0 +1,16 @@
+/* Cards for the documents, pages and videos a group of steps wrote: a row of small windows on the page. */
+.file-cards { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; margin: 6px 0 10px; }
+.file-card { display: flex; flex-direction: column; width: 240px; border-radius: 10px; overflow: hidden; background: rgba(0, 0, 0, .22); box-shadow: inset 0 0 0 1px var(--card-line, rgba(255, 255, 255, .13)); contain: layout paint; }
+.file-card.is-video { width: 267px; }
+.file-card-view { display: block; height: 150px; padding: 0; border: 0; background: none; cursor: zoom-in; overflow: hidden; }
+.file-card-view:focus-visible, .file-card-name:focus-visible { outline: 2px solid var(--accent-blue, #3b9eff); outline-offset: -2px; }
+.file-card-view img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.file-card video { display: block; width: 100%; height: 150px; object-fit: contain; background: #000; }
+/* A Markdown file laid out at half its size: the first screen of the document, faded at the bottom. */
+.file-card-doc { width: 200%; transform: scale(.5); transform-origin: top left; padding: 18px 22px; text-align: left; pointer-events: none;
+  -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+.file-card-empty { display: grid; place-items: center; gap: 6px; height: 100%; font-size: 11px; color: var(--ink-secondary, #b9c8d8); }
+.file-card-name { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border: 0; background: rgba(255, 255, 255, .05); color: var(--ink, #f2f7fc); font: 500 12px var(--font-ui); text-align: left; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.file-card-name:hover { background: rgba(255, 255, 255, .1); }
+.file-card-name svg { flex: none; color: var(--ink-secondary, #b9c8d8); }
+.file-cards-more { align-self: center; font-size: 12px; }

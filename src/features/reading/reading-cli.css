@@ -1,4 +1,3 @@
-.reading-cli-rows { margin: 0; font: 400 11.5px/1.6 var(--font-mono); white-space: pre; overflow-x: auto; color: #cbd9e8; }
 .reading-cli-panel .reading-choice-head strong { font-family: var(--font-mono); }
 .reading-command-output { margin: 4px 0 10px; padding: 0; }
 .reading-command-output .reading-choice-head { color: #9fb9d3; font-size: 11px; }

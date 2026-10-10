@@ -13,7 +13,9 @@ const WRAPPERS = /<(system-reminder|environment_context|user_instructions|comman
 // Only the start of a huge record is cleaned: the wrapper pattern scans to the end for each unclosed tag, and what is
 // shown is cut to TEXT_LIMIT anyway.
 const CLEAN_LIMIT = 60000;
-const clean = text => String(text || '').slice(0, CLEAN_LIMIT).replace(WRAPPERS, '').replace(/\[Image #\d+\]\s?/g, '').trim();
+// Claude Code wraps pasted text in <pasted_content id=…> tags: the text is what was said, the tags are not.
+const PASTED = /<\/?pasted_content\b[^>]*>\n?/g;
+const clean = text => String(text || '').slice(0, CLEAN_LIMIT).replace(WRAPPERS, '').replace(PASTED, '').replace(/\[Image #\d+\]\s?/g, '').trim();
 // Images the user attached to a message, as data URLs the reading view shows: at most four, none over about 2 MB,
 // each made small by the main process (setThumbnailer) so a conversation full of screenshots stays light to send.
 const IMAGE_LIMIT = 2_800_000;
@@ -53,7 +55,10 @@ function generatedImage(item, at) {
   return { id: `g:${item.id}`, at, role: 'assistant', text: '', images: [src], generated: { path: item.savedPath, prompt: bounded(String(item.revisedPrompt || '')) } };
 }
 const bounded = text => text.length > TEXT_LIMIT ? `${text.slice(0, TEXT_LIMIT)}\n\n…` : text;
-const brief = action => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object });
+// A step as the reading view shows it; an edit names the files it left (not deleted ones), so the documents, pages and
+// videos among them can be previewed.
+const brief = action => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object,
+  ...(action.kind === 'edit' && action.files?.length ? { written: action.files.filter(file => file.change !== 'delete').map(file => file.path).slice(0, 8) } : {}) });
 
 // Entries keep their order; a later record about the same entry (a tool that finished) replaces it.
 class ConversationLog {
@@ -144,4 +149,4 @@ function codexConversation(log, record, cwd) {
   for (const action of codexActions(payload, at, cwd)) log.put({ id: action.id, at, role: 'tool', tool: brief(action) });
 }
 
-module.exports = { ConversationLog, claudeConversation, codexConversation, clean, generatedImage, isGeneratedImage, setThumbnailer };
+module.exports = { ConversationLog, claudeConversation, codexConversation, clean, brief, generatedImage, isGeneratedImage, setThumbnailer };

@@ -44,6 +44,7 @@ const { PromptQueue } = require('./prompt-queue.cjs');
 const { createTerminalEnvironment } = require('./terminal-env.cjs');
 const { adoptSystemProxy } = require('./system-proxy.cjs');
 const { PreviewResources, resourceResponse } = require('./preview-resources.cjs');
+const { createFileCards } = require('./features/files/file-cards.cjs');
 const { UpdateManager, isInstalledBuild } = require('./updates.cjs');
 const { getSSHInfo } = require('./ssh-config.cjs');
 const { SSHAuthServer } = require('./ssh-auth.cjs');
@@ -72,14 +73,8 @@ const root = path.join(__dirname, '..');
 const integrationDir = app.isPackaged ? path.join(process.resourcesPath, 'integration') : path.join(root, 'integration');
 const devUrl = !app.isPackaged ? process.env.AGENTRIX_DEV_URL : null;
 if (process.env.AGENTRIX_DATA_DIR) app.setPath('userData', path.resolve(process.env.AGENTRIX_DATA_DIR));
+else if (app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'Agentrix'));
 else {
-  // Agentrix used to be called Project Grid: the first start under the new name takes over its profiles.
-  const { adoptProfile } = require('./profile-migration.cjs');
-  adoptProfile(path.join(app.getPath('appData'), 'Project Grid'), path.join(app.getPath('appData'), 'Agentrix'));
-  adoptProfile(path.join(app.getPath('appData'), 'Project Grid Dev'), path.join(app.getPath('appData'), 'Agentrix Dev'));
-  if (app.isPackaged) app.setPath('userData', path.join(app.getPath('appData'), 'Agentrix'));
-}
-if (!process.env.AGENTRIX_DATA_DIR && !app.isPackaged) {
   // `npm run dev` / `npm start` run beside the installed app, often from one of its own terminals.
   const devProfile = path.join(app.getPath('appData'), 'Agentrix Dev');
   require('./dev-profile.cjs').seedDevProfile(path.join(app.getPath('appData'), 'Agentrix'), devProfile);
@@ -108,6 +103,21 @@ const projectGit = new ProjectGit(id => remoteFor(id));
 const startupErrors = new Map();
 const restorePlans = new Map();
 const previewResources = new PreviewResources({ remote: project => remoteFor(project.id) });
+// A picture of an HTML page for its card in the reading view: rendered off screen in a sandboxed window with no
+// preload, which may not navigate or open others, for at most four seconds, then closed.
+async function capturePage(url) {
+  const page = new BrowserWindow({ show: false, width: 1280, height: 800, webPreferences: { offscreen: true, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
+  page.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  page.webContents.on('will-navigate', event => event.preventDefault());
+  page.webContents.setAudioMuted(true);
+  try {
+    await Promise.race([page.loadURL(url), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))]);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const image = await page.webContents.capturePage();
+    return image.isEmpty() ? null : `data:image/jpeg;base64,${image.resize({ width: 480, quality: 'good' }).toJPEG(82).toString('base64')}`;
+  } finally { page.destroy(); }
+}
+const fileCard = createFileCards({ previews: previewResources, capture: capturePage });
 let stateTimer;
 let runtimeDir;
 const { prepareAskpass, cleanupAskpass } = createSshRuntime({ fs, execFileSync, tempDirectory: () => app.getPath('temp'), integrationDir });
@@ -775,8 +785,7 @@ function registerIpc() {
     startTerminal, setStartupError: (id, message) => startupErrors.set(id, message), broadcast });
   updatesIpc = registerUpdatesIpc({ handle, updateManager, openExternal: url => shell.openExternal(url), getWindow: () => window, dialog, t,
     allowEditorClose, liveTerminalCount: () => [...sessions.values()].filter(session => session.status !== 'exited').length, setQuitting: value => { quitting = value; } });
-  registerWorkspaceIpc({ handle, publicState, dialog, getWindow: () => window, t, addProject: (folder, name) => store.add(folder, name), startTerminal,
-    setStartupError: (id, message) => startupErrors.set(id, message), getRecentProjects: () => store.recentProjects(), existsSync: fs.existsSync,
+  registerWorkspaceIpc({ handle, publicState, dialog, getWindow: () => window, t, addProject: (folder, name) => store.add(folder, name), getRecentProjects: () => store.recentProjects(), existsSync: fs.existsSync,
     getRecentEntry: folder => store.recentEntry(folder), forgetRecent: folder => store.forget(folder), clearHistory: () => store.clearHistory(),
     getEditorFile, allowEditorClose, confirmTerminalClose, disposeProjectTerminals, findProject, closeProjectPreviews: id => previewResources.closeProject(id),
     removeProject: id => store.remove(id), forgetBranch, broadcast, acknowledgeProject: id => store.acknowledge(id), reorderProjects: ids => store.reorderProjects(ids),
@@ -794,6 +803,7 @@ function registerIpc() {
   registerDirectIpc({ handle, findProject, getSession: id => sessions.get(id), startDirect: (id, threadId) => startDirect(id, threadId) });
   // A new project's card offers Claude Code and Codex, fresh or continuing this folder's latest conversation.
   const folderOf = id => store.findTerminal(id)?.record.restore?.cwd || findProject(id).path;
+  handle('project:card', (id, file) => fileCard(findProject(id), file));
   // A picture Codex generated opens in the system's image viewer; nothing else is opened this way.
   handle('agent:open-image', async file => {
     if (!isGeneratedImage(file) || !fs.existsSync(file)) throw new Error('只能打开 Codex 生成的图片。');
@@ -977,8 +987,8 @@ if (!app.requestSingleInstanceLock()) {
     updateIndicators();
     if (!process.env.AGENTRIX_DATA_DIR) updateManager.start();
     if (store.settings.restoreSessions && (!process.env.AGENTRIX_DATA_DIR || process.env.AGENTRIX_TEST_RESTORE === '1')) {
-      const terminals = store.projects.flatMap(project => [project, ...(project.terminals || [])].filter(record => record.restore === null || record.restore?.terminal).map(record => ({ project, record })));
-      terminals.forEach(({ project, record }, index) => {
+      const terminals = store.projects.flatMap(project => [project, ...(project.terminals || [])].filter(record => record.restore === null || record.restore?.terminal));
+      terminals.forEach((record, index) => {
         if (record.restore === null || record.restore.codex) restorePlans.set(record.id, { codex: record.restore?.codex === true, cwd: record.restore?.cwd });
         const timer = setTimeout(() => {
           if (quitting || !store.settings.restoreSessions || !store.findTerminal(record.id) || record.restore?.terminal === false) return;
