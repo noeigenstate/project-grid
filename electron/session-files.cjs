@@ -93,6 +93,8 @@ class SessionFiles {
     clearTimeout(this.idle);
     this.idle = setTimeout(() => { this.unwatch(); if (listings.get(this.directory) === this) listings.delete(this.directory); }, IDLE_CLOSE);
     this.idle.unref?.();
+    // A watched folder that is gone is not always reported (macOS drops the event now and then): its listing is stale.
+    if (this.watcher && !fs.existsSync(this.directory)) { this.unwatch(); this.missed = true; }
     this.watch();
     const full = !this.walkedAt || this.missed || Date.now() - this.walkedAt >= (this.watcher ? WATCHED_WALK_INTERVAL : WALK_INTERVAL);
     if (full || Date.now() - this.namesAt >= NAMES_INTERVAL) {
