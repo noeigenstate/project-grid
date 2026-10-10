@@ -38,7 +38,8 @@ const withImages = (entry, parts) => { const attached = images(parts); return at
 // made from the saved file (the main process sets how, see setThumbnailer), never the full image inline, and opens
 // the file itself on a click.
 const GENERATED = /[\\/]generated_images[\\/][^\\/]+[\\/][^\\/]+\.(?:png|jpe?g|webp)$/i;
-const isGeneratedImage = file => typeof file === 'string' && require('node:path').isAbsolute(file) && GENERATED.test(file);
+// Codex records the path on the system it runs on; either form of an absolute path is read the same way everywhere.
+const isGeneratedImage = file => typeof file === 'string' && (require('node:path').win32.isAbsolute(file) || require('node:path').posix.isAbsolute(file)) && GENERATED.test(file);
 let thumbnail = () => null;
 // fromFile(path) and fromDataUrl(url) return a small data URL, or null to keep what there is.
 function setThumbnailer(fromFile, fromDataUrl = url => url) { thumbnail = fromFile; shrink = fromDataUrl; }

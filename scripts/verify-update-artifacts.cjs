@@ -21,7 +21,7 @@ assert.ok(fs.statSync(path.join(release, installer + '.blockmap')).size > 0);
 const config = yaml.load(fs.readFileSync(path.join(release, 'win-unpacked', 'resources', 'app-update.yml'), 'utf8'));
 assert.equal(config.provider, 'github');
 assert.equal(config.owner, 'noeigenstate');
-assert.equal(config.repo, 'agentrix');
+assert.equal(config.repo, 'Agentrix');
 const resources = require('resedit');
 const exe = resources.NtExecutable.from(fs.readFileSync(path.join(release, 'win-unpacked', 'Agentrix.exe')));
 const entries = resources.NtExecutableResource.from(exe).entries;
