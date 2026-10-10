@@ -1,8 +1,8 @@
 // What the usage guide's last page lists for this release. Update it with every version: the guide opens on
 // first use and after each update, on this page for people who are updating.
 export const WHATS_NEW: string[] = [
-  '发出的消息一定送达：回车没被接收会自动补按，助手空闲后仍没收到会自动重发，实在不行才标出“未送达”并可重新发送。',
-  'Codex 直连（实验）：在设置 › 编码助手中打开后，项目可以不经过终端，在阅读视图里直接与 Codex 对话，确认和提问在卡片里作答。',
-  '粘贴的图片显示在你的消息里；只有你的消息带底板，模型的回答和工具调用不再有。',
-  '斜杠命令更可靠：Claude 的 /usage 不再停在状态页，也不会误改 /config 里的设置；Codex 的 /status 正常显示，用量画成进度条；命令卡片只保留展开和收起。',
+  'Project Grid 正式更名为 Agentrix。更新后项目列表、设置和语音模型自动搬过来，开始菜单和桌面的快捷方式换成新名字。',
+  '新建项目直接选 Claude Code 或 Codex：可以接着这个文件夹上次的对话，也可以开始新开发；其他命令行助手点「只打开终端」。',
+  'Codex 生成的图片直接显示在阅读视图里，点开查看原图；很长的对话、大段回答和大量截图也不会再让窗口卡住。',
+  'Claude 正在工作时连续使用 /status 和 /usage，各自显示正确的页面。',
 ];

@@ -986,10 +986,6 @@
   "项目卡片上多一个“直连 Codex”：不经过终端，阅读视图通过 Codex 的协议直接对话，回答逐字出现，确认和提问在卡片里作答": "Adds \"Codex direct\" to project cards: the reading view talks to Codex over its protocol without a terminal, answers appear word by word, and approvals and questions are answered in a card",
   "未送达：助手没有收到这条消息": "Not delivered: the agent did not receive this message",
   "重新发送": "Send again",
-  "发出的消息一定送达：回车没被接收会自动补按，助手空闲后仍没收到会自动重发，实在不行才标出“未送达”并可重新发送。": "Messages always arrive: a lost Enter is pressed again, a message the idle agent never received is sent again, and only one that still fails is marked \"Not delivered\" with a resend.",
-  "Codex 直连（实验）：在设置 › 编码助手中打开后，项目可以不经过终端，在阅读视图里直接与 Codex 对话，确认和提问在卡片里作答。": "Codex direct (experimental): turn it on in Settings › Coding agents to talk to Codex from the reading view without a terminal; approvals and questions are answered in a card.",
-  "粘贴的图片显示在你的消息里；只有你的消息带底板，模型的回答和工具调用不再有。": "Pasted pictures show in your message, and only your messages sit on a card; answers and tool calls no longer do.",
-  "斜杠命令更可靠：Claude 的 /usage 不再停在状态页，也不会误改 /config 里的设置；Codex 的 /status 正常显示，用量画成进度条；命令卡片只保留展开和收起。": "Slash commands are more reliable: Claude /usage no longer stays on the Status tab or changes /config settings by accident; Codex /status shows its result with usage as a bar; command cards only expand and collapse.",
   "选择助手，开始开发": "Pick an agent and start",
   "开发方式": "How to start",
   "开始新开发": "Start fresh",
@@ -1007,5 +1003,9 @@
   "生成的图片": "Generated image",
   "只能打开 Codex 生成的图片。": "Only images Codex generated can be opened this way.",
   "图片太大（超过 25 MB），请压缩后再粘贴。": "The image is over 25 MB; shrink it and paste again.",
-  "无法读取这张图片。": "This image could not be read."
+  "无法读取这张图片。": "This image could not be read.",
+  "Project Grid 正式更名为 Agentrix。更新后项目列表、设置和语音模型自动搬过来，开始菜单和桌面的快捷方式换成新名字。": "Project Grid is now Agentrix. After the update your projects, settings and voice models move over by themselves, and the Start menu and desktop shortcuts take the new name.",
+  "新建项目直接选 Claude Code 或 Codex：可以接着这个文件夹上次的对话，也可以开始新开发；其他命令行助手点「只打开终端」。": "A new project starts with a choice of Claude Code or Codex: continue this folder's last conversation or start fresh; other command-line agents run from \"Just a terminal\".",
+  "Codex 生成的图片直接显示在阅读视图里，点开查看原图；很长的对话、大段回答和大量截图也不会再让窗口卡住。": "Pictures Codex generates show in the reading view and open full size on a click; very long conversations, huge answers and many screenshots no longer freeze the window.",
+  "Claude 正在工作时连续使用 /status 和 /usage，各自显示正确的页面。": "While Claude is working, /status followed by /usage now each show their own page."
 }
