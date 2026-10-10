@@ -1005,5 +1005,9 @@
   "没有可显示的画面": "Nothing to show",
   "只能预览项目里的文件。": "Only files in the project can be previewed.",
   "远程项目暂不支持预览卡片。": "Preview cards are not available for remote projects yet.",
-  "这个文件没有预览卡片。": "This file has no preview card."
+  "这个文件没有预览卡片。": "This file has no preview card.",
+  "命令的对话框没有关闭，请在终端中关闭。": "The command's dialog did not close; close it in the terminal.",
+  "Esc 关闭": "Esc to close",
+  "正在生成图片… {seconds} 秒": "Generating the picture… {seconds} s",
+  "通常需要 20–40 秒": "This usually takes 20–40 seconds"
 }

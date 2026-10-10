@@ -15,9 +15,7 @@ import { ReadingSessions } from './ReadingSessions';
 import { usesSessionPicker } from './reading-sessions';
 import { useWelcomeStarting } from './reading-welcome';
 import { ReadingCliPanel } from './ReadingCliPanel';
-import { ReadingCommandOutput } from './ReadingCommandOutput';
 import { useReadingCli } from './useReadingCli';
-import type { CliOutputEntry } from './cli-panel';
 import { choiceIdentity } from './choice-keys';
 import { setChoiceVisible } from './reading-mode';
 import { useStickToBottom } from './useStickToBottom';
@@ -123,11 +121,27 @@ function GeneratedImage({ src, path, prompt, onError }: { src: string; path: str
   </figure>;
 }
 
+// Where a generated picture will appear: a bar that keeps moving and the seconds so far, so a picture that takes
+// half a minute does not look stuck.
+// When each picture began to be drawn, by its step: the card is drawn again as the conversation grows.
+const drawingSince = new Map<string, number>();
+function ImageProgress({ step }: { step: string }) {
+  if (!drawingSince.has(step)) { drawingSince.set(step, Date.now()); if (drawingSince.size > 20) drawingSince.delete(drawingSince.keys().next().value!); }
+  const since = drawingSince.get(step)!, [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  return <div className="reading-generating" role="status">
+    <span className="reading-generating-bar" aria-hidden="true"><i /></span>
+    <span>{t('正在生成图片… {seconds} 秒', { seconds: Math.max(0, Math.floor((now - since) / 1000)) })}</span><small>{t('通常需要 20–40 秒')}</small>
+  </div>;
+}
+
 function ToolGroup({ entries, live, projectId, onOpen }: { entries: ConversationEntry[]; live: boolean; projectId: string; onOpen: (file: string) => void }) {
   const running = entries.some(entry => !entry.tool?.done);
   const [open, setOpen] = useState(false);
   const failed = entries.filter(entry => entry.tool?.failed).length;
   const shown = open || (live && running);
+  // A picture being generated: Codex reports no progress, so the wait is shown as such, with the time it has taken.
+  const drawing = entries.find(entry => !entry.tool?.done && /image_?gen/i.test(`${entry.tool?.tool} ${entry.tool?.target}`));
   // The documents, pages and videos these steps finished writing, each once.
   const files = useMemo(() => [...new Set(entries.flatMap(entry => entry.tool?.done && !entry.tool.failed ? entry.tool.written ?? [] : []))].filter(previewable), [entries]);
   return <div className={`reading-tools ${running ? 'is-running' : ''}`}>
@@ -139,6 +153,7 @@ function ToolGroup({ entries, live, projectId, onOpen }: { entries: Conversation
     {shown && <ul>{entries.map(entry => <li key={entry.id} className={`${entry.tool!.done ? '' : 'is-running'} ${entry.tool!.failed ? 'is-failed' : ''} reading-tool-${entry.tool!.kind}`}>
       <b>{stepVerb(entry.tool!)}</b><code title={entry.tool!.target}>{entry.tool!.target}</code>{entry.tool!.detail && <small>{entry.tool!.detail}</small>}
     </li>)}</ul>}
+    {drawing && <ImageProgress step={drawing.id} />}
     {files.length > 0 && <FileCards projectId={projectId} files={files} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} />}
   </div>;
 }
@@ -184,7 +199,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   // Images pasted for the next message. The agent holds them itself; this only counts them.
   const [images, setImages] = useState<string[]>([]), originals = useRef(new Map<string, string>());
   const scroller = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null);
-  const cli = useReadingCli(terminal.id, terminal.sessionId, terminal.agent === 'claude' ? 'claude' : 'codex', entries, input, autoFocus);
+  const cli = useReadingCli(terminal.id, terminal.sessionId, terminal.agent === 'claude' ? 'claude' : 'codex', input, autoFocus);
   // A question's own key hint with no card read from it (the question is taller than the view, or its hint wrapped):
   // a message typed here would land in the question, so the box waits and the terminal shows the question instead.
   const unreadQuestion = !screen.choice && !!visibleScreen?.rows.some(row => /\benter to submit (?:answer|all)\b/i.test(row) || /^\s*Enter to select\b.*\bEsc to cancel\b/i.test(row));
@@ -247,7 +262,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const claudeIdle = terminal.agent === 'claude' && !!visibleScreen && isAtPrompt('claude', visibleScreen.rows, screen);
   const working = terminal.codexActive && terminal.codexActivity === 'working' && !claudeIdle;
   const agent = terminal.agent === 'claude' ? 'Claude Code' : 'Codex';
-  const grouped = useMemo(() => blocks(cli.entries), [cli.entries]);
+  const grouped = useMemo(() => blocks(entries), [entries]);
   const tail = useVisibleTail(grouped, conversation, scroller, stuck, holdPosition);
   // One message at a time: a second Enter while the first is still being pasted waits for nothing and sends nothing.
   const send = async (text = draft.trim()) => {
@@ -262,7 +277,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     const look = (first = false) => {
       const current = readScreen(terminal.id);
       if (!current) return { key: null, closed: true };
-      const parsed = parseAgentScreen(agent, current.rows), key = cliCloseKey(agent, current.rows, parsed, first ? command : undefined);
+      const parsed = parseAgentScreen(agent, current.rows), key = cliCloseKey(agent, current.rows, parsed, first ? command : undefined, cli.panel?.rows);
       return { key, closed: !key && hasCliInput(agent, current.rows, parsed) };
     };
     let state = look(true);
@@ -290,6 +305,18 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (!result.ok) { cancelEcho(pendingId); if (mounted.current) { edit(text); setImages(shown); } onError(result.error); return; }
     if (text) history.set(terminal.id, [...(history.get(terminal.id) || []), text].slice(-50));
   };
+  // Escape with a command's card open closes what the command opened (a dialog, a pager, a side conversation) rather
+  // than interrupting the round, pressing again while the dialog only left an inner mode (Claude's /config search).
+  // Closed, the card ends at once with what the command showed (a command left this way prints nothing more); with
+  // nothing left to close (its output still awaited) it is put away the same way.
+  const closeCommand = async () => {
+    const agentKind = terminal.agent === 'claude' ? 'claude' : 'codex', command = cli.panel?.command ?? '', current = readScreen(terminal.id);
+    const key = current ? cliCloseKey(agentKind, current.rows, parseAgentScreen(agentKind, current.rows), command, cli.panel?.rows) : null;
+    if (!cli.busy || !key) { cli.close(); return; }
+    if (key === '\x03') { window.agentrix.writeTerminal(terminal.id, key); cli.close(); return; }
+    if (await closeDialog(agentKind, command)) cli.close();
+    else if (mounted.current) onError(t('命令的对话框没有关闭，请在终端中关闭。'));
+  };
   const interrupt = () => { if (direct) void window.agentrix.agentInterrupt(terminal.id).then(result => { if (!result.ok) onError(result.error); }); else window.agentrix.writeTerminal(terminal.id, '\x1b'); };
   // The CLI recognises slash commands and shell mode from typed keys, not bracketed paste.
   const deliver = async (text: string) => {
@@ -302,10 +329,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     // A command's dialog still open (Claude's /usage, /config) would take this message's keys and Enter: close it first.
     // In a Codex side conversation a message is part of it: the card stays and nothing is closed. Its messages never
     // reach the main conversation's records, so they get no echo there either.
-    const side = !!cli.panel && isSideConversation(agentKind, cli.panel.command);
+    const side = !!cli.panel && isSideConversation(agentKind, cli.panel.command, [...cli.panel.rows, ...readScreen(terminal.id)?.rows ?? []]);
+    if (cli.panel && !cli.busy) cli.close();
     if (cli.busy && !side) {
       const command = cli.panel?.command;
-      cli.cancel();
+      cli.close();
       if (!await closeDialog(agentKind, command)) { if (mounted.current) onError(t('命令的对话框没有关闭，请在终端中关闭后再发送。')); return; }
     }
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
@@ -415,7 +443,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
         event.preventDefault(); if (event.key === 'Enter' && draft === selected.name) void send(); else complete(selected); return;
       }
     } else {
-      if (event.key === 'Escape') { if (working) { event.preventDefault(); interrupt(); } return; }
+      if (event.key === 'Escape') { if (cli.panel) { event.preventDefault(); void closeCommand(); } else if (working) { event.preventDefault(); interrupt(); } return; }
       const node = event.currentTarget, sent = history.get(terminal.id) || [];
       if (!event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey && node.selectionStart === node.selectionEnd && ((event.key === 'ArrowUp' && node.selectionStart === 0) || (event.key === 'ArrowDown' && node.selectionEnd === draft.length))) {
         if (event.key === 'ArrowUp' && sent.length) {
@@ -442,15 +470,13 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     : working || pending.some(prompt => prompt.sending) ? <WorkingLine key={terminal.sessionId} agent={terminal.agent === 'claude' ? 'claude' : 'codex'} label={terminal.action ? t('正在{step}', { step: actionText(terminal.action) }) : t('{agent} 正在思考', { agent })} />
     : null;
   let body: ReactNode;
-  if (!cli.entries.length && !pending.length) body = <ReadingWelcome agent={terminal.agent === 'claude' ? 'claude' : 'codex'} commands={commands} complete={complete} disabled={inputBlocked}
+  if (!entries.length && !pending.length) body = <ReadingWelcome agent={terminal.agent === 'claude' ? 'claude' : 'codex'} commands={commands} complete={complete} disabled={inputBlocked}
     screen={direct ? { ...screen, status: { ...screen.status, model: terminal.agentInfo?.model || null, effort: terminal.agentInfo?.effort || null } } : screen}
     starting={direct ? directStarting : welcomeIsStarting} names={direct ? DIRECT_COMMANDS.map(command => command.name) : undefined} />;
   else body = <>
     {tail.earlier > 0 && <button type="button" className="text-button reading-earlier" onClick={tail.showEarlier}>{t('显示更早的对话（{count}）', { count: tail.earlier })}</button>}
     {tail.visible.map((block, index) => block.kind === 'tools'
     ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onOpen={onOpenLink} />
-    : (block.entry as CliOutputEntry).cliOutput
-      ? <ReadingCommandOutput key={block.entry.id} rows={(block.entry as CliOutputEntry).cliOutput!} />
     : block.entry.role === 'user'
       ? <div key={block.entry.id} className="reading-user"><span>{t('你')}</span><UserText text={block.entry.text || ''} />{block.entry.images && <UserImages images={block.entry.images} />}</div>
       : <div key={block.entry.id} className="reading-assistant">{block.entry.text ? <Markdown text={block.entry.text} /> : null}
@@ -464,12 +490,8 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   }}>
     <div className="reading-scroll-area">
       <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} undelivered={undelivered} onResend={resend} onDiscard={prompt => cancelEcho(prompt.id)} />
-        {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} terminalId={terminal.id} exitOnEscape={isSideConversation(terminal.agent === 'claude' ? 'claude' : 'codex', cli.panel.command)} onExit={() => {
-          const key = visibleScreen && cliCloseKey(terminal.agent === 'claude' ? 'claude' : 'codex', visibleScreen.rows, screen, cli.panel?.command);
-          if (key) window.agentrix.writeTerminal(terminal.id, key);
-          cli.cancel(); input.current?.focus();
-        }} />}
         {status}</div></div>
+      {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} done={!!cli.panel.done} terminalId={terminal.id} onClose={() => { void closeCommand(); input.current?.focus(); }} />}
       {!stuck && <div className="reading-latest">
         {unseen > 0 && <span className="reading-unseen" role="status">{t('{count} 条新消息', { count: unseen })}</span>}
         <button type="button" className="icon-button reading-jump" title={t('跳到最新消息')} aria-label={t('跳到最新消息')} onClick={() => toBottom('smooth')}><ArrowDown size={18} /></button>

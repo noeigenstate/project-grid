@@ -29,8 +29,9 @@
   --wallpaper-text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
 }
 
-/* 1. The wallpaper, darkened and smoothed evenly (the panes blur it much further behind themselves). */
-:root[data-theme] .app-shell::before { background: rgba(6, 10, 16, .22); backdrop-filter: blur(3px) brightness(.8) saturate(.9); }
+/* 1. The wallpaper, sharp and slightly darkened: the frosted panes keep their own text clear, so the picture around
+   them is left as it is. */
+:root[data-theme] .app-shell::before { background: rgba(6, 10, 16, .22); backdrop-filter: brightness(.8) saturate(.9); }
 
 /* 2. Frosted panes. */
 :root[data-theme] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview) { background: transparent; backdrop-filter: none; border-color: transparent; isolation: isolate; }
@@ -99,8 +100,7 @@
 /* Only the reader's own messages sit on a card, so they are easy to find when scrolling back; tool calls and
    command results read as part of the answer. */
 :root[data-theme] .reading-user { border-radius: var(--card-radius); background: var(--card-fill); box-shadow: inset 0 0 0 1px var(--card-line); }
-:root[data-theme] :is(.reading-tools, .reading-command-output) { border-radius: 0; background: none; box-shadow: none; }
-:root[data-theme] .reading-command-output { margin: 4px 0 10px; padding: 0; }
+:root[data-theme] .reading-tools { border-radius: 0; background: none; box-shadow: none; }
 :root[data-theme] .reading-user { padding: 12px 16px; gap: 12px; }
 :root[data-theme] .reading-user > span { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border-radius: 8px; background: rgba(59, 158, 255, .22); box-shadow: inset 0 0 0 1px rgba(120, 190, 255, .35); color: #9fd0ff; font-size: 11.5px; line-height: 1; }
 :root[data-theme] .reading-user > p { color: var(--ink); }
@@ -119,7 +119,6 @@
 :root[data-theme] .reading-code { border-radius: 10px; background: rgba(4, 7, 12, .42); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 :root[data-theme] .reading-code-bar { background: rgba(255, 255, 255, .05); color: var(--ink-secondary); }
 :root[data-theme] .reading-code pre { color: #e3ecf5; }
-:root[data-theme] .reading-command-output .reading-choice-head { color: var(--ink-secondary); }
 :root[data-theme] .reading-choice { --choice-accent: var(--accent-blue); border-radius: var(--card-radius); background: rgba(14, 18, 26, .62); box-shadow: inset 2px 0 0 var(--choice-accent), inset 0 0 0 1px var(--card-line), 0 8px 24px rgba(0, 0, 0, .22); color: var(--ink); }
 :root[data-theme] .reading-choice.is-permission { --choice-accent: #ff8ac9; }
 :root[data-theme] .reading-question-actions .button.primary { border: 0; background: var(--accent-blue); color: #ffffff; text-shadow: none; box-shadow: 0 4px 12px -4px rgba(59, 158, 255, .7); }

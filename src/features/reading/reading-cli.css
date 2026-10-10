@@ -1,13 +1,14 @@
-.reading-cli-panel .reading-choice-head strong { font-family: var(--font-mono); }
-.reading-command-output { margin: 4px 0 10px; padding: 0; }
-.reading-command-output .reading-choice-head { color: #9fb9d3; font-size: 11px; }
-
-/* A slash command in the conversation, laid out like the rest of the document. */
-/* A running command takes keys, so a thin rule beside it marks the group; it has no card of its own. */
-.reading-cli-panel { margin: 4px 0 8px; padding: 2px 0 2px 14px; border-left: 2px solid rgba(120, 180, 255, .35); outline: none; }
-.reading-cli-panel:focus-visible, .reading-cli-panel:focus-within { border-left-color: rgba(120, 190, 255, .9); }
-.reading-cli-panel > .reading-choice-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.reading-cli-panel > .reading-choice-head strong { flex: 1; color: #8fc4ff; font: 600 13px var(--font-mono); }
+/* A slash command in a popup over the conversation: the page dims behind it, the window sits in the middle and
+   scrolls on its own when the command shows a lot. */
+.reading-cli-overlay { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px; background: rgba(4, 9, 16, .46); backdrop-filter: blur(3px); animation: reading-cli-in .14s ease-out; }
+.reading-cli-panel { display: flex; flex-direction: column; width: min(760px, 100%); max-height: min(78%, 680px); border-radius: var(--card-radius, 12px); outline: none;
+  background: var(--glass-solid, rgba(14, 20, 30, .92)); box-shadow: inset 0 0 0 1px var(--card-line, rgba(255, 255, 255, .13)), 0 24px 60px -20px rgba(0, 0, 0, .7); overflow: hidden; }
+.reading-cli-head { display: flex; align-items: baseline; gap: 12px; padding: 12px 18px 10px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.reading-cli-head strong { flex: 1; color: #8fc4ff; font: 600 13px var(--font-mono); }
+.reading-cli-head small { font-size: 11px; color: var(--ink-secondary, #a9bfd6); }
+.reading-cli-body { min-height: 0; padding: 14px 18px 16px; overflow: auto; }
+@keyframes reading-cli-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .reading-cli-overlay { animation: none; } }
 .cli-waiting { display: flex; align-items: center; gap: 8px; margin: 2px 0; font-size: 13px; color: var(--ink-secondary, #a9bfd6); }
 .cli-blocks { display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; line-height: 1.6; color: var(--ink, #e8f1fa); }
 .cli-blocks h5 { margin: 6px 0 0; font-size: 13.5px; font-weight: 600; color: var(--ink, #f1f7ff); }
@@ -24,7 +25,8 @@
 .cli-meter small { color: var(--ink-secondary, #a9bfd6); font-size: 12px; }
 .cli-hint { margin: 2px 0 0; font-size: 12px; color: var(--ink-secondary, #a9bfd6); }
 .cli-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-/* Folded: the head alone, without the gap it keeps above the content. */
-.reading-cli-panel > .reading-choice-head:last-child { margin-bottom: 0; }
 /* A bar given as a value sits in its table row, its text read like the other values. */
 .cli-pairs .cli-meter small { color: inherit; font-size: inherit; }
+/* The light theme: the command name in the ink of the page, the rule under the head darker. */
+:root[data-theme="mono-amber"] .reading-cli-head { border-bottom-color: rgba(0, 0, 0, .1); }
+:root[data-theme="mono-amber"] .reading-cli-head strong { color: var(--theme-ink); }

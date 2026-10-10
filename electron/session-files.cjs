@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { OversizedLine } = require('./oversized-record.cjs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const { transcriptWindow } = require('./transcript-window.cjs');
@@ -11,17 +12,23 @@ const WALK_INTERVAL = 2000, NAMES_INTERVAL = 10000, WATCHED_WALK_INTERVAL = 5 * 
 
 async function* records(filename, { historyWindow = false } = {}) {
   const window = historyWindow ? transcriptWindow((await fsp.stat(filename)).size) : { offset: 0, skipping: false };
-  let buffer = Buffer.alloc(0); let skipping = window.skipping;
+  let buffer = Buffer.alloc(0); let skipping = window.skipping, oversized = null;
   for await (const chunk of fs.createReadStream(filename, { start: window.offset, highWaterMark: 64 * 1024 })) {
     buffer = Buffer.concat([buffer, chunk]);
     let index;
     while ((index = buffer.indexOf(10)) >= 0) {
       const line = buffer.subarray(0, index);
       buffer = buffer.subarray(index + 1);
-      if (!skipping && line.length <= 1024 * 1024) { try { yield JSON.parse(line.toString('utf8')); } catch { } }
-      skipping = false;
+      // An oversized line ends here: a generated picture's record is rebuilt from its two ends.
+      const long = oversized ?? (!skipping && line.length > 1024 * 1024 ? new OversizedLine(Buffer.alloc(0)) : null);
+      if (long) { long.add(line); const record = long.record(); if (record) yield record; }
+      else if (!skipping) { try { yield JSON.parse(line.toString('utf8')); } catch { } }
+      skipping = false; oversized = null;
     }
-    if (buffer.length > 1024 * 1024) { buffer = Buffer.alloc(0); skipping = true; }
+    if (buffer.length > 1024 * 1024) {
+      if (oversized) oversized.add(buffer); else if (!skipping) oversized = new OversizedLine(buffer);
+      buffer = Buffer.alloc(0); skipping = true;
+    }
   }
   if (buffer.length && !skipping) { try { yield JSON.parse(buffer.toString('utf8')); } catch { } }
 }

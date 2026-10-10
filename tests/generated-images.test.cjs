@@ -41,7 +41,10 @@ test('Codex connected directly shows its generated pictures the same way', t => 
   t.after(() => setThumbnailer(() => null));
   const conversation = new ConversationLog(), actions = new ActionLog(() => {});
   const events = new CodexEvents({ conversation, actions, cwd: 'C:\\work', now: () => 5 });
+  events.notify('item/started', { item: { type: 'imageGeneration', id: 'ig1', status: 'inProgress' } });
+  assert.equal(conversation.list[0].tool.done, false, 'the picture being drawn is a running step, so the view can show its progress');
   events.notify('item/completed', { item: { type: 'imageGeneration', id: 'ig1', status: 'completed', revisedPrompt: 'A pink circle', result: 'iVBOR', savedPath: saved } });
-  assert.deepEqual(conversation.list.map(entry => [entry.id, entry.role, entry.images[0], entry.generated.prompt]), [['g:ig1', 'assistant', 'data:image/jpeg;base64,THUMB', 'A pink circle']]);
-  assert.equal(actions.list.length, 0, 'not counted as a tool step');
+  const picture = conversation.list.find(entry => entry.generated);
+  assert.deepEqual([picture.id, picture.role, picture.images[0], picture.generated.prompt], ['g:ig1', 'assistant', 'data:image/jpeg;base64,THUMB', 'A pink circle']);
+  assert.equal(conversation.list.find(entry => entry.tool).tool.done, true, 'the step ends with the picture');
 });

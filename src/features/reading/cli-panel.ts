@@ -1,5 +1,4 @@
 import type { AgentScreen, ScreenAgent } from '../agents/agent-screen-types.ts';
-import type { ConversationEntry } from '../../shared/types.ts';
 
 const rule = (row: string) => /^[─╌]{2,}$/.test(row.trim());
 // Claude draws a dialog that takes the input's place under an overline (▔▔▔), with its effort indicator
@@ -82,12 +81,16 @@ function cliDialogOpen(agent: ScreenAgent, rows: string[], screen: AgentScreen):
 }
 
 // Codex's /side opens a side conversation that only Ctrl+C leaves; Escape there tries to edit the last prompt.
-export const isSideConversation = (agent: ScreenAgent, command: string) => agent === 'codex' && /^\/side\b/.test(command.trim());
+// Codex refuses /side in a conversation with nothing in it yet ("'/side' is unavailable until …"): then no side
+// conversation opened, and /side is an ordinary command whose result is that line. rows: what it printed, then the
+// screen; the latest row naming /side tells, so an older refusal still on screen doesn't hide a side conversation.
+const sideRefused = (rows: readonly string[]) => /is unavailable/i.test([...rows].reverse().find(row => /\/side\b/.test(row)) ?? '');
+export const isSideConversation = (agent: ScreenAgent, command: string, output: readonly string[] = []) => agent === 'codex' && /^\/side\b/.test(command.trim()) && !sideRefused(output);
 
 // The key that closes what a command left open: Ctrl+C for a Codex side conversation, q for a pager (Codex's /diff),
 // Escape for a dialog, nothing when the CLI is back at its input (Escape there would start editing the last message).
-export function cliCloseKey(agent: ScreenAgent, rows: string[], screen: AgentScreen, command = ''): string | null {
-  if (isSideConversation(agent, command)) return '\x03';
+export function cliCloseKey(agent: ScreenAgent, rows: string[], screen: AgentScreen, command = '', output: readonly string[] = []): string | null {
+  if (isSideConversation(agent, command, [...output, ...rows])) return '\x03';
   if (rows.some(row => /\bq close\b/i.test(row))) return 'q';
   return cliDialogOpen(agent, rows, screen) ? '\x1b' : null;
 }
@@ -205,18 +208,18 @@ export function extractCliOutputRows(agent: ScreenAgent, rows: string[], screen:
 }
 
 export type CliCommand = {
-  id: string; command: string; at: number; anchor: string | null;
+  id: string; command: string; at: number;
   observed: boolean; idleSince: number | null; output: string[];
-  // The last dialog drawn in the input's place: what such a command showed, kept once it is closed.
+  // The last dialog drawn in the input's place: what such a command showed, still shown once it is closed.
   dialog: string[];
   // The history above the input when the command was sent.
   before?: string[];
+  // It asked something (a picker, a menu): answered or dismissed, it has nothing more to print.
+  chose?: boolean;
 };
-export type CliResult = Pick<CliCommand, 'id' | 'command' | 'at' | 'anchor'> & { rows: string[] };
-export type CliOutputEntry = ConversationEntry & { cliOutput?: string[] };
 
-// What a finished command leaves in the conversation: its dialog when it drew one (without the CLI's own
-// "dialog dismissed" note), else what it printed above the input.
+// What a finished command shows in its popup: its dialog when it drew one (without the CLI's own "dialog dismissed"
+// note), else what it printed above the input.
 export function cliResultRows(command: CliCommand): string[] {
   if (!command.dialog.length) return command.output;
   const printed = command.output.filter(row => row.trim() && !/dialog dismissed|^\s*⎿\s*$/i.test(row));
@@ -226,10 +229,11 @@ export function cliResultRows(command: CliCommand): string[] {
 // Stream observations start the idle clock; timer ticks only advance it. The
 // pre-submit snapshot must never complete a command before the CLI receives it.
 // Codex returns to its input at once and prints some results a while later (/status fetches the account's limits):
-// it is done once its output has stopped changing, and a command that printed nothing yet is given several seconds.
+// it is done once its output has stopped changing, and a command that printed nothing yet is given several seconds,
+// unless it asked something (Codex's /model picker): then nothing more is coming.
 const CODEX_PATIENCE = 8000;
 export function advanceCliCommand(command: CliCommand, agent: ScreenAgent, rows: string[], screen: AgentScreen, now: number, observation: boolean) {
-  const next = { ...command, observed: command.observed || observation };
+  const next = { ...command, observed: command.observed || observation, chose: command.chose || !!screen.choice };
   const idle = isCliIdle(agent, rows, screen);
   if (!next.observed || !idle) next.idleSince = null;
   else {
@@ -238,29 +242,8 @@ export function advanceCliCommand(command: CliCommand, agent: ScreenAgent, rows:
     else next.idleSince ??= now;
     next.output = output;
   }
-  const waited = agent !== 'codex' || next.output.length > 0 || now - command.at >= CODEX_PATIENCE;
+  const waited = agent !== 'codex' || next.output.length > 0 || next.chose || now - command.at >= CODEX_PATIENCE;
   return { command: next, done: next.idleSince !== null && now - next.idleSince >= 400 && waited };
-}
-
-// Insert immediately after the transcript's command when available. Otherwise a
-// local command row provides its anchor. Repeated commands match only after the
-// entry that preceded this submission, and each transcript row is used once.
-export function mergeCliResults(entries: ConversationEntry[], results: CliResult[]): CliOutputEntry[] {
-  const merged: CliOutputEntry[] = [...entries];
-  const used = new Set<string>();
-  for (const result of results) {
-    const anchor = result.anchor ? merged.findIndex(entry => entry.id === result.anchor) : -1;
-    let index = merged.findIndex((entry, at) => at > anchor && entry.role === 'user' && entry.text?.trim() === result.command && !used.has(entry.id));
-    if (index >= 0) used.add(merged[index].id);
-    else {
-      index = merged.findIndex((entry, at) => at > anchor && entry.at > result.at);
-      if (index < 0) index = merged.length;
-      merged.splice(index, 0, { id: result.id + '-command', at: result.at, role: 'user', text: result.command });
-    }
-    used.add(merged[index].id);
-    merged.splice(index + 1, 0, { id: result.id, at: result.at, role: 'assistant', cliOutput: result.rows });
-  }
-  return merged;
 }
 
 export function cliPanelKey(event: { key: string; shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }): string | null {

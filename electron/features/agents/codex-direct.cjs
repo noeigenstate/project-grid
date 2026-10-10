@@ -44,6 +44,7 @@ function itemAction(item, at, cwd) {
   if (item.type === 'mcpToolCall') return { ...base, kind: 'mcp', tool: `mcp__${item.server}__${item.tool}`, target: `${item.server} · ${item.tool}`, server: String(item.server || '') };
   if (item.type === 'webSearch') return { ...base, kind: 'web', tool: 'web_search', target: String(item.query || item.action?.query || '') };
   if (item.type === 'dynamicToolCall') return { ...base, kind: 'other', tool: String(item.tool || ''), target: String(item.tool || '') };
+  if (item.type === 'imageGeneration') return { ...base, kind: 'other', tool: 'image_gen__imagegen', target: 'image_gen__imagegen' };
   if (item.type === 'collabAgentToolCall') return { ...base, kind: 'agent', tool: 'agent', target: String(item.prompt || '').slice(0, 160) };
   return null;
 }
@@ -80,8 +81,9 @@ class CodexEvents {
       if (done && (said || shown.length)) this.conversation.put({ id: `u:${item.id}`, at, role: 'user', text: said, ...(shown.length ? { images: shown } : {}) });
       return;
     }
+    // A generated picture shows where its step ends.
     const picture = done ? generatedImage(item, at) : null;
-    if (picture) { this.conversation.put(picture); return; }
+    if (picture) this.conversation.put(picture);
     if (item.type === 'agentMessage') {
       if (!done) return;
       this.answers.delete(String(item.id));

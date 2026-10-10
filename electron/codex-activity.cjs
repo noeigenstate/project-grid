@@ -4,6 +4,7 @@ const os = require('node:os');
 const { interactiveSession } = require('./session-restore.cjs');
 const { rolloutFiles, sessionMeta } = require('./session-files.cjs');
 const { transcriptWindow, LIVE_READ_LIMIT } = require('./transcript-window.cjs');
+const { OversizedLine } = require('./oversized-record.cjs');
 
 // Only interactive rollout files can own a project card. A child agent can
 // inherit notify, but its completion does not end the interactive parent turn.
@@ -11,7 +12,7 @@ class CodexActivityReader {
   constructor(cwd, home = process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), since = Date.now(), options = {}) {
     this.cwd = cwd; this.directory = path.join(home, 'sessions'); this.since = since;
     this.options = options; this.boundThread = null;
-    this.offset = 0; this.buffer = Buffer.alloc(0); this.skipping = false;
+    this.offset = 0; this.buffer = Buffer.alloc(0); this.skipping = false; this.oversized = null;
     this.snapshot = null; this.nextDiscovery = 0;
   }
   async discover() {
@@ -78,10 +79,16 @@ class CodexActivityReader {
         let newline;
         while ((newline = this.buffer.indexOf(10)) !== -1) {
           const line = this.buffer.subarray(0, newline); this.buffer = this.buffer.subarray(newline + 1);
-          if (!this.skipping && line.length <= 1024 * 1024) { try { this.record(JSON.parse(line.toString('utf8'))); } catch {} }
-          this.skipping = false;
+          // An oversized line ends here: a generated picture's record is rebuilt from its two ends.
+          const oversized = this.oversized ?? (!this.skipping && line.length > 1024 * 1024 ? new OversizedLine(Buffer.alloc(0)) : null);
+          if (oversized) { oversized.add(line); const record = oversized.record(); if (record) this.record(record); }
+          else if (!this.skipping) { try { this.record(JSON.parse(line.toString('utf8'))); } catch {} }
+          this.skipping = false; this.oversized = null;
         }
-        if (this.buffer.length > 1024 * 1024) { this.buffer = Buffer.alloc(0); this.skipping = true; }
+        if (this.buffer.length > 1024 * 1024) {
+          if (this.oversized) this.oversized.add(this.buffer); else if (!this.skipping) this.oversized = new OversizedLine(this.buffer);
+          this.buffer = Buffer.alloc(0); this.skipping = true;
+        }
       }
       if (this.historyPending && this.offset >= stat.size) { this.historyPending = false; this.options.onHistory?.(true); }
       return this.offset >= stat.size ? { ...this.snapshot } : null;

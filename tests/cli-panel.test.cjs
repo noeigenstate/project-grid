@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { parseAgentScreen } = require('../src/features/agents/agent-screen.ts');
-const { cliCloseKey, cliHistory, isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, mergeCliResults, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
+const { cliCloseKey, isSideConversation, cliHistory, isCliIdle, extractCliPanelRows, extractCliOutputRows, advanceCliCommand, cliPanelKey } = require('../src/features/reading/cli-panel.ts');
 const fixture = name => fs.readFileSync(path.join(__dirname, 'fixtures/screens', name + '.txt'), 'utf8').split('\n');
 const inspect = (agent, rows) => parseAgentScreen(agent, rows);
 const footer = agent => agent === 'claude' ? ['  ⏺ Opus 5.5 · demo · ctx 4%   ● high · /effort', '  ⏸ manual mode on · ← for agents'] : ['  GPT-6.1-Sol high · C:\\work\\demo · 90% left', '? for shortcuts'];
@@ -126,25 +126,6 @@ test('live output updates during idle debounce and dialog close adds nothing', (
   const empty = ['❯ /cost', ...input('claude')];
   assert.deepEqual(advanceCliCommand(command, 'claude', empty, inspect('claude', empty), 400, true).command.output, []);
 });
-test('results merge immediately after their transcript command without mutating transcript', () => {
-  const entries = [{ id: 'old', at: 1, role: 'user', text: '/cost' }, { id: 'command', at: 3, role: 'user', text: '/cost' }, { id: 'reply', at: 4, role: 'assistant', text: 'Next' }];
-  const result = { id: 'output', at: 2, anchor: 'old', command: '/cost', rows: ['cost'] };
-  const merged = mergeCliResults(entries, [result]);
-  assert.deepEqual(merged.map(entry => entry.id), ['old', 'command', 'output', 'reply']);
-  assert.deepEqual(merged[2].cliOutput, ['cost']);
-  assert.equal(entries.length, 3);
-  assert.deepEqual(mergeCliResults(entries, [result]), merged);
-});
-test('local command and result precede later transcript entries when CLI does not record commands', () => {
-  const entries = [{ id: 'old', at: 1, role: 'assistant', text: 'Old' }, { id: 'new', at: 5, role: 'user', text: 'Next' }];
-  const merged = mergeCliResults(entries, [{ id: 'a', at: 2, anchor: 'old', command: '/status', rows: ['status'] }, { id: 'b', at: 3, anchor: 'old', command: '/status', rows: ['status again'] }]);
-  assert.deepEqual(merged.map(entry => entry.id), ['old', 'a-command', 'a', 'b-command', 'b', 'new']);
-});
-test('each repeated transcript command anchors one output', () => {
-  const entries = [{ id: 'a', at: 1, role: 'user', text: '/cost' }, { id: 'b', at: 2, role: 'user', text: '/cost' }];
-  const results = ['a', 'b'].map((id, i) => ({ id: id + '-out', command: '/cost', at: i + 1, anchor: null, rows: [id] }));
-  assert.deepEqual(mergeCliResults(entries, results).map(entry => entry.id), ['a', 'a-out', 'b', 'b-out']);
-});
 test('panel keys forward navigation, editing, search, tabs and control keys', () => {
   for (const [key, data] of [['ArrowUp', '\x1b[A'], ['ArrowDown', '\x1b[B'], ['ArrowLeft', '\x1b[D'], ['ArrowRight', '\x1b[C'], ['Enter', '\r'], ['Escape', '\x1b'], ['Tab', '\t'], ['Backspace', '\x7f'], [' ', ' '], ['a', 'a'], ['中', '中']]) assert.equal(cliPanelKey({ key }), data);
   assert.equal(cliPanelKey({ key: 'Tab', shiftKey: true }), '\x1b[Z');
@@ -181,12 +162,12 @@ function rendererHarness(t) {
   const previousWindow = globalThis.window;
   globalThis.window = { setInterval, clearInterval };
   t.after(() => { if (previousWindow === undefined) delete globalThis.window; else globalThis.window = previousWindow; });
-  const render = (id = 'a', session = 'session', entries = []) => mod.exports.useReadingCli(id, session, 'claude', entries, { current: { focus: () => focused++ } }, true);
+  const render = (id = 'a', session = 'session') => mod.exports.useReadingCli(id, session, 'claude', { current: { focus: () => focused++ } }, true);
   const emit = (id, rows) => { screens.set(id, { rows }); watchers.get(id)?.({ rows }); };
   return { render, emit, tick: ms => t.mock.timers.tick(ms), remount: () => { prior = null; }, focused: () => focused, watchers };
 }
 
-test('renderer waits for screen output, keeps panel through 400 ms idle, then restores composer', t => {
+test('renderer waits for screen output, keeps the finished popup until it is closed, then restores the composer', t => {
   const harness = rendererHarness(t);
   harness.emit('a', input('claude'));
   harness.render().begin('/status');
@@ -196,17 +177,19 @@ test('renderer waits for screen output, keeps panel through 400 ms idle, then re
   assert.deepEqual(harness.render().panel.rows, ['  Status tabs', 'Esc to close']);
   harness.emit('a', ['❯ /status', '  Printed status', ...input('claude')]);
   harness.tick(399);
-  assert.ok(harness.render().panel);
+  assert.equal(harness.render().busy, true);
   harness.tick(1);
   const done = harness.render();
   assert.equal(done.busy, false);
-  assert.equal(done.panel, null);
-  // The dialog it drew stays as the command's result, followed by what it printed on closing.
-  assert.deepEqual(done.entries.map(entry => entry.text ?? entry.cliOutput), ['/status', ['  Status tabs', 'Esc to close', '', '  Printed status']]);
-  assert.equal(harness.focused(), 1);
+  // The popup stays on what the command showed: the dialog it drew, then what it printed on closing.
+  assert.deepEqual(done.panel, { command: '/status', rows: ['  Status tabs', 'Esc to close', '', '  Printed status'], done: true });
+  assert.equal(harness.focused(), 0);
   assert.equal(harness.watchers.size, 0);
+  done.close();
+  assert.equal(harness.render().panel, null);
+  assert.equal(harness.focused(), 1, 'the message box takes the keyboard back once the popup closes');
 });
-test('renderer choice takes priority and empty dialog close creates no output', t => {
+test('renderer choice takes priority and a dialog closed without content leaves no popup', t => {
   const harness = rendererHarness(t);
   harness.render().begin('/model');
   harness.emit('a', fixture('claude-model-menu'));
@@ -214,18 +197,19 @@ test('renderer choice takes priority and empty dialog close creates no output', 
   assert.equal(harness.render().busy, true);
   harness.emit('a', ['❯ /model', ...input('claude')]);
   harness.tick(400);
-  assert.deepEqual(harness.render().entries, []);
+  assert.equal(harness.render().busy, false);
+  assert.equal(harness.render().panel, null);
 });
-test('renderer results survive remount, remain terminal-specific and reset for a new PTY session', t => {
+test('renderer popup survives remount, remains terminal-specific and resets for a new PTY session', t => {
   const harness = rendererHarness(t);
   harness.render().begin('! dir');
-  harness.remount(); // Opening the raw terminal does not stop the result watcher.
+  harness.remount(); // Opening the raw terminal does not stop the command's watcher.
   harness.emit('a', ['❯ ! dir', '  file.txt', ...input('claude')]);
   harness.tick(400);
-  assert.equal(harness.render().entries.length, 2);
-  assert.equal(harness.render('b').entries.length, 0);
-  assert.equal(harness.render('a', 'new-session').entries.length, 0);
-  assert.equal(harness.render().entries.length, 2);
+  assert.deepEqual(harness.render().panel.rows, ['  file.txt']);
+  assert.equal(harness.render('b').panel, null);
+  assert.equal(harness.render('a', 'new-session').panel, null);
+  assert.deepEqual(harness.render().panel.rows, ['  file.txt']);
 });
 test('renderer stops an old PTY watcher when the terminal session changes', t => {
   const harness = rendererHarness(t);
@@ -235,7 +219,7 @@ test('renderer stops an old PTY watcher when the terminal session changes', t =>
   assert.equal(next.busy, false);
   assert.equal(harness.watchers.size, 0);
   harness.tick(1000);
-  assert.deepEqual(harness.render('a', 'new-session').entries, []);
+  assert.equal(harness.render('a', 'new-session').panel, null);
 });
 
 test('a Claude dialog in a tall terminal shows itself, not the welcome banner above a run of blank rows', () => {
@@ -313,6 +297,15 @@ test('a Codex side conversation closes with Ctrl+C; a pager with q; an open dial
   assert.equal(cliCloseKey('codex', pager, inspect('codex', pager), '/diff'), 'q');
   const idle = ['• Done.', '', ...input('codex')];
   assert.equal(cliCloseKey('codex', idle, inspect('codex', idle), '/pwd'), null);
+  // Refused in a conversation with nothing in it yet: no side conversation opened, and Ctrl+C would quit Codex.
+  const refused = ["■ '/side' is unavailable until the current conversation has started."];
+  assert.equal(cliCloseKey('codex', idle, inspect('codex', idle), '/side', refused), null);
+  assert.equal(isSideConversation('codex', '/side', refused), false);
+  assert.equal(isSideConversation('codex', '/side'), true);
+  const shown = [...refused, '', ...input('codex')];
+  assert.equal(cliCloseKey('codex', shown, inspect('codex', shown), '/side'), null, 'the refusal on screen before the command printed anything');
+  const later = [...refused, '', '› /side', '', 'Side conversation', '', ...input('codex')];
+  assert.equal(cliCloseKey('codex', later, inspect('codex', later), '/side'), '\x03', 'an older refusal above a side conversation');
 });
 
 test('a Codex command waits for output that comes a moment after its input returns, then for it to settle', () => {
@@ -364,4 +357,16 @@ test('a Claude dialog opened while Claude works is still a dialog: the next comm
   assert.equal(cliCloseKey('claude', busy, inspect('claude', busy), '/status'), null);
   const answering = ['✶ Razzmatazzing… (3s · esc to interrupt)', '', '● Line one of the poem'];
   assert.equal(cliCloseKey('claude', answering, inspect('claude', answering), '/status'), null);
+});
+
+test('a Codex command that asked something ends once the question is gone, without waiting for output', () => {
+  const sent = ['• Earlier answer', '', ...input('codex', '/model')];
+  let command = { id: 'c', command: '/model', at: 0, observed: true, idleSince: null, output: [], dialog: [], before: cliHistory('codex', sent, inspect('codex', sent)) };
+  const step = (rows, now) => { const next = advanceCliCommand(command, 'codex', rows, inspect('codex', rows), now, true); command = next.command; return next.done; };
+  const menu = fixture('codex-model-menu');
+  assert.ok(inspect('codex', menu).choice, 'the fixture is a picker');
+  assert.equal(step(menu, 100), false);
+  const back = ['• Earlier answer', '', ...input('codex')];
+  assert.equal(step(back, 200), false);
+  assert.equal(step(back, 600), true, 'done after the usual 400 ms idle, not the eight seconds a silent command gets');
 });

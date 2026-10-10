@@ -24,7 +24,7 @@
   color: var(--theme-ink);
   background: radial-gradient(ellipse at 85% 0, #f7f8fa 0, transparent 60%), linear-gradient(145deg, #e9ecef, #cbd0d6);
 }
-:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .app-shell::before { backdrop-filter: blur(18px) saturate(0); }
+:root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .app-shell::before { backdrop-filter: saturate(0); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.titlebar, .focus-sidebar, .file-preview, .project-panel, .settings-dialog, .dropdown, .voice-overlay, .tour-bubble) { color: var(--theme-ink); text-shadow: none; }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) .app-shell .titlebar { background: rgba(249, 250, 251, var(--glass-alpha, .52)); border-bottom: 1px solid var(--theme-line); }
 :root:is([data-theme="mono-amber"], [data-theme="mono-amber-dark"]) :is(.titlebar-brand, .panel-name, .tree-row, .eyebrow, .terminal-empty, .terminal-empty p, .file-preview-message, .reading-scroll, .reading-welcome, .reading-user > p, .reading-markdown, .reading-plain, .activity-item, .activity-item code, .guide-body) { color: var(--theme-ink); }

@@ -31,9 +31,8 @@
     linear-gradient(rgba(10, 22, 27, .19), rgba(10, 22, 27, .19)),
     url('../../assets/macos-high-sierra.webp') center / cover no-repeat;
 }
-/* The wallpaper is only seen directly in the gaps between panes. Softening it there keeps each
-   gap a calm band of colour instead of a sharp, noisy strip framed by two glass edges. */
-.app-shell::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; backdrop-filter: blur(14px) saturate(120%); }
+/* A layer over the wallpaper that themes tint; the wallpaper itself stays sharp. */
+.app-shell::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 .titlebar, .focus-sidebar, .project-panel, .settings-dialog, .file-preview {
   backdrop-filter: var(--liquid-backdrop, blur(6px) saturate(165%));
 }
