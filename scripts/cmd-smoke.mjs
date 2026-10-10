@@ -40,7 +40,9 @@ try {
   page = await application.firstWindow();
   await page.waitForSelector('.project-panel');
   await waitFor(receipt, 'the interrupted session is resumed through Command Prompt', 60000);
-  assert.deepEqual((await receipt()).args.slice(4), ['resume', sessionId, '继续'], 'cmd passes the resume arguments, Chinese included, through the codex wrapper');
+  // Then what the reading view can show (electron/features/agents/reading-note.cjs), before the user's own arguments.
+  assert.deepEqual([(await receipt()).args[4], /^developer_instructions="You run inside Agentrix[^"]*"$/.test((await receipt()).args[5])], ['-c', true], 'cmd gives Codex the reading view note');
+  assert.deepEqual((await receipt()).args.slice(6), ['resume', sessionId, '继续'], 'cmd passes the resume arguments, Chinese included, through the codex wrapper');
   assert.equal((await terminal()).shell, 'cmd');
   await waitFor(async () => (await terminal()).codexActive, 'the wrapper reports Codex as started');
   await page.screenshot({ path: path.join(output, 'cmd-codex.png') });

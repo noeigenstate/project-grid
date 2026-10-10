@@ -108,7 +108,9 @@ async function runScenario(label, delay) {
       if (project.restore.agent === 'claude') {
         assert.equal(result.args[0], '--settings', `${label}: ${project.name} uses the Claude wrapper`);
         assert.doesNotThrow(() => JSON.parse(result.args[1]), `${label}: ${project.name} receives settings JSON`);
-        assert.deepEqual(result.args.slice(2), ['--resume', project.sessionId, '继续'], `${label}: ${project.name} resumes intact`);
+        // Then what the reading view can show (electron/features/agents/reading-note.cjs), before the resume arguments.
+        assert.deepEqual([result.args[2], /^You run inside Agentrix/.test(result.args[3])], ['--append-system-prompt', true], `${label}: ${project.name} is told what the reading view shows`);
+        assert.deepEqual(result.args.slice(4), ['--resume', project.sessionId, '继续'], `${label}: ${project.name} resumes intact`);
       } else {
         assert.deepEqual(result.args.slice(-3), ['resume', project.sessionId, '继续'], `${label}: ${project.name} resumes intact`);
       }
