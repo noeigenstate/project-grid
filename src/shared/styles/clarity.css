@@ -1,5 +1,5 @@
 /* Clarity over the wallpaper, for every theme (the "界面清晰化" layout plan). Three layers keep text legible:
-   1. The wallpaper is darkened and smoothed once, evenly, so bright clouds never cut through text.
+   1. The wallpaper is shown as it is: sharp and at its own brightness; each pane dims only what lies behind it.
    2. Each card, the sidebar and the file preview is a frosted pane: a dark fill over a strong blur, a thin light
       edge and a soft shadow. The main message area of an expanded card is a little darker still.
    3. Content that matters at a glance (your prompts, the agent's commands and tool calls, code, questions, the
@@ -17,7 +17,8 @@
   --sidebar-muted: var(--ink-secondary);
   --pane-fill: rgba(28, 32, 40, .3);
   --pane-dim: rgba(16, 20, 28, .36);
-  --pane-blur: blur(24px) saturate(130%);
+  /* The wallpaper keeps its own brightness; only what lies behind a pane is dimmed, so light ink stays clear over clouds. */
+  --pane-blur: blur(24px) saturate(130%) brightness(.62);
   --pane-edge: linear-gradient(160deg, rgba(255, 255, 255, .34), rgba(255, 255, 255, .16) 35%, rgba(255, 255, 255, .14) 70%, rgba(255, 255, 255, .24));
   --pane-shadow: 0 8px 24px rgba(0, 0, 0, .18);
   --glass-radius: 16px;
@@ -29,9 +30,8 @@
   --wallpaper-text-shadow: 0 1px 3px rgba(0, 0, 0, .55);
 }
 
-/* 1. The wallpaper, sharp and slightly darkened: the frosted panes keep their own text clear, so the picture around
-   them is left as it is. */
-:root[data-theme] .app-shell::before { background: rgba(6, 10, 16, .22); backdrop-filter: brightness(.8) saturate(.9); }
+/* 1. The wallpaper as it is, sharp and at its own brightness: the frosted panes keep their own text clear. */
+:root[data-theme] .app-shell::before { background: transparent; backdrop-filter: none; }
 
 /* 2. Frosted panes. */
 :root[data-theme] :is(.project-panel, .focus-mode .project-panel, .project-panel.has-unread, .project-panel.round-complete, .focus-sidebar, .file-preview) { background: transparent; backdrop-filter: none; border-color: transparent; isolation: isolate; }
@@ -198,21 +198,21 @@
    - Linux compositors often blur backdrops in software: a lighter blur over a denser fill keeps panes smooth.
    - High-density screens keep the soft shadow and the full blur, which they render crisply. */
 @media (resolution < 1.5dppx) {
-  :root[data-theme] { --pane-blur: blur(20px) saturate(130%); }
+  :root[data-theme] { --pane-blur: blur(20px) saturate(130%) brightness(.62); }
 }
 @media (resolution < 2dppx) {
   :root[data-theme] .icon-button:not(.window-actions .icon-button):hover { transform: translateY(-1px); }
 }
 @media (resolution >= 2dppx) {
-  :root[data-theme] { --pane-blur: blur(28px) saturate(135%); }
+  :root[data-theme] { --pane-blur: blur(28px) saturate(135%) brightness(.62); }
 }
 :root[data-theme][data-platform="darwin"] .app-shell { -webkit-font-smoothing: antialiased; }
 /* Windows: Chinese in Microsoft YaHei UI rather than a fallback chain, no faux bold for weights the font lacks, and
    kerning without the extra ligature work that can shift glyphs off DirectWrite's pixel grid. */
 :root[data-theme][data-platform="win32"] { --font-ui: 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; }
 :root[data-theme][data-platform="win32"] .app-shell { font-synthesis: none; text-rendering: auto; font-kerning: normal; }
-:root[data-theme][data-platform="darwin"] { --pane-blur: blur(26px) saturate(165%); }
-:root[data-theme][data-platform="linux"] { --pane-fill: rgba(28, 32, 40, .46); --pane-dim: rgba(16, 20, 28, .52); --pane-blur: blur(14px) saturate(120%); }
+:root[data-theme][data-platform="darwin"] { --pane-blur: blur(26px) saturate(165%) brightness(.62); }
+:root[data-theme][data-platform="linux"] { --pane-fill: rgba(28, 32, 40, .46); --pane-dim: rgba(16, 20, 28, .52); --pane-blur: blur(14px) saturate(120%) brightness(.62); }
 /* More contrast asked for by the system: denser panes and plain text edges. Forced colours: the system's own. */
 @media (prefers-contrast: more) {
   :root[data-theme] { --pane-fill: rgba(16, 20, 28, .72); --pane-dim: rgba(10, 13, 19, .8); --ink-secondary: rgba(255, 255, 255, .86); --text-shadow: none; }

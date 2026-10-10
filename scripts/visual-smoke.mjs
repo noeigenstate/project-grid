@@ -62,8 +62,8 @@ async function checkDaylightContrast() {
         return (Math.max(ink, brightest) + .05) / (Math.min(ink, brightest) + .05);
       });
     }, { png: screenshot.toString('base64'), areas });
-    // The wallpaper is darkened once and each card's frost darkens it again, so even the brightest ground behind the
-    // text leaves white ink above 3:1 (body text also carries a soft shadow).
+    // The wallpaper keeps its own brightness; each card's frost dims what lies behind it, so even the brightest ground
+    // behind the text (clouds) leaves white ink above 3:1.
     console.log(`Daylight ink contrast with the brightest ground per card: ${contrasts.map(value => value.toFixed(2)).join(', ')}`);
     assert.ok(contrasts.every(value => value >= 3), `white ink stays legible over the brightest ground: ${contrasts.map(value => value.toFixed(2)).join(', ')}`);
     await fs.writeFile(path.join(output, 'daylight-contrast.json'), JSON.stringify(contrasts, null, 2));

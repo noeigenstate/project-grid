@@ -23,7 +23,7 @@ export type ProjectTerminal = { direct?: boolean; card?: DirectCard | null; agen
 // A model reached over HTTP for the spoken summary. The API key is not part of the settings.
 export type SummaryEndpoint = { provider: string; protocol: 'openai' | 'anthropic'; baseUrl: string; model: string };
 type SummaryKeys = { keys: { cloud: boolean; local: boolean } };
-export type Settings = { codexDirect: boolean; surface: 'glass' | 'solid'; glassBackground: 'theme' | 'desktop'; glassTransparency: number | null; terminalRenderer: 'gpu' | 'dom'; summary: { mode: 'fast' | 'agent' | 'cloud' | 'local'; cloud: SummaryEndpoint; local: SummaryEndpoint }; autoSave: boolean; activityPane: boolean; notifications: boolean; sound: boolean; closeToTray: boolean; explorerCollapsed: boolean; fontSize: number; terminalFontWeight: 400 | 500 | 600; terminalFontFamily: string; terminalCjkFontFamily: string; restoreSessions: boolean; focusAnimation: 'smooth' | 'system' | 'off'; theme: ThemeId; announce: boolean; announcePhrase: string; language: 'zh' | 'en'; shortcuts: Partial<Record<'search' | 'addProject' | 'voice' | 'overview' | 'explorer' | 'settings' | 'nextProject' | 'previousProject' | 'maximize' | 'fullscreen' | 'newTerminal', string>>; guideVersion: string; shell: 'powershell' | 'cmd' | 'bash' | 'zsh'; voiceModel: string };
+export type Settings = { codexDirect: boolean; surface: 'glass' | 'solid'; glassBackground: 'theme' | 'desktop'; glassTransparency: number | null; terminalRenderer: 'gpu' | 'dom'; summary: { mode: 'fast' | 'agent' | 'cloud' | 'local'; cloud: SummaryEndpoint; local: SummaryEndpoint }; autoSave: boolean; activityPane: boolean; notifications: boolean; sound: boolean; closeToTray: boolean; explorerCollapsed: boolean; fontSize: number; terminalFontWeight: 400 | 500 | 600; terminalFontFamily: string; terminalCjkFontFamily: string; restoreSessions: boolean; focusAnimation: 'smooth' | 'system' | 'off'; theme: ThemeId; announce: boolean; announcePhrase: string; language: 'zh' | 'en'; shortcuts: Partial<Record<'search' | 'addProject' | 'voice' | 'overview' | 'explorer' | 'settings' | 'nextProject' | 'previousProject' | 'maximize' | 'fullscreen' | 'newTerminal' | 'removeProject', string>>; guideVersion: string; shell: 'powershell' | 'cmd' | 'bash' | 'zsh'; voiceModel: string };
 export type SpeechState = { phase: 'missing' | 'downloading' | 'ready' | 'error'; ready: boolean; percent: number; error: string | null; downloadBytes: number };
 export type RecentProject = { path: string; name: string; lastOpenedAt: number; exists: boolean };
 export type SSHInfo = { hosts: string[]; configFile: string; configExists: boolean; sshPath: string; source: string };
@@ -96,7 +96,8 @@ type Bridge = {
   getSSHAuth(): Promise<Result<SSHAuthPrompt[]>>;
   answerSSHAuth(id: string, answer: string | null): Promise<Result<void>>;
   onSSHAuth(callback: (prompts: SSHAuthPrompt[]) => void): () => void;
-  removeProject(id: string): Promise<Result<boolean>>;
+  // ask: confirm even with no terminal running (a removal by shortcut).
+  removeProject(id: string, ask?: boolean): Promise<Result<boolean>>;
   reorderProjects(ids: string[]): Promise<Result<void>>;
   acknowledge(id: string): Promise<Result<void>>;
   settings(patch: Partial<Settings>): Promise<Result<void>>;

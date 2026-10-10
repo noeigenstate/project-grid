@@ -24,9 +24,10 @@ function registerWorkspaceIpc({ handle, publicState, dialog, getWindow, t, addPr
   });
   handle('workspace:forget-recent', folder => { forgetRecent(folder); return recentProjects(); });
   handle('workspace:clear-recent', () => { clearHistory(); return recentProjects(); });
-  handle('workspace:remove', async id => {
+  // ask: a removal by shortcut is confirmed even when no terminal runs (a key is easily pressed by mistake).
+  handle('workspace:remove', async (id, ask) => {
     if (getEditorFile()?.id === id && !await allowEditorClose()) return false;
-    if (!await confirmTerminalClose(id, '移除', true)) return false;
+    if (!await confirmTerminalClose(id, '移除', true, ask === true)) return false;
     disposeProjectTerminals(findProject(id)); closeProjectPreviews(id); removeProject(id); forgetBranch(id); broadcast(); return true;
   });
   handle('workspace:acknowledge', id => { findProject(id); acknowledgeProject(id); broadcast(); });

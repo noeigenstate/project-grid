@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { marked } from 'marked';
 import createDOMPurify from 'dompurify';
-import { ArrowDown, CaretDown, CaretRight, CircleNotch, Image as ImageIcon, PaperPlaneRight, Stop } from '@phosphor-icons/react';
+import { ArrowDown, CaretDown, CaretRight, CircleNotch, Image as ImageIcon, PaperPlaneRight, Stop, X } from '@phosphor-icons/react';
 import type { AgentCommand, ConversationEntry, ProjectTerminal } from '../../shared/types';
 import { actionText, stepVerb } from '../agents/ActivityPane';
 import { dictateInto } from '../voice/voice-input';
@@ -135,7 +135,7 @@ function ImageProgress({ step }: { step: string }) {
   </div>;
 }
 
-function ToolGroup({ entries, live, projectId, onOpen }: { entries: ConversationEntry[]; live: boolean; projectId: string; onOpen: (file: string) => void }) {
+function ToolGroup({ entries, live, projectId, onOpen, onError }: { entries: ConversationEntry[]; live: boolean; projectId: string; onOpen: (file: string) => void; onError: (message: string) => void }) {
   const running = entries.some(entry => !entry.tool?.done);
   const [open, setOpen] = useState(false);
   const failed = entries.filter(entry => entry.tool?.failed).length;
@@ -154,7 +154,7 @@ function ToolGroup({ entries, live, projectId, onOpen }: { entries: Conversation
       <b>{stepVerb(entry.tool!)}</b><code title={entry.tool!.target}>{entry.tool!.target}</code>{entry.tool!.detail && <small>{entry.tool!.detail}</small>}
     </li>)}</ul>}
     {drawing && <ImageProgress step={drawing.id} />}
-    {files.length > 0 && <FileCards projectId={projectId} files={files} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} />}
+    {files.length > 0 && <FileCards projectId={projectId} files={files} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} onError={onError} />}
   </div>;
 }
 
@@ -273,12 +273,14 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   // Closes what a command left open and waits for the CLI's input to come back. Keys typed while a dialog is still
   // open land in it: Enter on Claude's /config switches the selected setting, and the dialog stays on its old tab
   // under the new command's name. A dialog that does not close after a few tries is left alone, nothing typed.
-  const closeDialog = async (agent: 'claude' | 'codex', command?: string) => {
+  // untilInput: also wait for the input to come back (a message is typed next); putting a popup away needs only the
+  // dialog gone.
+  const closeDialog = async (agent: 'claude' | 'codex', command?: string, untilInput = true) => {
     const look = (first = false) => {
       const current = readScreen(terminal.id);
       if (!current) return { key: null, closed: true };
       const parsed = parseAgentScreen(agent, current.rows), key = cliCloseKey(agent, current.rows, parsed, first ? command : undefined, cli.panel?.rows);
-      return { key, closed: !key && hasCliInput(agent, current.rows, parsed) };
+      return { key, closed: !key && (!untilInput || hasCliInput(agent, current.rows, parsed)) };
     };
     let state = look(true);
     if (!state.key) return true;
@@ -305,17 +307,16 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (!result.ok) { cancelEcho(pendingId); if (mounted.current) { edit(text); setImages(shown); } onError(result.error); return; }
     if (text) history.set(terminal.id, [...(history.get(terminal.id) || []), text].slice(-50));
   };
-  // Escape with a command's card open closes what the command opened (a dialog, a pager, a side conversation) rather
-  // than interrupting the round, pressing again while the dialog only left an inner mode (Claude's /config search).
-  // Closed, the card ends at once with what the command showed (a command left this way prints nothing more); with
-  // nothing left to close (its output still awaited) it is put away the same way.
+  // Escape with a command's popup open puts it away at once and closes what the command opened (a dialog, a pager, a
+  // side conversation) rather than interrupting the round, pressing again while the dialog only left an inner mode
+  // (Claude's /config search). A dialog that stays open is reported.
   const closeCommand = async () => {
     const agentKind = terminal.agent === 'claude' ? 'claude' : 'codex', command = cli.panel?.command ?? '', current = readScreen(terminal.id);
-    const key = current ? cliCloseKey(agentKind, current.rows, parseAgentScreen(agentKind, current.rows), command, cli.panel?.rows) : null;
-    if (!cli.busy || !key) { cli.close(); return; }
-    if (key === '\x03') { window.agentrix.writeTerminal(terminal.id, key); cli.close(); return; }
-    if (await closeDialog(agentKind, command)) cli.close();
-    else if (mounted.current) onError(t('命令的对话框没有关闭，请在终端中关闭。'));
+    const key = cli.busy && current ? cliCloseKey(agentKind, current.rows, parseAgentScreen(agentKind, current.rows), command, cli.panel?.rows) : null;
+    cli.close();
+    if (!key) return;
+    if (key === '\x03') { window.agentrix.writeTerminal(terminal.id, key); return; }
+    if (!await closeDialog(agentKind, command, false) && mounted.current) onError(t('命令的对话框没有关闭，请在终端中关闭。'));
   };
   const interrupt = () => { if (direct) void window.agentrix.agentInterrupt(terminal.id).then(result => { if (!result.ok) onError(result.error); }); else window.agentrix.writeTerminal(terminal.id, '\x1b'); };
   // The CLI recognises slash commands and shell mode from typed keys, not bracketed paste.
@@ -432,6 +433,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
       setImages(list => [...list, small].slice(-4));
     }).catch(() => onError(t('无法读取这张图片。')));
   };
+  // The attached pictures wait in the CLI's own input as "[Image #1]" placeholders, which Ctrl+U clears with them.
+  const removeImages = () => {
+    if (!direct) window.agentrix.writeTerminal(terminal.id, '');
+    originals.current.clear(); setImages([]); input.current?.focus();
+  };
   const keys = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
     if (event.key === 'Tab' && event.shiftKey) { event.preventDefault(); if (!direct) window.agentrix.writeTerminal(terminal.id, '\x1b[Z'); return; }
@@ -443,7 +449,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
         event.preventDefault(); if (event.key === 'Enter' && draft === selected.name) void send(); else complete(selected); return;
       }
     } else {
-      if (event.key === 'Escape') { if (cli.panel) { event.preventDefault(); void closeCommand(); } else if (working) { event.preventDefault(); interrupt(); } return; }
+      if (event.key === 'Escape') { if (cli.panel || cli.busy) { event.preventDefault(); void closeCommand(); } else if (working) { event.preventDefault(); interrupt(); } return; }
       const node = event.currentTarget, sent = history.get(terminal.id) || [];
       if (!event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey && node.selectionStart === node.selectionEnd && ((event.key === 'ArrowUp' && node.selectionStart === 0) || (event.key === 'ArrowDown' && node.selectionEnd === draft.length))) {
         if (event.key === 'ArrowUp' && sent.length) {
@@ -476,7 +482,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   else body = <>
     {tail.earlier > 0 && <button type="button" className="text-button reading-earlier" onClick={tail.showEarlier}>{t('显示更早的对话（{count}）', { count: tail.earlier })}</button>}
     {tail.visible.map((block, index) => block.kind === 'tools'
-    ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onOpen={onOpenLink} />
+    ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onOpen={onOpenLink} onError={onError} />
     : block.entry.role === 'user'
       ? <div key={block.entry.id} className="reading-user"><span>{t('你')}</span><UserText text={block.entry.text || ''} />{block.entry.images && <UserImages images={block.entry.images} />}</div>
       : <div key={block.entry.id} className="reading-assistant">{block.entry.text ? <Markdown text={block.entry.text} /> : null}
@@ -497,7 +503,8 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
         <button type="button" className="icon-button reading-jump" title={t('跳到最新消息')} aria-label={t('跳到最新消息')} onClick={() => toBottom('smooth')}><ArrowDown size={18} /></button>
       </div>}
     </div>
-    {images.length > 0 && <div className="reading-attachments" role="status"><ImageIcon size={14} />{t('已附加 {count} 张图片，随下一条消息发送', { count: images.length })}<UserImages images={images} /></div>}
+    {images.length > 0 && <div className="reading-attachments" role="status"><ImageIcon size={14} />{t('已附加 {count} 张图片，随下一条消息发送', { count: images.length })}<UserImages images={images} />
+      <button type="button" className="reading-attachments-remove" onClick={removeImages} title={t('移除图片')} aria-label={t('移除图片')}><X size={12} weight="bold" /></button></div>}
     {directCard && <div className="reading-choice-host" ref={choiceHost} onFocusCapture={() => { restoreComposer.current = true; }} onBlurCapture={event => {
       if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) restoreComposer.current = false;
     }}><ReadingDirectCard key={choiceKey} card={directCard} terminalId={terminal.id} onError={onError} /></div>}

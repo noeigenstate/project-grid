@@ -77,16 +77,24 @@ test('mixed submissions queue each real prompt and mark working even when comman
   }
 });
 
-test('plain text and unknown recalled history still arm completion on submission', () => {
-  for (const data of ['fix the button\r', '\x1b[A\r', '/model\r\x1b[A\r']) {
+test('typed text arms completion on submission; a line of unknown text (a menu choice, a recalled line) does not', () => {
+  const typed = terminalWriter('codex');
+  typed.write('fix the button\r');
+  assert.deepEqual(typed.calls.prompts, [['fix the button', false]]);
+  assert.equal(typed.session.codexActivity, 'working');
+  assert.deepEqual(typed.calls.completion, ['project']);
+  assert.equal(typed.calls.state, 1);
+  assert.equal(typed.calls.speech, 1);
+  typed.session.promptQueue.reset();
+  // Codex's update prompt answered with the arrows, a /model picker, a line recalled from history: the agent's own
+  // records tell whether a round started.
+  for (const data of ['\x1b[B\r', '\x1b[A\r', '/model\r\x1b[A\r']) {
     const { session, calls, write } = terminalWriter('codex');
     write(data);
-    assert.deepEqual(calls.prompts, [[data.startsWith('fix') ? 'fix the button' : '', false]]);
-    assert.equal(session.codexActivity, 'working');
-    assert.deepEqual(calls.completion, ['project']);
-    assert.equal(calls.state, 1);
-    assert.equal(calls.speech, 1);
-    session.promptQueue.reset();
+    assert.deepEqual(calls.prompts, []);
+    assert.equal(session.codexActivity, 'idle');
+    assert.deepEqual(calls.completion, []);
+    assert.deepEqual(calls.forwarded, [data]);
   }
 });
 

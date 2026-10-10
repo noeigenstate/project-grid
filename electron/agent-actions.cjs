@@ -91,7 +91,7 @@ const PHRASES = [...COMMAND_PHRASES.map(([, phrase]) => phrase), '运行脚本',
 const EDITING_COMMAND = /\b(apply_patch|writeFileSync|appendFileSync|Set-Content|Add-Content|Out-File|sed\s+-i|tee\s)/;
 // A shell command Codex ran. Codex edits files through the shell too (apply_patch or a script that writes).
 function codexCommand(id, at, command, cwd) {
-  const action = { id, at, kind: 'command', tool: 'exec_command', target: clip(command, 240), detail: '', description: '', done: false, failed: false };
+  const action = { id, at, cwd, kind: 'command', tool: 'exec_command', target: clip(command, 240), detail: '', description: '', done: false, failed: false };
   const files = [...String(command).matchAll(/^\*\*\* (Update|Add|Delete) File: (.+)$/gm)].map(match => ({ path: projectPath(match[2].trim(), cwd), change: match[1].toLowerCase() }));
   const skill = /([^\s"'`]*[\\/]([^\\/\s"'`]+)[\\/]SKILL\.md)/.exec(String(command));
   if (files.length) { action.kind = 'edit'; action.files = files; action.target = files.slice(0, 3).map(file => file.path).join('、') + (files.length > 3 ? ` +${files.length - 3}` : ''); }
@@ -111,7 +111,9 @@ function codexActions(payload, at, cwd) {
       if (name === 'exec_command' || name === 'shell') {
         const command = /cmd:\s*("(?:[^"\\]|\\.)*")/.exec(rest);
         let text = ''; try { text = command ? JSON.parse(command[1]) : ''; } catch { text = command ? command[1] : ''; }
-        actions.push(codexCommand(`${id}:${actions.length}`, at, text, cwd));
+        const workdir = /workdir:\s*("(?:[^"\\]|\\.)*")/.exec(rest.split(/tools\.[\w.]+\(/)[1] || rest);
+        let directory = cwd; try { if (workdir) directory = path.resolve(cwd || '.', JSON.parse(workdir[1])); } catch { }
+        actions.push(codexCommand(`${id}:${actions.length}`, at, text, directory));
       } else if (name === 'apply_patch') actions.push(codexCommand(`${id}:${actions.length}`, at, rest, cwd));
       else if (name === 'write_stdin') continue;
       else {
@@ -127,7 +129,7 @@ function codexActions(payload, at, cwd) {
     const name = String(payload.name || 'shell'), mcp = mcpTool(name);
     if (mcp) return [{ id: `${id}:0`, at, kind: 'mcp', tool: name, target: `${mcp.server} · ${mcp.tool}`, detail: '', description: '', done: false, failed: false, server: mcp.server }];
     const command = Array.isArray(args.command) ? args.command.join(' ') : args.command || args.cmd || args.input || '';
-    if (['shell', 'exec_command', 'local_shell', 'apply_patch', 'container.exec'].includes(name)) return [codexCommand(`${id}:0`, at, name === 'apply_patch' ? `apply_patch\n${command}` : command, cwd)];
+    if (['shell', 'exec_command', 'local_shell', 'apply_patch', 'container.exec'].includes(name)) return [codexCommand(`${id}:0`, at, name === 'apply_patch' ? `apply_patch\n${command}` : command, typeof args.workdir === 'string' ? path.resolve(cwd || '.', args.workdir) : cwd)];
     return [{ id: `${id}:0`, at, kind: 'other', tool: name, target: name, detail: '', description: '', done: false, failed: false }];
   }
   return [];

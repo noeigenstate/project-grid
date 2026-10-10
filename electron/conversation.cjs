@@ -1,3 +1,4 @@
+const path = require('node:path');
 const { claudeAction, codexActions } = require('./agent-actions.cjs');
 
 // The conversation of a terminal's agent, for the reading view: what the user asked, what the agent
@@ -56,13 +57,14 @@ function generatedImage(item, at) {
 }
 const bounded = text => text.length > TEXT_LIMIT ? `${text.slice(0, TEXT_LIMIT)}\n\n…` : text;
 // A step as the reading view shows it; an edit names the files it left (not deleted ones), so the documents, pages and
-// videos among them can be previewed.
-const brief = action => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object,
-  ...(action.kind === 'edit' && action.files?.length ? { written: action.files.filter(file => file.change !== 'delete').map(file => file.path).slice(0, 8) } : {}) });
+// videos among them can be previewed. Keep their cwd here; the project folder may be a parent of it.
+const brief = (action, cwd = action.cwd) => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object,
+  ...(action.kind === 'edit' && action.files?.length ? { written: action.files.filter(file => file.change !== 'delete').map(file => cwd ? path.resolve(cwd, file.path.replace(/\\/g, '/')) : file.path).slice(0, 8) } : {}) });
 
 // Entries keep their order; a later record about the same entry (a tool that finished) replaces it.
 class ConversationLog {
-  constructor(changed = () => {}, limit = 400) { this.changed = changed; this.limit = limit; this.list = []; }
+  // cwd: the folder Codex works in (its session's and each turn's), which relative file paths in its steps start from.
+  constructor(changed = () => {}, limit = 400) { this.changed = changed; this.limit = limit; this.list = []; this.cwd = null; }
   // Records still feed activity tracking during replay, but reading snapshots wait for the file tail.
   beginHistory() { this.loading = true; }
   endHistory() { if (!this.loading) return; this.loading = false; this.changed({ reset: true }); }
@@ -118,7 +120,7 @@ function claudeConversation(log, record, cwd) {
   content.forEach((block, index) => {
     const text = block.type === 'text' ? clean(block.text) : '';
     if (text) log.put({ id: `a:${base}:${index}`, at, role: 'assistant', text: bounded(text) });
-    else if (block.type === 'tool_use') { const action = claudeAction(block, at, cwd); log.put({ id: action.id, at, role: 'tool', tool: brief(action) }); }
+    else if (block.type === 'tool_use') { const action = claudeAction(block, at, record.cwd || cwd); log.put({ id: action.id, at, role: 'tool', tool: brief(action, record.cwd || cwd) }); }
   });
 }
 
@@ -130,7 +132,8 @@ function codexMessage(item) {
 function codexConversation(log, record, cwd) {
   if (!record?.payload) return;
   const payload = record.payload, at = Date.parse(record.timestamp) || Date.now();
-  if (record.type === 'session_meta') { log.reset(); return; }
+  if (record.type === 'session_meta') { log.reset(); log.cwd = payload.cwd || cwd; return; }
+  if (record.type === 'turn_context') { log.cwd = payload.cwd || log.cwd; return; }
   if (record.type === 'event_msg') {
     const picture = payload.type === 'item_completed' ? generatedImage(payload.item, at) : null;
     if (picture) log.put(picture);
@@ -146,7 +149,7 @@ function codexConversation(log, record, cwd) {
   }
   if (record.type !== 'response_item') return;
   if (['custom_tool_call_output', 'function_call_output', 'local_shell_call_output'].includes(payload.type)) { log.finish(String(payload.call_id || ''), false, true); return; }
-  for (const action of codexActions(payload, at, cwd)) log.put({ id: action.id, at, role: 'tool', tool: brief(action) });
+  for (const action of codexActions(payload, at, log.cwd || cwd)) log.put({ id: action.id, at, role: 'tool', tool: brief(action) });
 }
 
 module.exports = { ConversationLog, claudeConversation, codexConversation, clean, brief, generatedImage, isGeneratedImage, setThumbnailer };

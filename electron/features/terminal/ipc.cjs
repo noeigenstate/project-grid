@@ -31,7 +31,9 @@ function registerTerminalIpc({ handle, listen, findProject, getSession, hasSessi
     // A Codex session connected directly has no terminal: its messages go through agent:send.
     if (s && s.status !== 'exited' && !s.direct) {
       const submitted = s.submissions.write(data);
-      const prompts = s.submissions.sent.filter(text => !isLocalCommand(text));
+      // A line of unknown text (arrows, then Enter) is as often a choice in a menu (Codex's update prompt, a /model
+      // picker) as a prompt recalled from history: the agent's own records report a round it really starts.
+      const prompts = s.submissions.sent.filter(text => text && !isLocalCommand(text));
       if (submitted && s.codexActive) for (const text of prompts) s.promptQueue.submit(text, s.codexActivity === 'working');
       // Sending a new prompt means the last result has been read: clear the unviewed state before the next round.
       if (submitted && getProjectById(s.projectId)?.unread) { acknowledgeProject(s.projectId); scheduleState(); }

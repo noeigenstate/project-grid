@@ -11,20 +11,21 @@ const SHOWN = 4;
 // The documents, pages and videos a group of steps wrote, as small cards under it: a Markdown file laid out, a picture
 // of an HTML page, a video that plays where it is. Nothing is read until a card scrolls into view; a click opens the
 // file in the full preview.
-export function FileCards({ projectId, files, renderMarkdown, onOpen }: {
-  projectId: string; files: string[]; renderMarkdown: (text: string) => ReactNode; onOpen: (file: string) => void;
+export function FileCards({ projectId, files, renderMarkdown, onOpen, onError }: {
+  projectId: string; files: string[]; renderMarkdown: (text: string) => ReactNode; onOpen: (file: string) => void; onError: (message: string) => void;
 }) {
   const [all, setAll] = useState(false);
   const shown = all ? files : files.slice(0, SHOWN);
   return <div className="file-cards">
-    {shown.map(file => <FileCard key={file} projectId={projectId} file={file} renderMarkdown={renderMarkdown} onOpen={onOpen} />)}
+    {shown.map(file => <FileCard key={file} projectId={projectId} file={file} renderMarkdown={renderMarkdown} onOpen={onOpen} onError={onError} />)}
     {files.length > SHOWN && !all && <button type="button" className="text-button file-cards-more" onClick={() => setAll(true)}>{t('还有 {count} 个文件', { count: files.length - SHOWN })}</button>}
   </div>;
 }
 
-function FileCard({ projectId, file, renderMarkdown, onOpen }: { projectId: string; file: string; renderMarkdown: (text: string) => ReactNode; onOpen: (file: string) => void }) {
+function FileCard({ projectId, file, renderMarkdown, onOpen, onError }: { projectId: string; file: string; renderMarkdown: (text: string) => ReactNode; onOpen: (file: string) => void; onError: (message: string) => void }) {
   const root = useRef<HTMLDivElement>(null), video = useRef<HTMLVideoElement>(null);
-  const [card, setCard] = useState<Card | null>(null), [failed, setFailed] = useState(false), [seen, setSeen] = useState(false);
+  // failed: why the card could not be made, shown again when it is clicked.
+  const [card, setCard] = useState<Card | null>(null), [failed, setFailed] = useState<string | null>(null), [seen, setSeen] = useState(false);
   // Asked for once it is near the view; a video that leaves the view stops playing.
   useEffect(() => {
     const node = root.current; if (!node) return;
@@ -38,13 +39,23 @@ function FileCard({ projectId, file, renderMarkdown, onOpen }: { projectId: stri
   useEffect(() => {
     if (!seen) return;
     let live = true;
-    void window.agentrix.fileCard(projectId, file).then(result => { if (!live) return; if (result.ok) setCard(result.value); else setFailed(true); });
+    setCard(null); setFailed(null);
+    void window.agentrix.fileCard(projectId, file).then(result => { if (!live) return; if (result.ok) setCard(result.value); else setFailed(result.error); }).catch(() => { if (live) setFailed('无法预览此文件。'); });
     return () => { live = false; };
   }, [seen, projectId, file]);
   const name = file.split(/[\\/]/).pop() || file;
   const kind = card?.kind ?? (/\.html?$/i.test(file) ? 'html' : /\.(?:md|markdown|mdx)$/i.test(file) ? 'markdown' : 'video');
   const Icon = kind === 'html' ? FileHtml : kind === 'video' ? FilmStrip : FileText;
-  const open = () => onOpen(card?.path ?? file);
+  // A click before the card loaded still resolves through the main process, never the raw agent path.
+  const open = async () => {
+    if (card) { onOpen(card.path); return; }
+    if (failed) { onError(t(failed)); return; }
+    try {
+      const result = await window.agentrix.fileCard(projectId, file);
+      if (result.ok) { setCard(result.value); onOpen(result.value.path); }
+      else onError(t(result.error));
+    } catch { onError(t('无法预览此文件。')); }
+  };
   return <div ref={root} className={`file-card is-${kind}`}>
     {card?.kind === 'video'
       ? <video ref={video} src={card.url} preload="metadata" controls playsInline />

@@ -359,6 +359,16 @@ test('a Claude dialog opened while Claude works is still a dialog: the next comm
   assert.equal(cliCloseKey('claude', answering, inspect('claude', answering), '/status'), null);
 });
 
+test('a Claude dialog closed while Claude still works ends its command at once, with what the dialog showed', () => {
+  const working = ['· Razzmatazzing… (11s · thinking with high effort)', '▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔', '   Settings  Status   Config   Usage   Stats', '',
+    '   Current session    ██▌ 5% used', '', '   Esc to cancel'];
+  const shown = { id: 'c', command: '/usage', at: 0, observed: true, idleSince: null, output: [], dialog: ['   Current session    ██▌ 5% used'] };
+  assert.equal(advanceCliCommand(shown, 'claude', working, inspect('claude', working), 100, true).done, false, 'still open');
+  const busy = ['● Writing the poem', '', '✶ Razzmatazzing… (12s · esc to interrupt)', '', ...input('claude')];
+  assert.equal(advanceCliCommand(shown, 'claude', busy, inspect('claude', busy), 200, true).done, true, 'closed, Claude still working');
+  assert.equal(advanceCliCommand({ ...shown, dialog: [] }, 'claude', busy, inspect('claude', busy), 200, true).done, false, 'no dialog seen yet: wait');
+});
+
 test('a Codex command that asked something ends once the question is gone, without waiting for output', () => {
   const sent = ['• Earlier answer', '', ...input('codex', '/model')];
   let command = { id: 'c', command: '/model', at: 0, observed: true, idleSince: null, output: [], dialog: [], before: cliHistory('codex', sent, inspect('codex', sent)) };

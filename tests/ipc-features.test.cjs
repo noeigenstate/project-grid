@@ -208,7 +208,9 @@ test('workspace removal asks the editor first and preserves cleanup order', asyn
   });
   const remove = h.handles.get('workspace:remove'); assert.equal(await remove('p'), false); assert.deepEqual(calls, ['editor']);
   allow = true; calls.length = 0; assert.equal(await remove('p'), true);
-  assert.deepEqual(calls, ['editor', ['p', '移除', true], ['terminals', 'p'], ['previews', 'p'], ['remove', 'p'], ['branch', 'p'], 'broadcast']);
+  assert.deepEqual(calls, ['editor', ['p', '移除', true, false], ['terminals', 'p'], ['previews', 'p'], ['remove', 'p'], ['branch', 'p'], 'broadcast']);
+  // By its shortcut, removal is confirmed even with nothing running.
+  calls.length = 0; assert.equal(await remove('p', true), true); assert.deepEqual(calls[1], ['p', '移除', true, true]);
 });
 
 test('terminal registrar flushes attach, validates paste and resize, and changes focus ownership', () => {

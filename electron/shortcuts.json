@@ -9,5 +9,6 @@
   "previousProject": "Ctrl+Shift+Tab",
   "maximize": "Ctrl+Shift+Enter",
   "fullscreen": "F11",
-  "newTerminal": "Ctrl+Shift+T"
+  "newTerminal": "Ctrl+Shift+T",
+  "removeProject": "Ctrl+Shift+W"
 }

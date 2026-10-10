@@ -35,7 +35,7 @@ contextBridge.exposeInMainWorld('agentrix', {
   getSSHAuth: () => ipcRenderer.invoke('ssh:auth-pending'),
   answerSSHAuth: (id, answer) => ipcRenderer.invoke('ssh:auth-answer', id, answer),
   onSSHAuth: callback => listen('ssh:auth-changed', callback),
-  removeProject: id => ipcRenderer.invoke('workspace:remove', id),
+  removeProject: (id, ask) => ipcRenderer.invoke('workspace:remove', id, ask === true),
   reorderProjects: ids => ipcRenderer.invoke('workspace:reorder', ids),
   acknowledge: id => ipcRenderer.invoke('workspace:acknowledge', id),
   settings: patch => ipcRenderer.invoke('workspace:settings', patch),

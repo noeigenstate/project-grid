@@ -179,3 +179,88 @@ test('old popup text above new conversation does not set an overlay', () => {
     }
   }
 });
+
+test('prompts shown before the input exists are choices: Codex update offer, folders to trust, resuming from a summary', () => {
+  // Codex 0.162 at start-up, as captured.
+  const update = ['', '  Update available · 0.162.0 → 0.162.1', '  Release notes: https://github.com/openai/codex/releases/latest',
+    "› 1. Update now (runs `powershell -ExecutionPolicy Bypass -c 'irm https://chatgpt.com/codex/install.ps1 | iex'`)", '  2. Skip',
+    '  3. Skip until next version', '  enter continue · esc skip', ''];
+  const offer = parseAgentScreen('codex', update).choice;
+  assert.equal(offer.title, 'Update available · 0.162.0 → 0.162.1');
+  assert.deepEqual(offer.context, ['Release notes: https://github.com/openai/codex/releases/latest']);
+  assert.deepEqual(offer.options.map(option => [option.number, option.label.slice(0, 10), option.selected]), [[1, 'Update now', true], [2, 'Skip', false], [3, 'Skip until', false]]);
+  assert.equal(offer.hint, 'enter continue · esc skip');
+  const codexTrust = ['', '> You are running Codex in C:\work\demo', '', '  Since this folder is not version controlled, we recommend requiring approval of all edits and commands.', '',
+    '› 1. Allow Codex to work in this folder without asking for approval', '  2. Require approval of edits and commands', '', '  Press enter to continue'];
+  const trusting = parseAgentScreen('codex', codexTrust).choice;
+  assert.equal(trusting.title, 'Since this folder is not version controlled, we recommend requiring approval of all edits and commands.');
+  assert.equal(trusting.options.length, 2);
+  // Claude 2.1.296 hides the numbers and puts the cursor on "No, exit" first.
+  const claudeTrust = [' Accessing workspace:', '', ' C:\work\demo', '', ' Quick safety check: Is this a project you created or one you trust? (Like your own code, a well-known open source', ' project, or work from your team).',
+    '', ' Security guide', '', ' ❯ No, exit', '   Yes, I trust this folder', '', ' Enter to confirm · Esc to cancel'];
+  const trust = parseAgentScreen('claude', claudeTrust).choice;
+  assert.equal(trust.title, 'Accessing workspace:');
+  assert.equal(trust.context[0], 'C:\work\demo');
+  assert.match(trust.context.join(' '), /Quick safety check/);
+  assert.deepEqual(trust.options.map(option => [option.number, option.label, option.selected]), [[1, 'No, exit', true], [2, 'Yes, I trust this folder', false]]);
+  assert.equal(trust.hint, 'Enter to confirm · Esc to cancel');
+  // Claude's own input box with a key hint under it is no choice.
+  assert.equal(parseAgentScreen('claude', ['────', '❯ draft', '────', ' Enter to confirm · Esc to cancel']).choice, null);
+  const resume = [' This session is 3h 12m old and 230.6k tokens.', ' Resuming the full session will consume a substantial portion of your usage limits.', '',
+    ' ❯ 1. Resume from summary (recommended)', '   2. Resume full session as-is', "   3. Don't ask me again", '', ' Enter to confirm · Esc to cancel'];
+  assert.deepEqual(parseAgentScreen('claude', resume).choice.options.map(option => option.label), ['Resume from summary (recommended)', 'Resume full session as-is', "Don't ask me again"]);
+});
+
+test('a numbered list in a reply is never taken for a choice', () => {
+  const reply = ['● Steps:', '  1. Build', '  2. Test', '', '────', '❯ ', '────', '  ? for shortcuts'];
+  assert.equal(parseAgentScreen('claude', reply).choice, null);
+  const noCursor = ['  Plan', '  1. Build', '  2. Test'];
+  assert.equal(parseAgentScreen('codex', noCursor).choice, null);
+});
+
+test('first-run screens captured from the real CLIs open as choices', () => {
+  // Claude Code 2.1.296 with an empty config folder: the text style, then the sign-in method.
+  const theme = ['.......█ █   █ █..........................................', '', " Let's get started.", '', ' Choose the text style that looks best with your terminal', ' To change this later, run /theme', '',
+    '     Auto (match terminal)', ' ❯ ✔ Dark mode', '     Light mode', '     Dark mode (colorblind-friendly)', '     Light mode (colorblind-friendly)', '     Dark mode (ANSI colors only)', '     Light mode (ANSI colors only)', '',
+    ' ╌╌╌╌╌╌╌╌', '  1  function greet() {', '  2 -  console.log("Hello, World!");', '  2 +  console.log("Hello, Claude!");', '  3  }', ' ╌╌╌╌╌╌╌╌', '  Syntax theme: Monokai Extended (ctrl+t to disable)'];
+  const style = parseAgentScreen('claude', theme).choice;
+  assert.equal(style.title, "Let's get started.");
+  assert.deepEqual(style.context, ['Choose the text style that looks best with your terminal', 'To change this later, run /theme']);
+  assert.deepEqual(style.options.map(option => option.label), ['Auto (match terminal)', 'Dark mode', 'Light mode', 'Dark mode (colorblind-friendly)', 'Light mode (colorblind-friendly)', 'Dark mode (ANSI colors only)', 'Light mode (ANSI colors only)']);
+  assert.equal(style.options.findIndex(option => option.selected), 1);
+  const login = ['.......█ █   █ █..........................................', '', ' Claude Code can be used with your Claude subscription or billed based on API usage through your Console account.', '', ' Select login method:', '',
+    ' ❯ 1. Claude account with subscription · Pro, Max, Team, or Enterprise', '   2. Anthropic Console account · API usage billing', '   3. 3rd-party platform · Amazon Bedrock, Microsoft Foundry, Google Vertex AI'];
+  const method = parseAgentScreen('claude', login).choice;
+  assert.equal(method.title, 'Select login method:');
+  assert.deepEqual(method.options.map(option => [option.number, option.selected]), [[1, true], [2, false], [3, false]]);
+  // Codex 0.162 with an empty CODEX_HOME: its cursor is ">", each option has a description, blank rows between them.
+  const signIn = ["  Welcome to Codex, OpenAI's command-line coding agent", '', '  Sign in with ChatGPT to use Codex as part of your paid plan', '  or connect an API key for usage-based billing', '',
+    '> 1. Sign in with ChatGPT', '     Usage included with Plus, Pro, Business, and Enterprise plans', '', '  2. Sign in with Device Code', '     Sign in from another device with a one-time code', '',
+    '  3. Provide your own API key', '     Pay for what you use', '', '  Press enter to continue'];
+  const codex = parseAgentScreen('codex', signIn).choice;
+  assert.equal(codex.title, 'Sign in with ChatGPT to use Codex as part of your paid plan');
+  assert.deepEqual(codex.options.map(option => [option.label, option.detail, option.selected]), [
+    ['Sign in with ChatGPT', 'Usage included with Plus, Pro, Business, and Enterprise plans', true],
+    ['Sign in with Device Code', 'Sign in from another device with a one-time code', false],
+    ['Provide your own API key', 'Pay for what you use', false]]);
+  assert.equal(codex.hint, 'Press enter to continue');
+});
+
+test('prompts reproduced from the CLIs\' own text open as choices', () => {
+  // Codex 0.162 asks before working in a folder it has not been told to trust.
+  const trust = ['  Trust this folder?', '', '  Codex can read, edit, and run files here, subject to your permission settings. Folder settings can run code', '  automatically, even without a model request. Continue only if you trust these files. Your trust decision will be saved.', '',
+    '› 1. Trust and continue', '  2. Open restricted', '  3. Quit', '', '  Press enter to continue'];
+  const folder = parseAgentScreen('codex', trust).choice;
+  assert.equal(folder.title, 'Trust this folder?');
+  assert.match(folder.context.join(' '), /^Codex can read, edit, and run files here/);
+  assert.deepEqual(folder.options.map(option => option.label), ['Trust and continue', 'Open restricted', 'Quit']);
+  // Claude's warnings without numbers, the refusal first and under the cursor.
+  const bypass = [' WARNING: Claude Code running in Bypass Permissions mode', '', ' In Bypass Permissions mode, Claude Code will not ask for your approval before running potentially dangerous commands.',
+    ' By proceeding, you accept all responsibility for actions taken while running in Bypass Permissions mode.', '', ' ❯ No, exit', '   Yes, I accept', '', ' Enter to confirm · Esc to cancel'];
+  const warning = parseAgentScreen('claude', bypass).choice;
+  assert.equal(warning.title, 'WARNING: Claude Code running in Bypass Permissions mode');
+  assert.deepEqual(warning.options.map(option => [option.label, option.selected]), [['No, exit', true], ['Yes, I accept', false]]);
+  const mcp = [' New MCP server found in this project: github', '', ' MCP servers may execute code or access system resources. All tool calls require approval.', '',
+    ' ❯ Use this MCP server', '   Use this and all future MCP servers in this project', '   Continue without using this MCP server', '', ' Enter to confirm · Esc to cancel'];
+  assert.deepEqual(parseAgentScreen('claude', mcp).choice.options.map(option => option.label), ['Use this MCP server', 'Use this and all future MCP servers in this project', 'Continue without using this MCP server']);
+});

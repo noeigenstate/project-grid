@@ -92,13 +92,13 @@ class CodexEvents {
     }
     const action = itemAction(item, at, this.cwd);
     if (!action) return;
-    if (!done) { this.actions.add(action); this.conversation.put({ id: action.id, at, role: 'tool', tool: brief(action) }); return; }
+    if (!done) { this.actions.add(action); this.conversation.put({ id: action.id, at, role: 'tool', tool: brief(action, this.cwd) }); return; }
     const failed = failedItem(item);
     // A file change is only known once its patch is final: name its files from the completed item.
     if (item.type === 'fileChange') { const known = this.actions.list.find(entry => entry.id === action.id); if (known) Object.assign(known, { target: action.target, files: action.files }); }
     this.actions.finish(action.id, failed);
     const finished = this.actions.list.find(entry => entry.id === action.id) || { ...action, done: true, failed };
-    this.conversation.put({ id: action.id, at: finished.at, role: 'tool', tool: brief(finished) });
+    this.conversation.put({ id: action.id, at: finished.at, role: 'tool', tool: brief(finished, this.cwd) });
   }
 }
 

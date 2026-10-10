@@ -2,10 +2,10 @@ import type { AgentScreen, ScreenAgent, ScreenBanner, ScreenChoice, ScreenOption
 import { parseQuestion } from './agent-question.ts';
 
 const rule = (row: string) => /^[─╌]{2,}$/.test(row.trim());
-const optionRow = (row: string) => /^(\s*)([❯›↓↑]?\s*)(\d+)\.\s+(.+)$/.exec(row);
+const optionRow = (row: string) => /^(\s*)([❯›>↓↑]?\s*)(\d+)\.\s+(.+)$/.exec(row);
 const inputRow = (agent: ScreenAgent, row: string) =>
   (agent === 'claude' ? /^\s*❯(?:\s|$)/ : /^\s*›(?:\s|$)/).test(row) && !optionRow(row);
-const hintRow = (row: string) => /^(?:press\s+)?(?:enter|esc)\b.*(?:cancel|confirm|select|back|default)/i.test(row.trim());
+const hintRow = (row: string) => /^(?:press\s+)?(?:enter|esc)\b.*(?:cancel|confirm|select|back|default|continue|skip|exit|close)/i.test(row.trim());
 const menuExtra = (row: string) => /^(?:…\s*\+\d+ models|●\s+\S+ effort\b.*to adjust)$/.test(row.trim());
 const permissionTitle = (row: string) => /^(?:Do you want\b|Would you like to run\b|Allow\b)/i.test(row);
 const choiceTitle = (row: string) => permissionTitle(row) || /^Select\b/i.test(row);
@@ -105,22 +105,79 @@ function parseOverlay(agent: ScreenAgent, rows: string[], start: number): AgentS
   return 'none';
 }
 
+// Claude's own prompts before its input exists list their options without numbers: the folder to trust ("❯ No, exit"
+// over "Yes, I trust this folder"), the first run's text style ("❯ ✔ Dark mode" among its siblings, a preview under
+// them). The cursor row with the rows whose labels line up with it are the options, numbered in their order on screen;
+// a mark of the current setting (✔) is not part of a label. Claude's input box (❯ between rules) is never one.
+const bareCursor = /^(\s*❯\s+(?:✔\s+)?)\S/, bareLabel = /^(\s*(?:✔\s+)?)\S/;
+function bareChoice(rows: string[]): ScreenChoice | null {
+  if (rows.some((row, index) => /^\s*❯/.test(row) && (rule(rows[index - 1] ?? '') || rule(rows[index + 1] ?? '')))) return null;
+  const cursor = rows.findIndex(row => bareCursor.test(row));
+  if (cursor < 0) return null;
+  const column = bareCursor.exec(rows[cursor])![1].length, lines = (index: number) => bareLabel.exec(rows[index] ?? '')?.[1].length === column;
+  let first = cursor, last = cursor;
+  while (first > 0 && lines(first - 1)) first--;
+  while (last < rows.length - 1 && lines(last + 1)) last++;
+  if (last === first || last - first > 8) return null;
+  const options: ScreenOption[] = rows.slice(first, last + 1).map((row, index) => ({ number: index + 1,
+    label: row.trim().replace(/^❯\s+/, '').replace(/^✔\s+/, ''), detail: '', selected: first + index === cursor, hotkey: null }));
+  let hint: string | null = null;
+  for (let index = last + 1; index < rows.length && hint === null; index++) if (hintRow(rows[index])) hint = rows[index].trim();
+  // The words just above the options, up to a logo drawn in blocks, a rule or a wider gap (what the shell showed before
+  // the CLI started): their first row heads the prompt, the rest explains it.
+  const above: string[] = [];
+  for (let index = first - 1, blanks = 0; index >= 0; index--) {
+    const row = rows[index].trim();
+    if (!row) { if (++blanks > 1 && above.length) break; continue; }
+    if (rule(row) || !/\p{L}/u.test(row)) { if (above.length) break; continue; }
+    blanks = 0; above.unshift(row);
+  }
+  if (!above.length) return null;
+  return { title: above[0], kind: 'menu', options, hint, context: above.slice(1) };
+}
+
 function parseChoice(agent: ScreenAgent, rows: string[]): ScreenChoice | null {
   let lastOption = rows.length - 1;
   while (lastOption >= 0 && !optionRow(rows[lastOption])) lastOption--;
-  if (lastOption < 0) return null;
+  if (lastOption < 0) return agent === 'claude' ? bareChoice(rows) : null;
 
   let titleIndex = lastOption - 1;
   while (titleIndex >= 0 && !choiceTitle(rows[titleIndex].trim())) {
     if (inputRow(agent, rows[titleIndex])) return null;
     titleIndex--;
   }
-  if (titleIndex < 0) return null;
+  // A prompt the CLI shows before its input exists (Codex's update offer, a folder to trust, Claude's "resume from
+  // summary") has no title of a known form: with no input on screen and the cursor on one of its options, the
+  // paragraph just above the options heads it.
+  if (titleIndex < 0) {
+    if (rows.some(row => inputRow(agent, row))) return null;
+    // The options' block runs up past their wrapped labels, descriptions and the blank rows between them.
+    let first = lastOption;
+    const indent = optionRow(rows[lastOption])![1].length;
+    for (let index = lastOption - 1; index >= 0; index--) {
+      if (optionRow(rows[index])) first = index;
+      else if (rows[index].trim() && rows[index].search(/\S/) <= indent + 1) break;
+    }
+    if (!rows.slice(first, lastOption + 1).some(row => /^\s*[❯›>]\s*\d+\./.test(row))) return null;
+    let top = first - 1;
+    while (top >= 0 && (!rows[top].trim() || rule(rows[top]))) top--;
+    if (top < 0) return null;
+    while (top > 0 && rows[top - 1].trim() && !rule(rows[top - 1])) top--;
+    // A question or heading of its own a blank row above that paragraph heads it instead ("Trust this folder?").
+    const heading = top - 2;
+    if (heading >= 0 && !rows[top - 1].trim() && /[?:？：]$/.test(rows[heading].trim()) && !rows[heading - 1]?.trim()) top = heading;
+    titleIndex = top;
+  }
   let firstOption = titleIndex + 1;
   while (firstOption <= lastOption && !optionRow(rows[firstOption])) firstOption++;
 
   const options: ScreenOption[] = [];
-  let numberColumn = 0, hasDetail = false, end = firstOption;
+  // A row under an option is its label wrapping when the label's row ran to the screen's edge, else its description
+  // (Codex's sign-in options: "Sign in with ChatGPT" over "Usage included with Plus, Pro…").
+  let width = 0;
+  const wraps = (length: number) => length >= (width ||= Math.max(...rows.map(row => row.length))) - 12;
+  const nextFilled = (from: number) => { while (from < rows.length && !rows[from].trim()) from++; return rows[from]; };
+  let numberColumn = 0, hasDetail = false, end = firstOption, previous = 0;
   for (; end < rows.length; end++) {
     const row = rows[end], match = optionRow(row);
     if (match) {
@@ -128,12 +185,16 @@ function parseChoice(agent: ScreenAgent, rows: string[]): ScreenChoice | null {
       numberColumn = match[1].length + match[2].length;
       hasDetail = columns.length > 1;
       options.push({ number: Number(match[3]), label: columns[0], detail: columns.slice(1).join(' '),
-        selected: match[2].includes(agent === 'claude' ? '❯' : '›'), hotkey: null });
+        selected: match[2].includes(agent === 'claude' ? '❯' : '›') || match[2].includes('>'), hotkey: null });
+      previous = row.length;
+    } else if (!row.trim() && options.length && optionRow(nextFilled(end + 1) ?? '')) {
+      continue; // a blank row between options (Codex's sign-in choices)
     } else if (row.trim() && !rule(row) && !hintRow(row) && !menuExtra(row) && !inputRow(agent, row) &&
         row.search(/\S/) > numberColumn && options.length) {
       const option = options[options.length - 1];
-      if (hasDetail) option.detail += ' ' + row.trim();
+      if (hasDetail || !wraps(previous)) { option.detail = `${option.detail} ${row.trim()}`.trim(); hasDetail = true; }
       else option.label += ' ' + row.trim();
+      previous = row.length;
     } else break;
   }
   if (end <= lastOption) return null;

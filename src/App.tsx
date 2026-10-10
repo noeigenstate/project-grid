@@ -207,6 +207,11 @@ export function App() {
         if (!id) { reportError(t('先点一下要分屏的项目，再按 {key}。', { key: shortcut('newTerminal') })); return; }
         void perform(api.addTerminal(id)).then(terminal => { if (terminal) focusTerminalWhenReady(terminal); });
       }
+      else if (action === 'removeProject') {
+        const id = currentProject();
+        if (!id) { reportError(t('先点一下要移除的项目，再按 {key}。', { key: shortcut('removeProject') })); return; }
+        void perform(api.removeProject(id, true));
+      }
       else if (action === 'maximize') { if (focusedId) void returnToGrid(); else { const id = currentProject(); if (id) void focusProject(id); } }
       else if (action === 'fullscreen') api.toggleFullScreen();
       else if (action === 'nextProject' || action === 'previousProject') {

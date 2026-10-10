@@ -103,20 +103,7 @@ const projectGit = new ProjectGit(id => remoteFor(id));
 const startupErrors = new Map();
 const restorePlans = new Map();
 const previewResources = new PreviewResources({ remote: project => remoteFor(project.id) });
-// A picture of an HTML page for its card in the reading view: rendered off screen in a sandboxed window with no
-// preload, which may not navigate or open others, for at most four seconds, then closed.
-async function capturePage(url) {
-  const page = new BrowserWindow({ show: false, width: 1280, height: 800, webPreferences: { offscreen: true, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
-  page.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  page.webContents.on('will-navigate', event => event.preventDefault());
-  page.webContents.setAudioMuted(true);
-  try {
-    await Promise.race([page.loadURL(url), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))]);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const image = await page.webContents.capturePage();
-    return image.isEmpty() ? null : `data:image/jpeg;base64,${image.resize({ width: 480, quality: 'good' }).toJPEG(82).toString('base64')}`;
-  } finally { page.destroy(); }
-}
+const capturePage = require('./features/files/capture-page.cjs').createPageCapture(BrowserWindow);
 const fileCard = createFileCards({ previews: previewResources, capture: capturePage });
 let stateTimer;
 let runtimeDir;
@@ -748,14 +735,16 @@ function disposeTerminal(id) {
   if (s.bootstrapFile) fs.rmSync(s.bootstrapFile, { force: true });
 }
 
-async function confirmTerminalClose(id, verb, all = false) {
+// always: ask even with nothing running (removing a project by its shortcut).
+async function confirmTerminalClose(id, verb, all = false, always = false) {
   const project = findProject(id);
   const chosen = all ? [...sessions.values()].filter(item => item.projectId === project.id) : [sessions.get(id)].filter(Boolean);
   const count = chosen.filter(item => item.status !== 'exited').length;
-  if (!count) return true;
+  if (!count && !always) return true;
   const result = await dialog.showMessageBox(window, {
-    type: 'question', title: t(`${verb}${all ? '项目' : '终端'}`), message: t('{verb}“{name}”的 {count} 个终端？', { verb: t(verb), name: project.name, count }),
-    detail: t('所选终端内的 Codex 和其他运行中的命令会被结束。项目文件会保留。'),
+    type: 'question', title: t(`${verb}${all ? '项目' : '终端'}`),
+    message: count ? t('{verb}“{name}”的 {count} 个终端？', { verb: t(verb), name: project.name, count }) : t('移除项目“{name}”？', { name: project.name }),
+    detail: count ? t('所选终端内的 Codex 和其他运行中的命令会被结束。项目文件会保留。') : t('项目文件会保留，以后可以重新添加。'),
     buttons: [t('取消'), t(`确认${verb}`)], defaultId: 0, cancelId: 0,
   });
   return result.response === 1;
@@ -803,7 +792,7 @@ function registerIpc() {
   registerDirectIpc({ handle, findProject, getSession: id => sessions.get(id), startDirect: (id, threadId) => startDirect(id, threadId) });
   // A new project's card offers Claude Code and Codex, fresh or continuing this folder's latest conversation.
   const folderOf = id => store.findTerminal(id)?.record.restore?.cwd || findProject(id).path;
-  handle('project:card', (id, file) => fileCard(findProject(id), file));
+  handle('project:card', (id, file) => fileCard(findProject(id), file, folderOf(id)));
   // A picture Codex generated opens in the system's image viewer; nothing else is opened this way.
   handle('agent:open-image', async file => {
     if (!isGeneratedImage(file) || !fs.existsSync(file)) throw new Error('只能打开 Codex 生成的图片。');

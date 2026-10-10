@@ -93,10 +93,10 @@
   background: url('../../assets/daylight-glacier.webp') center 38% / cover no-repeat;
 }
 :root[data-theme="mountain-blue"] .app-shell {
-  background: linear-gradient(#0c273320, #0c273333), url('../../assets/macos-big-sur.webp') center 35% / cover no-repeat;
+  background: url('../../assets/macos-big-sur.webp') center 35% / cover no-repeat;
 }
 :root[data-theme="wild-red"] .app-shell {
-  background: linear-gradient(#24192012, #2419202e), url('../../assets/macos-sierra.webp') center / cover no-repeat;
+  background: url('../../assets/macos-sierra.webp') center / cover no-repeat;
 }
 
 /* Shared theme materials; Daylight's complete light treatment is loaded last. */

@@ -7,7 +7,10 @@ import { advanceCliCommand, cliHistory, cliResultRows, extractCliPanelRows, hasC
 // The command shown in the popup: while it runs (pending), and once it has finished (done) until the reader closes it.
 type Panel = { command: string; rows: string[]; done?: boolean };
 type Snapshot = { pending: CliCommand | null; panel: Panel | null };
-type Session = { terminalId: string; snapshot: Snapshot; listeners: Set<() => void>; stop: (() => void) | null };
+// What the view shows (the popup, whether a command runs) changes far less often than the tracking behind it: the
+// screen redraws many times a second while the agent works, and only a visible change re-renders the reading view.
+type View = { panel: Panel | null; busy: boolean };
+type Session = { terminalId: string; snapshot: Snapshot; view: View; listeners: Set<() => void>; stop: (() => void) | null };
 // Renderer-only state survives switching views; each PTY session owns its popup.
 const sessions = new Map<string, Session>();
 export function pruneReadingCli(liveKeys: ReadonlySet<string>) {
@@ -23,11 +26,16 @@ function sessionFor(id: string, sessionId: string | null) {
     if (otherKey !== key && other.terminalId === id && other.stop) { other.stop(); other.stop = null; }
   }
   let session = sessions.get(key);
-  if (!session) { session = { terminalId: id, snapshot: { pending: null, panel: null }, listeners: new Set(), stop: null }; sessions.set(key, session); }
+  if (!session) { session = { terminalId: id, snapshot: { pending: null, panel: null }, view: { panel: null, busy: false }, listeners: new Set(), stop: null }; sessions.set(key, session); }
   return session;
 }
+const samePanel = (a: Panel | null, b: Panel | null) => a === b || (!!a && !!b && a.command === b.command && a.done === b.done
+  && a.rows.length === b.rows.length && a.rows.every((row, index) => row === b.rows[index]));
 function publish(session: Session, snapshot: Snapshot) {
   session.snapshot = snapshot;
+  const busy = snapshot.pending !== null;
+  if (busy === session.view.busy && samePanel(snapshot.panel, session.view.panel)) return;
+  session.view = { panel: snapshot.panel, busy };
   session.listeners.forEach(listener => listener());
 }
 function begin(session: Session, terminalId: string, agent: ScreenAgent, command: string, history?: string[]) {
@@ -53,8 +61,10 @@ function begin(session: Session, terminalId: string, agent: ScreenAgent, command
       const panel = screen.choice ? null : isCliIdle(agent, latest.rows, screen) && !side
         ? agent === 'codex' && next.command.observed && !next.command.chose ? { command, rows: next.command.output } : session.snapshot.panel
         : next.command.observed ? { command, rows: extractCliPanelRows(agent, latest.rows, screen, command, next.command.before) } : null;
+      // A dialog the CLI is still redrawing (or just closed) leaves nothing for a moment: keep showing it.
+      const shown = panel && !panel.rows.length && session.snapshot.panel?.rows.length ? session.snapshot.panel : panel;
       if (panel?.rows.length && (side || !hasCliInput(agent, latest.rows, screen))) next.command.dialog = panel.rows;
-      publish(session, { pending: next.command, panel });
+      publish(session, { pending: next.command, panel: shown });
     }
   };
   const unsubscribe = subscribeScreen(terminalId, screen => { latest = screen; if (!subscribing) update(true); });
@@ -72,7 +82,7 @@ function close(session: Session) {
 
 export function useReadingCli(terminalId: string, sessionId: string | null, agent: ScreenAgent, input: RefObject<HTMLTextAreaElement | null>, autoFocus: boolean) {
   const session = useMemo(() => sessionFor(terminalId, sessionId), [terminalId, sessionId]);
-  const snapshot = useSyncExternalStore(listener => { session.listeners.add(listener); return () => { session.listeners.delete(listener); }; }, () => session.snapshot);
+  const snapshot = useSyncExternalStore(listener => { session.listeners.add(listener); return () => { session.listeners.delete(listener); }; }, () => session.view);
   const previous = useRef(snapshot.panel);
   useLayoutEffect(() => {
     if (previous.current && !snapshot.panel && autoFocus) input.current?.focus();
@@ -80,7 +90,7 @@ export function useReadingCli(terminalId: string, sessionId: string | null, agen
   }, [snapshot.panel, autoFocus, input]);
   return {
     panel: snapshot.panel,
-    busy: snapshot.pending !== null,
+    busy: snapshot.busy,
     begin: (command: string, history?: string[]) => begin(session, terminalId, agent, command, history),
     close: () => close(session),
   };

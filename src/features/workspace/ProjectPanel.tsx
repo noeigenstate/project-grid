@@ -108,7 +108,7 @@ export function ProjectPanel({ project, index, hidden, focused, navTarget, navPo
           <button role="menuitem" onClick={() => action(() => onRevealProject(project.id))}><FolderOpen size={16} />{t('打开项目目录')}</button>
           <button role="menuitem" onClick={() => action(() => { onAction(api.restartTerminal(currentTerminal.id)); })}><ArrowCounterClockwise size={16} />{project.kind === 'ssh' ? t('重新连接 SSH') : t('重启当前终端')}</button>
           <div className="menu-divider" />
-          <button role="menuitem" className="danger-text" onClick={() => action(() => { onAction(api.removeProject(project.id)); })}><X size={16} />{t('移除项目')}</button>
+          <button role="menuitem" className="danger-text" onClick={() => action(() => { onAction(api.removeProject(project.id)); })}><X size={16} />{t('移除项目')}<span className="menu-shortcut" aria-hidden="true">{shortcut('removeProject')}</span></button>
         </div>}
       </div>
     </header>

@@ -243,7 +243,9 @@ export function advanceCliCommand(command: CliCommand, agent: ScreenAgent, rows:
     next.output = output;
   }
   const waited = agent !== 'codex' || next.output.length > 0 || next.chose || now - command.at >= CODEX_PATIENCE;
-  return { command: next, done: next.idleSince !== null && now - next.idleSince >= 400 && waited };
+  // Claude's dialog (/usage during a round) closed and its input back: the command is over though Claude still works.
+  const dismissed = agent === 'claude' && next.observed && !!command.dialog?.length && !idle && hasCliInput(agent, rows, screen) && !cliDialogOpen(agent, rows, screen);
+  return { command: next, done: dismissed || (next.idleSince !== null && now - next.idleSince >= 400 && waited) };
 }
 
 export function cliPanelKey(event: { key: string; shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }): string | null {
