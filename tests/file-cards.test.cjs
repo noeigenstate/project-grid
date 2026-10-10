@@ -50,8 +50,28 @@ test('files outside the project or of other kinds get no card', async () => {
   const card = createFileCards({ previews, capture: async () => null });
   await assert.rejects(card(project, '../outside.md'), /文件在项目目录之外/);
   await assert.rejects(card(project, 'notes.txt'), /没有预览卡片/);
-  await assert.rejects(card({ ...project, kind: 'ssh' }, 'docs/guide.md'), /远程项目/);
-  assert.equal(cardKind('README.MD'), 'markdown'); assert.equal(cardKind('a/b.htm'), 'html'); assert.equal(cardKind('x.webm'), 'video'); assert.equal(cardKind('x.ts'), null);
+  assert.equal(cardKind('README.MD'), 'markdown'); assert.equal(cardKind('a/b.htm'), 'html'); assert.equal(cardKind('x.webm'), 'video'); assert.equal(cardKind('x.PNG'), 'image'); assert.equal(cardKind('x.ts'), null);
+});
+
+test('files in a remote project are read over its connection: pages pictured, documents excerpted, images shrunk', async () => {
+  const files = { 'site/index.html': '<h1>remote</h1>', 'docs/guide.md': '# 远程文档', 'img/cat.png': 'x'.repeat(300 * 1024) }, reads = [];
+  const connection = { ready: Promise.resolve(), info: { root: '/srv/app' }, request: async (op, message) => {
+    const content = files[message.path];
+    if (op === 'stat') { if (content === undefined) throw new Error('missing'); return { file: true, size: content.length, modifiedAt: 1 }; }
+    reads.push([message.path, message.offset, message.length]);
+    return Buffer.from(content.slice(message.offset, message.offset + message.length)).toString('base64');
+  } };
+  const opened = [], previews = { remote: () => connection, open: (project, relative, kind) => { opened.push([relative, kind]); return { url: `project-preview://p/${relative}`, previewId: relative }; }, close: () => {} };
+  const shrunk = [];
+  const card = createFileCards({ previews, capture: async url => `picture of ${url}`, shrinkBytes: bytes => { shrunk.push(bytes.length); return 'data:image/png;base64,small'; } });
+  const project = { id: 'r', kind: 'ssh', path: '/srv/app' };
+  assert.deepEqual(await card(project, '/srv/app/site/index.html'), { kind: 'html', path: 'site/index.html', picture: 'picture of project-preview://p/site/index.html' });
+  assert.deepEqual(await card(project, 'docs/guide.md'), { kind: 'markdown', path: 'docs/guide.md', excerpt: '# 远程文档' });
+  assert.deepEqual(await card(project, 'img/cat.png'), { kind: 'image', path: 'img/cat.png', remote: true, picture: 'data:image/png;base64,small' });
+  assert.deepEqual(shrunk, [300 * 1024], 'the whole image arrives, in the pieces the worker reads at once');
+  assert.deepEqual(reads.filter(([file]) => file === 'img/cat.png').map(([, offset, length]) => [offset, length]), [[0, 256 * 1024], [256 * 1024, 44 * 1024]]);
+  await assert.rejects(card(project, '/etc/passwd.md'), /文件在项目目录之外/);
+  await assert.rejects(card(project, 'img/missing.png'), /找不到这张图片/);
 });
 
 test('absolute paths, mixed separators and Windows casing return preview-safe relative paths', async () => {
@@ -173,19 +193,20 @@ test('Codex shell edits honor workdir rather than the session root', async () =>
   for (const entry of log.list) assert.equal((await card(project, entry.tool.written[0])).path, 'docs/guide.md');
 });
 
-test('card and name clicks open only resolved paths, including early clicks and capture failures', async t => {
+test('card and name clicks show only resolved paths in the popup, including early clicks and capture failures', async t => {
   const Module = require('node:module'), ts = require('typescript');
   const filename = path.join(__dirname, '../src/features/reading/FileCards.tsx'), mod = new Module(filename, module);
   mod.filename = filename; mod.paths = Module._nodeModulePaths(path.dirname(filename));
   let states = [], index = 0;
+  const opened = [], errors = [], raw = path.join(os.tmpdir(), 'template.html');
   const originalRequire = mod.require.bind(mod);
   mod.require = name => name === 'react' ? { useEffect: () => {}, useRef: () => ({ current: null }), useState: initial => [states[index++] ?? initial, () => {}] }
-    : name === '@phosphor-icons/react' ? { FileHtml: () => null, FileText: () => null, FilmStrip: () => null }
+    : name === '@phosphor-icons/react' ? { FileHtml: () => null, FileText: () => null, FilmStrip: () => null, Image: () => null }
+    : name.endsWith('/file-popup') ? { showPopup: target => opened.push(target) }
     : name.endsWith('/i18n') ? { t: value => value } : name.endsWith('.css') ? {} : originalRequire(name);
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
   const previous = global.window; t.after(() => { global.window = previous; });
-  const opened = [], errors = [], raw = path.join(os.tmpdir(), 'template.html');
-  const props = { projectId: 'p', files: [raw], renderMarkdown: text => text, onOpen: file => opened.push(file), onError: error => errors.push(error) };
+  const props = { projectId: 'p', files: [raw], renderMarkdown: text => text, onError: error => errors.push(error) };
   const item = mod.exports.FileCards(props).props.children[0][0];
   for (const loaded of [null, { kind: 'html', path: 'docs/template.html', picture: null }]) {
     global.window = { agentrix: { fileCard: async () => ({ ok: true, value: { kind: 'html', path: 'docs/template.html', picture: null } }) } };
@@ -193,7 +214,7 @@ test('card and name clicks open only resolved paths, including early clicks and 
     const buttons = item.type(item.props).props.children;
     await buttons[0].props.onClick(); await buttons[1].props.onClick();
   }
-  assert.deepEqual(opened, Array(4).fill('docs/template.html'));
+  assert.deepEqual(opened, Array(4).fill({ kind: 'file', projectId: 'p', path: 'docs/template.html' }));
   global.window.agentrix.fileCard = async () => ({ ok: false, error: '文件在项目目录之外，无法在此预览。' });
   states = []; index = 0;
   await item.type(item.props).props.children[1].props.onClick();

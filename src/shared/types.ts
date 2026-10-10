@@ -15,7 +15,7 @@ export type Project = {
   terminals: ProjectTerminal[];
 };
 // A document, page or video an agent wrote, as its card in the reading view shows it.
-export type FileCard = { kind: 'markdown'; path: string; excerpt: string } | { kind: 'html'; path: string; picture: string | null } | { kind: 'video'; path: string; url: string } | { kind: 'image'; path: string; picture: string };
+export type FileCard = { kind: 'markdown'; path: string; excerpt: string } | { kind: 'html'; path: string; picture: string | null } | { kind: 'video'; path: string; url: string } | { kind: 'image'; path: string; picture: string; remote?: boolean };
 // A question or approval Codex, connected directly, waits on: the reading view shows it as a card.
 export type DirectCard = { kind: 'approval'; subject: 'command' | 'files'; title: string; detail: string; options: ('accept' | 'acceptForSession' | 'decline')[] }
   | { kind: 'question'; questions: { id: string; header: string; question: string; other: boolean; secret: boolean; options: { label: string; description: string }[] }[] };
@@ -143,7 +143,7 @@ type Bridge = {
   attachTerminal(id: string): Promise<Result<TerminalSnapshot>>;
   terminalCommands(id: string): Promise<Result<AgentCommand[]>>;
   agentStart(id: string): Promise<Result<boolean>>;
-  agentOpenImage(file: string): Promise<Result<boolean>>;
+  agentImage(file: string): Promise<Result<{ url: string; width: number; height: number }>>;
   fileCard(id: string, file: string): Promise<Result<FileCard>>;
   agentHistory(id: string): Promise<Result<{ claude: { id: string; at: number } | null; codex: { id: string; at: number } | null }>>;
   agentLaunch(id: string, agent: 'claude' | 'codex', mode: 'new' | 'continue'): Promise<Result<boolean>>;
@@ -154,6 +154,7 @@ type Bridge = {
   agentSessions(id: string): Promise<Result<AgentSession[]>>;
   followAgentSession(id: string, sessionId: string): Promise<Result<boolean>>;
   writeTerminal(id: string, data: string): void;
+  answerTerminal(id: string, data: string): void;
   resizeTerminal(id: string, cols: number, rows: number): void;
   copy(text: string): Promise<Result<void>>;
   readClipboard(): Promise<Result<string>>;

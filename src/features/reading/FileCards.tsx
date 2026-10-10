@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FileHtml, FileText, FilmStrip, Image as ImageIcon } from '@phosphor-icons/react';
 import type { FileCard as Card } from '../../shared/types';
 import { t } from '../../shared/i18n';
+import { showPopup } from '../files/file-popup';
 import './file-cards.css';
 
 const PREVIEWED = /\.(?:md|markdown|mdx|html?|mp4|m4v|webm|ogv|ogg|mov|mkv|avi|png|jpe?g|gif|webp|bmp)$/i;
@@ -10,20 +11,20 @@ const SHOWN = 4;
 
 // The documents, pages, videos and images a group of steps wrote (or a reply named), as small cards under it: a
 // Markdown file laid out, a picture of an HTML page, a video that plays where it is, the image itself. Nothing is read
-// until a card scrolls into view; a click opens the file in the full preview, an image in the system's viewer.
+// until a card scrolls into view; a click shows the file in a popup over the conversation, never on the project's page.
 // quiet: a file that cannot be shown leaves no card (a reply may name a picture that is not there).
-export function FileCards({ projectId, files, renderMarkdown, onOpen, onError, quiet = false }: {
-  projectId: string; files: string[]; renderMarkdown: (text: string) => ReactNode; onOpen: (file: string) => void; onError: (message: string) => void; quiet?: boolean;
+export function FileCards({ projectId, files, renderMarkdown, onError, quiet = false }: {
+  projectId: string; files: string[]; renderMarkdown: (text: string) => ReactNode; onError: (message: string) => void; quiet?: boolean;
 }) {
   const [all, setAll] = useState(false);
   const shown = all ? files : files.slice(0, SHOWN);
   return <div className="file-cards">
-    {shown.map(file => <FileCard key={file} projectId={projectId} file={file} renderMarkdown={renderMarkdown} onOpen={onOpen} onError={onError} quiet={quiet} />)}
+    {shown.map(file => <FileCard key={file} projectId={projectId} file={file} renderMarkdown={renderMarkdown} onError={onError} quiet={quiet} />)}
     {files.length > SHOWN && !all && <button type="button" className="text-button file-cards-more" onClick={() => setAll(true)}>{t('还有 {count} 个文件', { count: files.length - SHOWN })}</button>}
   </div>;
 }
 
-function FileCard({ projectId, file, renderMarkdown, onOpen, onError, quiet }: { projectId: string; file: string; renderMarkdown: (text: string) => ReactNode; onOpen: (file: string) => void; onError: (message: string) => void; quiet: boolean }) {
+function FileCard({ projectId, file, renderMarkdown, onError, quiet }: { projectId: string; file: string; renderMarkdown: (text: string) => ReactNode; onError: (message: string) => void; quiet: boolean }) {
   const root = useRef<HTMLDivElement>(null), video = useRef<HTMLVideoElement>(null);
   // failed: why the card could not be made, shown again when it is clicked.
   const [card, setCard] = useState<Card | null>(null), [failed, setFailed] = useState<string | null>(null), [seen, setSeen] = useState(false);
@@ -47,10 +48,8 @@ function FileCard({ projectId, file, renderMarkdown, onOpen, onError, quiet }: {
   const name = file.split(/[\\/]/).pop() || file;
   const kind = card?.kind ?? (/\.html?$/i.test(file) ? 'html' : /\.(?:md|markdown|mdx)$/i.test(file) ? 'markdown' : /\.(?:png|jpe?g|gif|webp|bmp)$/i.test(file) ? 'image' : 'video');
   const Icon = kind === 'html' ? FileHtml : kind === 'video' ? FilmStrip : kind === 'image' ? ImageIcon : FileText;
-  const show = (shown: Card) => {
-    if (shown.kind !== 'image') { onOpen(shown.path); return; }
-    void window.agentrix.agentOpenImage(shown.path).then(result => { if (!result.ok) onError(t(result.error)); });
-  };
+  // An image on this computer is read by its own path; one in a remote project, like any file there, through the project.
+  const show = (shown: Card) => showPopup(shown.kind === 'image' && !shown.remote ? { kind: 'image', path: shown.path } : { kind: 'file', projectId, path: shown.path });
   // A click before the card loaded still resolves through the main process, never the raw agent path.
   const open = async () => {
     if (card) { show(card); return; }

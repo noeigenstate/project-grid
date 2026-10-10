@@ -5,7 +5,7 @@ import { CodeEditor, findConflicts, resolveConflict, type Conflict } from './Cod
 import { t } from '../../shared/i18n';
 const MarkdownPreview = lazy(() => import('./MarkdownPreview').then(module => ({ default: module.MarkdownPreview })));
 
-function TextContent({ content }: { content: string }) {
+export function TextContent({ content }: { content: string }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [scroll, setScroll] = useState({ top: 0, height: 700 });
   const lines = useMemo(() => content.split('\n'), [content]);

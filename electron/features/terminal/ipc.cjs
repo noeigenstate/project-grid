@@ -25,9 +25,12 @@ function registerTerminalIpc({ handle, listen, findProject, getSession, hasSessi
     s.flush();
     return { sessionId: s.sessionId, seq: s.seq, data: s.chunks.join('') };
   });
-  function writeTerminal(id, data) {
+  // answer: keys that answer the CLI itself while it signs in (a code from the browser, an API key, Enter, Escape). They
+  // reach it as typed, but are never a prompt: no round starts, nothing is queued and the text is shown nowhere.
+  function writeTerminal(id, data, answer = false) {
     if (typeof data !== 'string' || data.length > 1024 * 1024) return;
     const s = getSession(id);
+    if (s && s.status !== 'exited' && !s.direct && answer === true) { s.gate.input(data); return; }
     // A Codex session connected directly has no terminal: its messages go through agent:send.
     if (s && s.status !== 'exited' && !s.direct) {
       const submitted = s.submissions.write(data);

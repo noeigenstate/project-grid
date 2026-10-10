@@ -7,7 +7,7 @@ const { StringDecoder } = require('node:string_decoder');
 const { sshArguments, readSSHSettings } = require('./ssh-config.cjs');
 
 class RemoteConnection {
-  constructor(project, { integrationDir, auth, sessionKey, onEvent, onReady, sshPath, askpassPath, codingPath, extraEnv = {} }) {
+  constructor(project, { integrationDir, auth, sessionKey, onEvent, onReady, sshPath, askpassPath, codingPath, readingNote = '', extraEnv = {} }) {
     const worker = fs.readFileSync(path.join(integrationDir, 'remote-worker.py'));
     this.project = project; this.auth = auth; this.events = new EventEmitter();
     this.pending = new Map(); this.nextId = 0; this.buffer = ''; this.connected = false; this.closed = false;
@@ -44,7 +44,7 @@ class RemoteConnection {
     }, 1000);
     this.connectTimer.unref?.();
     this.child.stdin.write(worker.toString('base64') + '\n');
-    this.send({ path: project.path, codingPath, projectId: project.id, token: sessionKey, cols: 90, rows: 24 });
+    this.send({ path: project.path, codingPath, projectId: project.id, token: sessionKey, cols: 90, rows: 24, readingNote });
   }
   onData(callback) { this.events.on('data', callback); return { dispose: () => this.events.off('data', callback) }; }
   onExit(callback) { this.events.on('exit', callback); return { dispose: () => this.events.off('exit', callback) }; }

@@ -43,6 +43,20 @@ await fs.writeFile(path.join(shop, 'src', 'pages', 'Checkout.tsx'), checkout([
   '    <h2>订单结算</h2>', '    <CartList items={cart} />', '    <CouponInput value={coupon} onChange={setCoupon} />', '    <p className="total">合计 {formatPrice(total)}</p>', '    <PayButton amount={total} />', '  </section>;', '}']));
 await fs.writeFile(path.join(shop, 'src', 'pages', 'CouponInput.tsx'), "export function CouponInput({ value, onChange }: Props) {\n  return <input placeholder=\"优惠券\" value={value} onChange={event => onChange(event.target.value)} />;\n}\n");
 
+// A design mock of the checkout with its coupon field, drawn as the storefront's picture.
+const COUPON_MOCK = `<!doctype html><meta charset="utf-8"><body style="margin:0;height:560px;display:grid;place-items:center;font-family:'Segoe UI','Microsoft YaHei',sans-serif;
+background:radial-gradient(circle at 20% 15%,#ff7ab6 0,transparent 42%),radial-gradient(circle at 85% 80%,#5b8cff 0,transparent 45%),linear-gradient(135deg,#1d1236,#0d1b2e)">
+<div style="width:520px;padding:30px 34px;border-radius:22px;background:rgba(255,255,255,.94);box-shadow:0 30px 70px -20px rgba(0,0,0,.6)">
+<div style="font-size:13px;color:#8a7fa8;letter-spacing:.12em">CHECKOUT</div><div style="font-size:26px;font-weight:700;color:#1b1630;margin:4px 0 18px">订单结算</div>
+<div style="display:flex;justify-content:space-between;color:#4a4560;font-size:15px;margin:8px 0">降噪耳机 × 1<b>¥ 899</b></div>
+<div style="display:flex;justify-content:space-between;color:#4a4560;font-size:15px;margin:8px 0">数据线 × 2<b>¥ 98</b></div>
+<div style="display:flex;gap:10px;margin:20px 0 14px"><div style="flex:1;padding:12px 14px;border-radius:12px;border:2px solid #7b5cff;color:#1b1630;font-size:15px;font-weight:600;letter-spacing:.06em">SPRING20</div>
+<div style="padding:12px 18px;border-radius:12px;background:#7b5cff;color:#fff;font-size:15px;font-weight:600">已使用</div></div>
+<div style="color:#2f9e6b;font-size:14px;margin-bottom:12px">✓ 优惠券已生效，立减 ¥ 199</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #ece8f5;padding-top:16px"><span style="color:#4a4560">合计</span>
+<span style="font-size:30px;font-weight:800;color:#1b1630">¥ 798</span></div>
+<div style="margin-top:18px;padding:14px;border-radius:14px;text-align:center;color:#fff;font-weight:700;font-size:16px;background:linear-gradient(90deg,#ff5fa2,#7b5cff)">立即支付</div></div></body>`;
+
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false, fontSize: 13, guideVersion: '9.9.9' } }));
 const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const application = await electron.launch({ executablePath: require('electron'), args: [root, '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'], cwd: root, env, timeout: 30000 });
@@ -57,6 +71,18 @@ try {
     ipcMain.removeHandler('voice:state'); ipcMain.handle('voice:state', () => ({ ok: true, value: { phase: 'ready', ready: true, percent: 100, model: 'demo', error: null, downloadBytes: 0 } }));
   });
   await page.waitForSelector('.project-panel');
+  // The picture the storefront's answer names, rendered off screen from a small design mock: the reading view shows it
+  // under the answer.
+  const mock = await application.evaluate(async ({ BrowserWindow }, html) => {
+    const window = new BrowserWindow({ show: false, width: 960, height: 560, webPreferences: { offscreen: true } });
+    await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const png = (await window.webContents.capturePage()).toPNG().toString('base64');
+    window.destroy();
+    return png;
+  }, COUPON_MOCK);
+  await fs.mkdir(path.join(shop, 'design'), { recursive: true });
+  await fs.writeFile(path.join(shop, 'design', 'coupon-preview.png'), Buffer.from(mock, 'base64'));
   const state = async index => (await page.evaluate(() => window.agentrix.getState())).value.projects[index];
   const panel = index => page.locator(`[data-project-id="${projects[index].id}"]`);
   const write = (index, data) => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id: projects[index].id, data });
@@ -98,7 +124,7 @@ try {
     call('c1', 'Get-Content src/pages/Checkout.tsx'), done('c1'), call('c2', 'rg -n "totalOf" src'), done('c2'),
     message('agent', 'a2', '## 方案\n\n- 新增 `CouponInput` 组件，受控输入\n- 在 `lib/price.ts` 里加 `applyCoupon(total, code)`，未知券码不改价格\n- `Checkout` 用 `applyCoupon(totalOf(cart), coupon)` 计算合计\n\n```ts\nexport function applyCoupon(total: number, code: string) {\n  const rate = COUPONS[code.trim().toUpperCase()] ?? 1;\n  return Math.round(total * rate);\n}\n```'),
     call('c3', `apply_patch <<'EOF'\n*** Begin Patch\n*** Update File: src/pages/Checkout.tsx\n*** Add File: src/pages/CouponInput.tsx\n*** Update File: src/lib/price.ts\n*** End Patch\nEOF`), done('c3'),
-    message('agent', 'a3', '改好了，接下来跑结算相关的测试。'),
+    message('agent', 'a3', '改好了，这是结算页加上优惠券后的效果图：\n\n![优惠券输入框](design/coupon-preview.png)\n\n接下来跑结算相关的测试。'),
     call('c4', 'npm test -- checkout')]);
   await waitFor(async () => (await state(0)).codexActivity === 'working', 'storefront working');
   // Payments and dashboard: finished rounds; the dashboard has been looked at (green), payments waits (pink).

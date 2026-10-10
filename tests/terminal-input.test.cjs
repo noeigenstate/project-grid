@@ -25,8 +25,20 @@ function terminalWriter(agent, activity = 'idle') {
     now: () => 1234,
     applyActivity: (_project, s, snapshot) => { calls.interrupted = snapshot; s.codexActivity = snapshot.state; },
   });
-  return { session, calls, write: data => write('terminal', data) };
+  return { session, calls, write: data => write('terminal', data), answer: data => write('terminal', data, true) };
 }
+
+test('answers to a CLI signing in reach it as typed but are never a prompt', () => {
+  for (const agent of ['claude', 'codex']) {
+    const { session, calls, answer, write } = terminalWriter(agent);
+    for (const data of ['code-from-the-browser', '\r', 'sk-secret', '\r', '\x1b']) answer(data);
+    assert.deepEqual(calls.forwarded, ['code-from-the-browser', '\r', 'sk-secret', '\r', '\x1b']);
+    assert.deepEqual(calls.prompts, []); assert.deepEqual(calls.completion, []);
+    assert.equal(session.codexActivity, 'idle'); assert.equal(calls.polls, 0);
+    // What the reader types next is not run together with the answer.
+    write('hello\r'); assert.deepEqual(calls.prompts, [['hello', false]]);
+  }
+});
 
 test('local commands are classified by the submitted prefix, with history retaining prompt behavior', () => {
   for (const text of ['/model', '/status', '/custom-prompt', '/', '!ls', '!']) assert.equal(isLocalCommand(text), true, text);

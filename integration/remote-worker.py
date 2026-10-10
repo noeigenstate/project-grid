@@ -46,6 +46,7 @@ except Exception: pass
 
 BASH_SOURCE = r'''if [ -r "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi
 cd -- "$AGENTRIX_ROOT" || exit 1
+__pg_note=$AGENTRIX_READING_NOTE; unset AGENTRIX_READING_NOTE
 unalias codex 2>/dev/null || true
 __pg_emit() { "$AGENTRIX_PYTHON" "$AGENTRIX_NOTIFY_FILE" "$@" >/dev/null 2>&1; }
 function codex {
@@ -53,7 +54,10 @@ function codex {
     executable=$(type -P codex)
     if [ -z "$executable" ]; then printf 'Codex CLI was not found on this SSH host.\n'; return 127; fi
     __pg_emit codex-started
-    "$executable" -c "notify=$AGENTRIX_NOTIFY_COMMAND" -c 'tui.terminal_title=["session-id"]' "$@"
+    # What the reading view can show (electron/features/agents/reading-note.cjs); the user's own -c comes later and wins.
+    local -a note=()
+    [ -n "$__pg_note" ] && note=(-c "developer_instructions=\"$__pg_note\"")
+    "$executable" -c "notify=$AGENTRIX_NOTIFY_COMMAND" -c 'tui.terminal_title=["session-id"]' "${note[@]}" "$@"
     result=$?
     __pg_emit codex-exited "$result"
     return "$result"
@@ -506,7 +510,7 @@ class Worker:
                 if temporary and os.path.exists(temporary): os.unlink(temporary)
         return self.preview(relative, page_index)
 
-    def start_terminal(self, cols, rows):
+    def start_terminal(self, cols, rows, reading_note=""):
         if os.name != "posix": raise ValueError("SSH 远端目前需要 Linux、Python 3 和 Bash。")
         import pty
         bash = shutil.which("bash")
@@ -524,6 +528,8 @@ class Worker:
         self.listener.listen(8)
         self.listener.settimeout(0.5)
         env = dict(os.environ, TERM="xterm-256color", COLORTERM="truecolor", AGENTRIX_ROOT=self.coding_root, AGENTRIX_PYTHON=sys.executable, AGENTRIX_NOTIFY_FILE=notify_file, AGENTRIX_SOCKET=self.socket_path, AGENTRIX_TOKEN=self.token, AGENTRIX_NOTIFY_COMMAND=json.dumps([sys.executable, notify_file, "notify"]))
+        # Plain words for the Codex wrapper in BASH_SOURCE; anything that could break its TOML string is left out.
+        if isinstance(reading_note, str) and reading_note and not set('"\\\n') & set(reading_note): env["AGENTRIX_READING_NOTE"] = reading_note[:2000]
         for key in ("NO_COLOR", "NODE_DISABLE_COLORS"): env.pop(key, None)
         if env.get("FORCE_COLOR") == "0": env.pop("FORCE_COLOR", None)
         child, master = pty.fork()
@@ -643,7 +649,7 @@ def main():
         config = json.loads(sys.stdin.buffer.readline(MAX_MESSAGE + 1))
         info = worker.initialize(config)
         emit({"type": "ready", "info": info})
-        worker.start_terminal(config.get("cols", 90), config.get("rows", 24))
+        worker.start_terminal(config.get("cols", 90), config.get("rows", 24), config.get("readingNote", ""))
         while not worker.stopping:
             line = sys.stdin.buffer.readline(MAX_MESSAGE + 1)
             if not line: break

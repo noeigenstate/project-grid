@@ -15,6 +15,8 @@ import { ReadingSessions } from './ReadingSessions';
 import { usesSessionPicker } from './reading-sessions';
 import { useWelcomeStarting } from './reading-welcome';
 import { ReadingCliPanel } from './ReadingCliPanel';
+import { ReadingSignIn } from './ReadingSignIn';
+import { signInScreen } from '../agents/sign-in-screen';
 import { useReadingCli } from './useReadingCli';
 import { choiceIdentity } from './choice-keys';
 import { setChoiceVisible } from './reading-mode';
@@ -31,7 +33,8 @@ import { usePendingPrompts } from './usePendingPrompts';
 import { PendingPromptEntries, UserImages, UserText } from './PendingPromptEntries';
 import { ReadingDirectCard } from './ReadingDirectCard';
 import { FileCards, previewable } from './FileCards';
-import { replyImages } from './reply-images';
+import { replyFiles } from './reply-files';
+import { showPopup } from '../files/file-popup';
 
 const purifier = createDOMPurify(window);
 // Switching to the CLI unmounts the composer; sent messages still belong to that terminal.
@@ -113,22 +116,22 @@ function Markdown({ text }: { text: string }) {
   return <div className="reading-markdown" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
-// A picture the agent generated, shown where it answered; a click opens the full image in the system's viewer.
-function GeneratedImage({ src, path, prompt, onError }: { src: string; path: string; prompt: string; onError: (message: string) => void }) {
-  const open = () => void window.agentrix.agentOpenImage(path).then(result => { if (!result.ok) onError(result.error); });
+// A picture the agent generated, shown where it answered; a click shows it full size in a popup.
+function GeneratedImage({ src, path, prompt }: { src: string; path: string; prompt: string }) {
+  const open = () => showPopup({ kind: 'image', path });
   return <figure className="reading-generated">
     <button type="button" title={t('打开原图')} aria-label={t('打开原图')} onClick={open}><img src={src} alt={prompt || t('生成的图片')} /></button>
     {prompt && <figcaption title={prompt}>{prompt}</figcaption>}
   </figure>;
 }
 
-// A reply, with the local pictures it names shown under it as pictures (the agents are told they can show an image
+// A reply, with the local pictures, pages and videos it names shown under it (the agents are told they can show one
 // this way: electron/features/agents/reading-note.cjs).
-function AssistantReply({ entry, projectId, onOpen, onError }: { entry: ConversationEntry; projectId: string; onOpen: (file: string) => void; onError: (message: string) => void }) {
-  const pictures = useMemo(() => entry.text ? replyImages(entry.text) : [], [entry.text]);
+function AssistantReply({ entry, projectId, onError }: { entry: ConversationEntry; projectId: string; onError: (message: string) => void }) {
+  const named = useMemo(() => entry.text ? replyFiles(entry.text) : [], [entry.text]);
   return <div className="reading-assistant">{entry.text ? <Markdown text={entry.text} /> : null}
-    {pictures.length > 0 && <FileCards projectId={projectId} files={pictures} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} onError={onError} quiet />}
-    {entry.generated && entry.images?.[0] && <GeneratedImage src={entry.images[0]} {...entry.generated} onError={onError} />}</div>;
+    {named.length > 0 && <FileCards projectId={projectId} files={named} renderMarkdown={text => <Markdown text={text} />} onError={onError} quiet />}
+    {entry.generated && entry.images?.[0] && <GeneratedImage src={entry.images[0]} {...entry.generated} />}</div>;
 }
 
 // Where a generated picture will appear: a bar that keeps moving and the seconds so far, so a picture that takes
@@ -145,7 +148,7 @@ function ImageProgress({ step }: { step: string }) {
   </div>;
 }
 
-function ToolGroup({ entries, live, projectId, onOpen, onError }: { entries: ConversationEntry[]; live: boolean; projectId: string; onOpen: (file: string) => void; onError: (message: string) => void }) {
+function ToolGroup({ entries, live, projectId, onError }: { entries: ConversationEntry[]; live: boolean; projectId: string; onError: (message: string) => void }) {
   const running = entries.some(entry => !entry.tool?.done);
   const [open, setOpen] = useState(false);
   const failed = entries.filter(entry => entry.tool?.failed).length;
@@ -164,7 +167,7 @@ function ToolGroup({ entries, live, projectId, onOpen, onError }: { entries: Con
       <b>{stepVerb(entry.tool!)}</b><code title={entry.tool!.target}>{entry.tool!.target}</code>{entry.tool!.detail && <small>{entry.tool!.detail}</small>}
     </li>)}</ul>}
     {drawing && <ImageProgress step={drawing.id} />}
-    {files.length > 0 && <FileCards projectId={projectId} files={files} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} onError={onError} />}
+    {files.length > 0 && <FileCards projectId={projectId} files={files} renderMarkdown={text => <Markdown text={text} />} onError={onError} />}
   </div>;
 }
 
@@ -194,6 +197,11 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const screen = useMemo(() => parseAgentScreen(terminal.agent === 'claude' ? 'claude' : 'codex', visibleScreen?.rows ?? []), [terminal.agent, visibleScreen]);
   // Codex connected directly: no screen to read; its questions and approvals come as a card, its state with the session.
   const direct = !!terminal.direct, directCard = direct ? terminal.card ?? null : null;
+  // The CLI signing in before its input exists (a link to open, a code to paste): a popup, never a stuck welcome.
+  const signIn = useMemo(() => {
+    const kind = terminal.agent === 'claude' ? 'claude' : 'codex';
+    return terminal.codexActive && !direct && visibleScreen && !screen.choice && !hasCliInput(kind, visibleScreen.rows, screen) ? signInScreen(kind, visibleScreen.rows) : null;
+  }, [terminal.agent, terminal.codexActive, direct, visibleScreen, screen]);
   const directDown = direct && terminal.status === 'exited', directStarting = direct && terminal.status === 'starting';
   const choiceKey = screen.choice ? choiceIdentity(screen.choice) : directCard ? JSON.stringify(directCard) : null;
   const [sessionsOpen, setSessionsOpen] = useState(false);
@@ -495,10 +503,10 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   else body = <>
     {tail.earlier > 0 && <button type="button" className="text-button reading-earlier" onClick={tail.showEarlier}>{t('显示更早的对话（{count}）', { count: tail.earlier })}</button>}
     {tail.visible.map((block, index) => block.kind === 'tools'
-    ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onOpen={onOpenLink} onError={onError} />
+    ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onError={onError} />
     : block.entry.role === 'user'
       ? <div key={block.entry.id} className="reading-user"><span>{t('你')}</span><UserText text={block.entry.text || ''} />{block.entry.images && <UserImages images={block.entry.images} />}</div>
-      : <AssistantReply key={block.entry.id} entry={block.entry} projectId={projectId} onOpen={onOpenLink} onError={onError} />)}
+      : <AssistantReply key={block.entry.id} entry={block.entry} projectId={projectId} onError={onError} />)}
   </>;
   return <div className="reading-view" onClick={event => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-copy-code]');
@@ -509,7 +517,8 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     <div className="reading-scroll-area">
       <div className="reading-scroll" ref={scroller} tabIndex={0}><div className="reading-content" ref={content} style={{ visibility: entries.length && !ready ? 'hidden' : undefined }}>{body}<PendingPromptEntries prompts={pending} undelivered={undelivered} onResend={resend} onDiscard={prompt => cancelEcho(prompt.id)} />
         {status}</div></div>
-      {!screen.choice && !sessionsOpen && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} done={!!cli.panel.done} terminalId={terminal.id} onClose={() => { void closeCommand(); input.current?.focus(); }} />}
+      {signIn && <ReadingSignIn agent={terminal.agent === 'claude' ? 'claude' : 'codex'} screen={signIn} terminalId={terminal.id} projectId={projectId} onError={onError} />}
+      {!screen.choice && !sessionsOpen && !signIn && cli.panel && <ReadingCliPanel command={cli.panel.command} rows={cli.panel.rows} done={!!cli.panel.done} terminalId={terminal.id} onClose={() => { void closeCommand(); input.current?.focus(); }} />}
       {!stuck && <div className="reading-latest">
         {unseen > 0 && <span className="reading-unseen" role="status">{t('{count} 条新消息', { count: unseen })}</span>}
         <button type="button" className="icon-button reading-jump" title={t('跳到最新消息')} aria-label={t('跳到最新消息')} onClick={() => toBottom('smooth')}><ArrowDown size={18} /></button>

@@ -118,8 +118,13 @@ SSH 项目的目录菜单、终端目录链接和 Markdown 目录链接都进入
 终端里运行 Codex 或 Claude Code 时，对话默认按文档排版显示：你的提示、按 Markdown 排好的回答（代码块带「复制」按钮）和折叠成一行的工具调用。真实终端一直在下面运行，底部输入框的内容直接发给它，Enter 发送，Shift+Enter 换行，工作中可点停止按钮中断。
 
 - 点击标题栏的终端图标切换到原始终端，再点一次回到文档排版。这个选择保持到该终端里的程序退出，下次启动 Codex 或 Claude Code 时又默认显示文档排版。
-- 在输入框里粘贴图片（Ctrl+V）：图片交给 Codex 或 Claude Code 本身，附在下一条消息上，输入框上方显示已附加几张；只有图片也可以直接发送。
-- 程序弹出需要在终端里选择的提示（例如信任目录、确认运行命令）时，切换到终端作答。
+- 在输入框里粘贴图片（Ctrl+V）：图片交给 Codex 或 Claude Code 本身，附在下一条消息上，输入框上方显示已附加几张，点 × 移除；只有图片也可以直接发送。
+- 回答里写到的本机图片、HTML 页面和视频（完整路径、反引号里的路径或 Markdown 图片 `![说明](路径)`）直接显示在回答下面；工具写出的图片、网页、Markdown 和视频也以卡片显示在那一组步骤下。点卡片或回答里的文件链接，在当前界面弹窗显示大图、网页、文档或文件夹，Esc、× 或点弹窗外面关闭；不会进入项目页，也不会打开其他程序。SSH 项目的文件通过 SSH 读取。
+- Agentrix 启动 Claude Code 和 Codex 时会临时告诉它们「写出完整路径，阅读视图就会显示图片、网页和视频，不要用别的程序打开」（Claude 用 `--append-system-prompt`，Codex 用 `developer_instructions`，不写入配置文件；命令行里你自己给的同类参数优先）。SSH 项目目前只对 Codex 生效。
+- 斜杠命令的结果以弹窗显示，Esc 或点弹窗外面关闭；命令在 CLI 里打开的对话框随之关闭，没能关上的会在下一条消息发出前关闭。
+- 启动前的确认（信任文件夹、选主题、绕过权限警告、新 MCP 服务器、从摘要恢复、Codex 更新提示）、权限确认和选择题都以弹窗或卡片呈现，点选即可。
+- 第一次启动、尚未登录时弹出「登录 Claude Code / Codex」窗口：一键在浏览器打开登录页、复制链接，把浏览器给的授权码或 OpenAI API Key 粘贴进去提交，或复制 Codex 的一次性验证码；成功或出错后按「继续」「取消」。这里输入的内容只交给 CLI，不算作对话消息，也不会显示在任务列表里。
+- 新项目卡片上没安装的助手标为「未安装 · 点击一键安装」，点一下用 npm 全局安装后直接启动；没有 Node.js 时先打开它的下载页。
 
 ## Git 状态与提交历史
 
@@ -162,7 +167,7 @@ Markdown（`.md`、`.markdown`、`.mdown`、`.mkd`）提供「编辑 / 预览」
 - 新建终端会清除从父进程继承的 `NO_COLOR` 等禁用颜色标记，并启用 truecolor 终端能力，保留 Codex 和其他命令的 ANSI 颜色。旧终端需要在更新后重启才能使用新的环境设置。
 - 正文、路径和终端文字使用更明亮的配色，文字区域的玻璃底色加深，减少背景对阅读的影响。
 - 终端文字默认用显卡绘制（设置 › 外观 › 终端渲染 › GPU 加速）。Codex 和 Claude Code 工作时每秒重绘界面十次左右，用网页方式逐行排版会占去大部分处理器时间；显卡绘制后，四个助手同时工作时窗口的处理器占用约为原来的四分之一。最多 12 个终端用显卡绘制，其余的和显卡出错（例如从睡眠唤醒）时自动改用兼容方式。如果终端文字显示异常，选择「兼容模式」。
-- 按住 **Ctrl + 鼠标左键** 点击终端链接：HTTP/HTTPS 地址交给默认浏览器，项目内文件进入应用预览。支持普通网址、Markdown 文件链接、OSC 8 超链接、中文路径和终端自动换行的链接；普通单击不打开链接。`art/report.html`、`./art/report.html` 等相对路径自动按对应项目根目录补全，本地和 SSH 项目均适用。Codex 输出的 `报告 (art/report.html)`、方括号包裹的路径，以及文件名中合法的括号均可识别。
+- 按住 **Ctrl + 鼠标左键** 点击终端链接：HTTP/HTTPS 地址交给默认浏览器，项目内文件和文件夹在当前界面弹窗打开，不会进入项目页（项目页已打开时，文件夹在目录栏中展开）。支持普通网址、Markdown 文件链接、OSC 8 超链接、中文路径和终端自动换行的链接；普通单击不打开链接。`art/report.html`、`./art/report.html` 等相对路径自动按对应项目根目录补全，本地和 SSH 项目均适用。Codex 输出的 `报告 (art/report.html)`、方括号包裹的路径，以及文件名中合法的括号均可识别。
 
 ## 主题选择
 
@@ -216,20 +221,20 @@ curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/
 
 可以在管道后的 `bash` 前设置这些变量：
 
-- `AGENTRIX_VERSION=0.7.6`：安装指定版本。
+- `AGENTRIX_VERSION=0.7.7`：安装指定版本。
 - `AGENTRIX_INSTALL_DIR=~/Applications`：指定安装目录。
 - `AGENTRIX_OPEN=0`：安装后不打开应用。
 
-例如，安装 0.7.6：
+例如，安装 0.7.7：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | AGENTRIX_VERSION=0.7.6 bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | AGENTRIX_VERSION=0.7.7 bash
 ```
 
 如果已经下载了 ZIP，也可以用本地的安装脚本安装：
 
 ```bash
-bash install-macos.sh ~/Downloads/Agentrix-0.7.6-mac-arm64.zip
+bash install-macos.sh ~/Downloads/Agentrix-0.7.7-mac-arm64.zip
 ```
 
 应用使用临时签名（ad-hoc），没有 Apple Developer ID，也未经过 Apple 公证。如果用浏览器下载 DMG，再将应用拖到「应用程序」，首次打开时 macOS 会提示「无法验证开发者」。在「系统设置 › 隐私与安全性」中点一次「仍要打开」，或运行：

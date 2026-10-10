@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CircleNotch, Lightning, Terminal as TerminalIcon } from '@phosphor-icons/react';
-import type { Result } from '../../shared/types';
+import type { AgentsState, Result } from '../../shared/types';
 import { relativeTime } from '../../shared/time';
 import { t } from '../../shared/i18n';
 import './agent-launcher.css';
@@ -10,13 +10,22 @@ type History = Record<Agent, { id: string; at: number } | null>;
 const AGENTS: { agent: Agent; name: string; mark: string }[] = [{ agent: 'claude', name: 'Claude Code', mark: '✻' }, { agent: 'codex', name: 'Codex', mark: '>_' }];
 
 // A project with no terminal yet: pick the agent to work with, fresh or continuing this folder's latest conversation
-// with it. A plain terminal (for other CLIs) and, when enabled, Codex without a terminal stay one click away.
+// with it. An agent not installed yet is installed by the same click (Node.js first, when even npm is missing), then
+// started. A plain terminal (for other CLIs) and, when enabled, Codex without a terminal stay one click away.
 export function AgentLauncher({ terminalId, codexDirect, onAction }: {
   terminalId: string; codexDirect: boolean; onAction: <T,>(promise: Promise<Result<T>>) => Promise<T | undefined>;
 }) {
   const [history, setHistory] = useState<History | null>(null);
   const [mode, setMode] = useState<'new' | 'continue' | null>(null);
   const [starting, setStarting] = useState<Agent | 'terminal' | 'direct' | null>(null);
+  const [agents, setAgents] = useState<AgentsState | null>(null);
+  useEffect(() => {
+    let active = true;
+    void window.agentrix.getAgents().then(result => { if (active && result.ok) setAgents(result.value); });
+    const off = window.agentrix.onAgents(state => { if (active) setAgents(state); });
+    return () => { active = false; off(); };
+  }, []);
+  const missing = (agent: Agent) => !!agents && !agents[agent].installed;
   useEffect(() => {
     let active = true;
     void window.agentrix.agentHistory(terminalId).then(result => {
@@ -32,10 +41,18 @@ export function AgentLauncher({ terminalId, codexDirect, onAction }: {
     setStarting(what);
     // Once started, the terminal (or the reading view) takes this card's place; a failure leaves it to try again.
     if (what === 'terminal') await onAction(window.agentrix.startTerminal(terminalId));
-    else await onAction(what === 'direct' ? window.agentrix.agentStart(terminalId) : window.agentrix.agentLaunch(terminalId, what, chosen));
+    else if (what === 'direct') await onAction(window.agentrix.agentStart(terminalId));
+    else if (missing(what) && !agents?.npm) await onAction(window.agentrix.openNode());
+    else {
+      const installed = missing(what) ? await onAction(window.agentrix.installAgent(what)) : agents;
+      if (installed) setAgents(installed);
+      if (installed?.[what].installed) await onAction(window.agentrix.agentLaunch(terminalId, what, chosen));
+    }
     setStarting(null);
   };
   const note = (agent: Agent) => {
+    if (agents?.installing === agent) return t('正在安装…');
+    if (missing(agent)) return agents!.npm ? t('未安装 · 点击一键安装') : t('未安装 · 需要先安装 Node.js');
     if (chosen === 'new') return t('开始新的对话');
     if (!history) return t('正在查找开发记录…');
     const last = history[agent];
@@ -47,10 +64,11 @@ export function AgentLauncher({ terminalId, codexDirect, onAction }: {
       <button type="button" role="radio" aria-checked={chosen === 'new'} onClick={() => setMode('new')}>{t('开始新开发')}</button>
       <button type="button" role="radio" aria-checked={chosen === 'continue'} disabled={!known} title={history && !known ? t('这个文件夹还没有开发记录') : undefined} onClick={() => setMode('continue')}>{t('继承开发历史')}</button>
     </div>
-    <div className="agent-launcher-agents">{AGENTS.map(({ agent, name, mark }) => <button type="button" key={agent} className={`agent-launcher-agent is-${agent}`} disabled={!!starting} onClick={() => void start(agent)}>
-      <span className="agent-launcher-mark" aria-hidden="true">{starting === agent ? <CircleNotch size={16} className="loading-spinner" /> : mark}</span>
+    <div className="agent-launcher-agents">{AGENTS.map(({ agent, name, mark }) => <button type="button" key={agent} className={`agent-launcher-agent is-${agent}${missing(agent) ? ' is-missing' : ''}`} disabled={!!starting || !!agents?.installing} onClick={() => void start(agent)}>
+      <span className="agent-launcher-mark" aria-hidden="true">{starting === agent || agents?.installing === agent ? <CircleNotch size={16} className="loading-spinner" /> : mark}</span>
       <b>{name}</b><small>{note(agent)}</small>
     </button>)}</div>
+    {agents?.error && <p className="agent-launcher-error" role="alert">{agents.error}</p>}
     <div className="agent-launcher-more">
       <button type="button" className="text-button" disabled={!!starting} onClick={() => void start('terminal')}><TerminalIcon size={13} />{t('只打开终端')}</button>
       {codexDirect && <button type="button" className="text-button" disabled={!!starting} title={t('不经过终端，阅读视图直接与 Codex 对话')} onClick={() => void start('direct')}><Lightning size={13} weight="fill" />{t('直连 Codex')}</button>}

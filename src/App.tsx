@@ -20,9 +20,11 @@ import { quickDictation } from './features/voice/voice-input';
 import { UsageGuide } from './features/guide/UsageGuide';
 import { GuideTour } from './features/guide/GuideTour';
 import { IconButton } from './shared/IconButton';
+import { showPopup, usePopup } from './features/files/file-popup';
 import { ProjectPanel, isRoundComplete } from './features/workspace/ProjectPanel';
 import { SettingsDialog } from './features/settings/SettingsDialog';
 const FilePreview = lazy(() => import('./features/files/FilePreview').then(module => ({ default: module.FilePreview })));
+const FilePopup = lazy(() => import('./features/files/FilePopup').then(module => ({ default: module.FilePopup })));
 const GitDiffView = lazy(() => import('./features/git/GitDiffView').then(module => ({ default: module.GitDiffView })));
 
 const api = window.agentrix;
@@ -134,6 +136,14 @@ export function App() {
   const openTerminalLink = useCallback(async (id: string, target: string) => {
     await showProjectLocation(id, await perform(api.openLink(id, target)));
   }, [perform, showProjectLocation]);
+  // A file or folder named in a terminal or a conversation opens in a popup over what is on screen: only a project's
+  // header or a shortcut opens its page. With that page already open, a folder is shown in its file list instead.
+  const openLinkInPopup = useCallback(async (id: string, target: string) => {
+    const result = await perform(api.openLink(id, target));
+    if (result?.kind === 'directory' && focusedId === id) await showProjectLocation(id, result);
+    else if (result && result.kind !== 'external') showPopup({ kind: result.kind === 'file' ? 'file' : 'folder', projectId: id, path: result.path });
+  }, [perform, showProjectLocation, focusedId]);
+  const popup = usePopup();
   const revealProject = useCallback(async (id: string) => {
     await showProjectLocation(id, await perform(api.revealProject(id)));
   }, [perform, showProjectLocation]);
@@ -303,7 +313,7 @@ export function App() {
                 hidden={focusedId ? focusedId !== project.id : !visibleIds.has(project.id)} focused={focusedId === project.id && !previewFile}
                 navTarget={projectSwitch?.id === project.id ? projectSwitch.sequence : undefined}
                 navPosition={projectSwitch?.id === project.id && switchPosition > 0 ? t('{position} / {total}', { position: switchPosition, total: navigation.current.length }) : undefined}
-                fontSize={settings.fontSize} codexDirect={settings.codexDirect} now={now} activityOpen={settings.activityPane} onToggleActivity={() => setPreference({ activityPane: !settings.activityPane })} onFocus={focusProject} onAction={perform} onError={reportError} onOpenLink={openTerminalLink} onRevealProject={revealProject}
+                fontSize={settings.fontSize} codexDirect={settings.codexDirect} now={now} activityOpen={settings.activityPane} onToggleActivity={() => setPreference({ activityPane: !settings.activityPane })} onFocus={focusProject} onAction={perform} onError={reportError} onOpenLink={openLinkInPopup} onRevealProject={revealProject}
                 dragging={reorder.drag?.id === project.id} /> </div>)}
               {reorder.drag && <div className="reorder-hint" role="status">{t('拖动项目排序 · 松开完成')}<span>{t('Esc 取消')}</span></div>}
             </div>
@@ -311,6 +321,7 @@ export function App() {
         </div>
       </main>
     </div>
+    {popup && <Suspense fallback={null}><FilePopup target={popup} onError={reportError} /></Suspense>}
     {error && <div className="error-toast" role="alert"><Info size={18} /><span>{error}</span><IconButton label={t('关闭提示')} onClick={() => setError(null)}><X size={16} /></IconButton></div>}
     {guide === 'tour' && <GuideTour projects={projects} focusedId={focusedId} withAdd={tourWithAdd.current} onClose={() => { setGuide(null); if (settings.guideVersion !== workspace.version) setPreference({ guideVersion: workspace.version }); }} />}
     {guide && guide !== 'tour' && <UsageGuide version={workspace.version} start={guide} onTour={startTour} onClose={() => { setGuide(null); if (settings.guideVersion !== workspace.version) setPreference({ guideVersion: workspace.version }); }} />}

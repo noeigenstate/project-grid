@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 380" width="1280" height="380" role="img" aria-labelledby="title desc">
+  <title id="title">Agentrix</title>
+  <desc id="desc">A neon grid of six project cards: one working in blue, one breathing pink because its round is done, one green after it was read. Beside them the Agentrix wordmark and the line: AI agents, in parallel, on one grid.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#060a18"/><stop offset=".55" stop-color="#0d0b22"/><stop offset="1" stop-color="#160a26"/>
+    </linearGradient>
+    <radialGradient id="glowPink" cx=".12" cy=".05" r=".55"><stop offset="0" stop-color="#ff3d8b" stop-opacity=".42"/><stop offset="1" stop-color="#ff3d8b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glowCyan" cx=".92" cy="1" r=".6"><stop offset="0" stop-color="#2ef2ff" stop-opacity=".30"/><stop offset="1" stop-color="#2ef2ff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7df9ff"/><stop offset=".5" stop-color="#a98bff"/><stop offset="1" stop-color="#ff5fa2"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff" stop-opacity="1"/></linearGradient>
+    <mask id="floorMask"><rect x="0" y="230" width="1280" height="150" fill="url(#fade)"/></mask>
+    <clipPath id="frame"><rect width="1280" height="380" rx="22"/></clipPath>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
+    <style>
+      .floor line { stroke: #6f5cff; stroke-opacity: .55; stroke-width: 1; }
+      .run { animation: run 2.4s linear infinite; }
+      @keyframes run { from { transform: translateY(0); } to { transform: translateY(30px); } }
+      .card { fill: #0f1630; fill-opacity: .82; stroke-width: 1.6; }
+      .bar { fill: #ffffff; fill-opacity: .16; }
+      .working { stroke: #3b9eff; animation: work 1.6s ease-in-out infinite; }
+      @keyframes work { 0%, 100% { stroke-opacity: .55; } 50% { stroke-opacity: 1; } }
+      .done { stroke: #ff3d8b; animation: breathe 3.2s ease-in-out infinite; }
+      .doneGlow { fill: #ff3d8b; animation: glow 3.2s ease-in-out infinite; }
+      @keyframes breathe { 0%, 100% { stroke-opacity: .5; } 50% { stroke-opacity: 1; } }
+      @keyframes glow { 0%, 100% { opacity: .08; } 50% { opacity: .38; } }
+      .seen { stroke: #39ffa0; stroke-opacity: .8; }
+      .idle { stroke: #ffffff; stroke-opacity: .18; }
+      .typing { animation: type 2.6s steps(6) infinite; }
+      @keyframes type { from { width: 8px; } to { width: 74px; } }
+      .scan { animation: scan 6s ease-in-out infinite; }
+      @keyframes scan { 0%, 100% { transform: translateX(-60px); opacity: 0; } 20%, 80% { opacity: .55; } 50% { transform: translateX(560px); } }
+      @media (prefers-reduced-motion: reduce) { .run, .working, .done, .doneGlow, .typing, .scan { animation: none; } }
+    </style>
+  </defs>
+  <g clip-path="url(#frame)">
+    <rect width="1280" height="380" fill="url(#sky)"/>
+    <rect width="1280" height="380" fill="url(#glowPink)"/>
+    <rect width="1280" height="380" fill="url(#glowCyan)"/>
+    <!-- The floor: a perspective grid running towards the viewer. -->
+    <g class="floor" mask="url(#floorMask)">
+      <g class="run">
+        <line x1="0" y1="232" x2="1280" y2="232"/><line x1="0" y1="262" x2="1280" y2="262"/><line x1="0" y1="292" x2="1280" y2="292"/>
+        <line x1="0" y1="322" x2="1280" y2="322"/><line x1="0" y1="352" x2="1280" y2="352"/><line x1="0" y1="382" x2="1280" y2="382"/>
+      </g>
+      <line x1="640" y1="230" x2="-420" y2="380"/><line x1="640" y1="230" x2="-140" y2="380"/><line x1="640" y1="230" x2="140" y2="380"/>
+      <line x1="640" y1="230" x2="420" y2="380"/><line x1="640" y1="230" x2="640" y2="380"/><line x1="640" y1="230" x2="860" y2="380"/>
+      <line x1="640" y1="230" x2="1140" y2="380"/><line x1="640" y1="230" x2="1420" y2="380"/><line x1="640" y1="230" x2="1700" y2="380"/>
+    </g>
+    <!-- Six projects at once: working, done and waiting, read, idle. -->
+    <g transform="translate(70 62)">
+      <rect class="doneGlow" x="186" y="-6" width="172" height="112" rx="16" filter="url(#soft)"/>
+      <g><rect class="card working" x="0" y="0" width="160" height="100" rx="12"/>
+        <circle cx="18" cy="18" r="4" fill="#3b9eff"/><rect class="bar" x="30" y="14" width="64" height="8" rx="4"/>
+        <rect class="bar" x="16" y="40" width="120" height="6" rx="3"/><rect class="bar typing" x="16" y="56" width="74" height="6" rx="3"/>
+        <rect x="16" y="76" width="44" height="10" rx="5" fill="#3b9eff" fill-opacity=".35"/></g>
+      <g transform="translate(192 0)"><rect class="card done" x="0" y="0" width="160" height="100" rx="12"/>
+        <circle cx="18" cy="18" r="4" fill="#ff3d8b"/><rect class="bar" x="30" y="14" width="80" height="8" rx="4"/>
+        <rect class="bar" x="16" y="40" width="128" height="6" rx="3"/><rect class="bar" x="16" y="56" width="96" height="6" rx="3"/>
+        <rect x="16" y="76" width="58" height="10" rx="5" fill="#ff3d8b" fill-opacity=".45"/></g>
+      <g transform="translate(384 0)"><rect class="card seen" x="0" y="0" width="160" height="100" rx="12"/>
+        <circle cx="18" cy="18" r="4" fill="#39ffa0"/><rect class="bar" x="30" y="14" width="56" height="8" rx="4"/>
+        <rect class="bar" x="16" y="40" width="110" height="6" rx="3"/><rect class="bar" x="16" y="56" width="124" height="6" rx="3"/></g>
+      <g transform="translate(0 116)"><rect class="card done" x="0" y="0" width="160" height="100" rx="12" style="animation-delay: -1.6s"/>
+        <circle cx="18" cy="18" r="4" fill="#ff3d8b"/><rect class="bar" x="30" y="14" width="70" height="8" rx="4"/>
+        <rect class="bar" x="16" y="40" width="100" height="6" rx="3"/><rect class="bar" x="16" y="56" width="128" height="6" rx="3"/></g>
+      <g transform="translate(192 116)"><rect class="card working" x="0" y="0" width="160" height="100" rx="12" style="animation-delay: -.8s"/>
+        <circle cx="18" cy="18" r="4" fill="#3b9eff"/><rect class="bar" x="30" y="14" width="60" height="8" rx="4"/>
+        <rect class="bar" x="16" y="40" width="124" height="6" rx="3"/><rect class="bar typing" x="16" y="56" width="74" height="6" rx="3" style="animation-delay: -1.3s"/></g>
+      <g transform="translate(384 116)"><rect class="card idle" x="0" y="0" width="160" height="100" rx="12"/>
+        <circle cx="18" cy="18" r="4" fill="#ffffff" fill-opacity=".4"/><rect class="bar" x="30" y="14" width="48" height="8" rx="4"/>
+        <text x="16" y="62" fill="#ffffff" fill-opacity=".45" font-family="ui-monospace, 'Cascadia Code', Consolas, monospace" font-size="14">&gt;_</text></g>
+      <rect class="scan" x="0" y="-8" width="40" height="232" fill="#7df9ff" fill-opacity=".10"/>
+    </g>
+    <!-- The name and what it is. -->
+    <g transform="translate(700 0)" font-family="'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif">
+      <text x="0" y="150" font-size="92" font-weight="800" letter-spacing="-2" fill="url(#word)">Agentrix</text>
+      <text x="4" y="196" font-size="24" font-weight="500" fill="#e8ecff" fill-opacity=".92">AI agents, in parallel — on one grid.</text>
+      <g transform="translate(4 226)" font-size="14" font-weight="600" letter-spacing=".6">
+        <rect width="112" height="30" rx="15" fill="#3c7dff" fill-opacity=".22" stroke="#3c7dff" stroke-opacity=".7"/><text x="56" y="20" text-anchor="middle" fill="#cfe0ff">CODEX</text>
+        <rect x="124" width="148" height="30" rx="15" fill="#ff7a3d" fill-opacity=".18" stroke="#ff7a3d" stroke-opacity=".7"/><text x="198" y="20" text-anchor="middle" fill="#ffe0cf">CLAUDE CODE</text>
+        <rect x="284" width="168" height="30" rx="15" fill="#8a5bff" fill-opacity=".2" stroke="#8a5bff" stroke-opacity=".7"/><text x="368" y="20" text-anchor="middle" fill="#e6dcff">WIN · MAC · LINUX</text>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -26,7 +26,8 @@ const thumbnail = image => {
   if (image.getSize().width <= 640) return null;
   return `data:image/jpeg;base64,${image.resize({ width: 640, quality: 'good' }).toJPEG(86).toString('base64')}`;
 };
-const pictureOf = file => { const image = nativeImage.createFromPath(file); return thumbnail(image) || (image.isEmpty() ? null : image.toDataURL()); };
+const small = image => thumbnail(image) || (image.isEmpty() ? null : image.toDataURL());
+const pictureOf = file => small(nativeImage.createFromPath(file));
 setThumbnailer(pictureOf, url => thumbnail(nativeImage.createFromDataURL(url)) || url);
 const path = require('node:path');
 const fs = require('node:fs');
@@ -105,7 +106,7 @@ const startupErrors = new Map();
 const restorePlans = new Map();
 const previewResources = new PreviewResources({ remote: project => remoteFor(project.id) });
 const capturePage = require('./features/files/capture-page.cjs').createPageCapture(BrowserWindow);
-const fileCard = createFileCards({ previews: previewResources, capture: capturePage, shrink: pictureOf });
+const fileCard = createFileCards({ previews: previewResources, capture: capturePage, shrink: pictureOf, shrinkBytes: bytes => small(nativeImage.createFromBuffer(bytes)) });
 let stateTimer;
 let runtimeDir;
 const { prepareAskpass, cleanupAskpass } = createSshRuntime({ fs, execFileSync, tempDirectory: () => app.getPath('temp'), integrationDir });
@@ -589,7 +590,7 @@ function startTerminal(id) {
     powershellPath, notifyPath: path.join(integrationDir, 'notify.ps1'), claudeHookPath: path.join(integrationDir, 'claude-hook.ps1'),
   }), { mode: 0o600 });
   let env = createTerminalEnvironment(withoutAppImage(process.env), bootstrapFile || '');
-  // The agent wrappers tell Claude Code and Codex what the reading view shows; a remote project's files never reach it.
+  // The agent wrappers tell Claude Code and Codex what the reading view shows (an SSH project's worker is told on start).
   if (project.kind !== 'ssh') env.AGENTRIX_READING_NOTE = READING_NOTE;
   // zsh and Bash learn where to report from their environment (integration/zsh-integration.zsh and
   // bash-integration.bash), and report through integration/agent-event.cjs run by this executable as Node.
@@ -600,7 +601,7 @@ function startTerminal(id) {
     locale: process.platform === 'darwin' ? terminalLocale(app.getPreferredSystemLanguages()) : 'C.UTF-8' };
   if (local) env = shellKind === 'zsh' ? zshEnvironment(env, integration) : shellEnvironment(env, integration);
   const sshAskpassPath = project.kind === 'ssh' ? prepareAskpass() : undefined;
-  const terminal = project.kind === 'ssh' ? new RemoteConnection({ ...project, id }, { integrationDir, auth: sshAuth, sessionKey, onEvent, codingPath: startPath, askpassPath: sshAskpassPath,
+  const terminal = project.kind === 'ssh' ? new RemoteConnection({ ...project, id }, { integrationDir, auth: sshAuth, sessionKey, onEvent, codingPath: startPath, askpassPath: sshAskpassPath, readingNote: READING_NOTE,
     onReady: info => { remoteBranch(project.id, info.branch); },
   }) : shellKind === 'zsh' ? pty.spawn(shell.file, ['-l', '-i'], {
     name: 'xterm-256color', cols: 90, rows: 22, cwd: startPath, env,
@@ -796,12 +797,14 @@ function registerIpc() {
   // A new project's card offers Claude Code and Codex, fresh or continuing this folder's latest conversation.
   const folderOf = id => store.findTerminal(id)?.record.restore?.cwd || findProject(id).path;
   handle('project:card', (id, file) => fileCard(findProject(id), file, folderOf(id)));
-  // A picture the reading view shows (one Codex generated, or an image file a card shows) opens in the system's image
-  // viewer; nothing but an image file is opened this way.
-  handle('agent:open-image', async file => {
-    if (!(isGeneratedImage(file) || isImageFile(file) && path.isAbsolute(file)) || !fs.statSync(file, { throwIfNoEntry: false })?.isFile()) throw new Error('只能打开图片文件。');
-    const error = await shell.openPath(file); if (error) throw new Error(error);
-    return true;
+  // A picture the reading view shows (one Codex generated, or an image file a card shows), large enough to look at in
+  // its popup: at most 2400 pixels wide. Only an image file is read this way, never opened in another program.
+  handle('agent:image', async file => {
+    if (!(isGeneratedImage(file) || isImageFile(file) && path.isAbsolute(file)) || !fs.statSync(file, { throwIfNoEntry: false })?.isFile()) throw new Error('只能显示图片文件。');
+    const image = nativeImage.createFromPath(file);
+    if (image.isEmpty()) throw new Error('无法读取这张图片。');
+    const { width, height } = image.getSize();
+    return { url: width > 2400 ? `data:image/jpeg;base64,${image.resize({ width: 2400, quality: 'best' }).toJPEG(90).toString('base64')}` : image.toDataURL(), width, height };
   });
   handle('agent:history', id => findProject(id).kind === 'ssh' ? { claude: null, codex: null } : folderHistory(folderOf(id)));
   handle('agent:launch', async (id, agent, mode) => {

@@ -28,3 +28,7 @@
 :root[data-theme="mono-amber"] .agent-launcher-agent.is-claude .agent-launcher-mark { color: #c4501c; }
 :root[data-theme="mono-amber"] .agent-launcher-agent.is-codex .agent-launcher-mark { color: #1f63c4; }
 :root[data-theme="mono-amber"] .agent-launcher-mode { background: rgba(0, 0, 0, .06); }
+/* An agent not installed yet: the same card, quieter, saying a click installs it. */
+.agent-launcher-agent.is-missing { opacity: .78; }
+.agent-launcher-agent.is-missing small { color: var(--accent-amber, #f0b45a); }
+.agent-launcher-error { max-width: 520px; margin: 0; font-size: 12px; line-height: 1.5; color: var(--danger, #ff8a80); white-space: pre-wrap; text-align: center; overflow-wrap: anywhere; }

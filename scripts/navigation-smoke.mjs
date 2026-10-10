@@ -166,11 +166,13 @@ try {
     await screen.hover({ position });
     await waitFor(async () => second.locator('.terminal-host').getAttribute('title').then(title => title?.includes(target)), 'terminal link hover ready');
     await screen.click({ position, modifiers: ['Control'] });
-    await settled(true);
-    await page.getByRole('treeitem', { name: 'note.txt', exact: true }).waitFor();
-    assert.equal(await page.getByRole('treeitem', { name: 'nested', exact: true }).getAttribute('aria-expanded'), 'true');
+    // The folder opens in a popup over the overview: only a project's header or a shortcut opens its page.
+    const popup = page.locator('.file-popup');
+    await popup.getByRole('listitem').filter({ hasText: 'note.txt' }).waitFor();
+    assert.equal(await page.locator('.focus-mode').count(), 0, 'a folder link never opens the project page');
+    await page.waitForTimeout(400); // past the popup's fade-in
     await page.screenshot({ path: path.join(output, target.endsWith('docs-alias') ? 'ssh-link-alias.png' : 'ssh-link-directory.png') });
-    await page.getByRole('button', { name: '返回总览', exact: true }).click(); await settled(false);
+    await page.keyboard.press('Escape'); await popup.waitFor({ state: 'detached' });
   }
   await second.getByRole('button', { name: `全屏查看 ${remote.name}`, exact: true }).click(); await settled(true);
   await page.getByRole('treeitem', { name: 'README.md', exact: true }).click();
@@ -193,6 +195,6 @@ try {
   await page.keyboard.press('F11'); await waitFor(async () => await fullScreen() !== before, 'F11 toggles full screen');
   await page.keyboard.press('F11'); await waitFor(async () => await fullScreen() === before, 'F11 toggles full screen back');
   assert.deepEqual(errors, []);
-  console.log(`PASS: project shortcuts cycle reading/terminal/card focus with renewed ring and HUD in both views; removed sidebar/manual-finish/VS Code actions, local folder/browser retained, SSH root/nested/symlink/Markdown directories stay internal and protect drafts. Screenshots: ${output}`);
+  console.log(`PASS: project shortcuts cycle reading/terminal/card focus with renewed ring and HUD in both views; removed sidebar/manual-finish/VS Code actions, local folder/browser retained, SSH root/nested/symlink/Markdown directories stay internal (terminal links in a popup, never the project page) and protect drafts. Screenshots: ${output}`);
 } catch (error) { if (page) await page.screenshot({ path: path.join(output, 'failure.png') }).catch(() => {}); throw error; }
 finally { if (app) await app.close(); await ssh.close(); }
