@@ -18,7 +18,7 @@ export function VoiceModelSetting({ choice, onChoose }: { choice: string; onChoo
   const status = chosen.phase === 'ready' ? <span className="voice-model-status is-ready" role="status">{t('已就绪')}</span>
     : chosen.phase === 'downloading' ? <span className="voice-model-status" role="status">{voice.active && voice.active !== chosen.id
       ? t('下载中 {percent}%，完成前继续使用 {model}', { percent: chosen.percent, model: voice.model }) : t('下载中 {percent}%', { percent: chosen.percent })}</span>
-    : <button type="button" className="button secondary small" title={chosen.error ? t(chosen.error) : undefined} onClick={() => void window.projectGrid.prepareVoice()}>{chosen.phase === 'error' ? t('重试下载') : t('下载模型')}</button>;
+    : <button type="button" className="button secondary small" title={chosen.error ? t(chosen.error) : undefined} onClick={() => void window.agentrix.prepareVoice()}>{chosen.phase === 'error' ? t('重试下载') : t('下载模型')}</button>;
   return <span className="voice-model-setting">
     <select aria-label={t('语音识别模型')} value={chosen.id} onChange={event => onChoose(event.target.value)}>
       {voice.models.map(model => <option key={model.id} value={model.id}>{`${model.label} · ${t(VOICE_MODEL_KINDS[model.id] ?? '')}（${downloadSize(model.downloadBytes)}）`}</option>)}

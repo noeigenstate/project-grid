@@ -31,10 +31,10 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
   report.current = onError;
   const openLink = useRef(onOpenLink);
   openLink.current = onOpenLink;
-  const copy = async (text: string) => { const result = await window.projectGrid.copy(text); if (!result.ok) report.current(result.error); };
+  const copy = async (text: string) => { const result = await window.agentrix.copy(text); if (!result.ok) report.current(result.error); };
   const paste = async () => {
     const terminal = term.current;
-    const result = await window.projectGrid.readClipboard();
+    const result = await window.agentrix.readClipboard();
     if (!result.ok) { report.current(result.error); return; }
     if (terminal && terminal === term.current && result.value) terminal.paste(result.value);
   };
@@ -123,13 +123,13 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       lastSeq = packet.seq;
       terminal.write(packet.data);
     };
-    const unsubscribe = window.projectGrid.onTerminalData(packet => {
+    const unsubscribe = window.agentrix.onTerminalData(packet => {
       if (packet.id !== id || packet.sessionId !== sessionId || disposed) return;
       if (!ready) queued.push(packet); else apply(packet);
     });
     // Subscribe before obtaining the snapshot. Sequence numbers prevent gaps
     // and double output when the terminal is mounted during an active stream.
-    window.projectGrid.attachTerminal(id).then(result => {
+    window.agentrix.attachTerminal(id).then(result => {
       if (disposed) return;
       if (!result.ok) { queued = []; unsubscribe(); report.current(result.error); return; }
       if (result.value.sessionId === sessionId) {
@@ -140,23 +140,23 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       for (const packet of queued) apply(packet);
       queued = [];
     }).catch(error => { if (!disposed) { queued = []; unsubscribe(); report.current(String(error)); } });
-    const input = terminal.onData(data => window.projectGrid.writeTerminal(id, data));
+    const input = terminal.onData(data => window.agentrix.writeTerminal(id, data));
     // Messages from the reading view and dictation. Where the program would take a pasted line break as Enter, the
     // main process names the key that starts a new line instead, and the text is typed with it.
-    const offPaste = window.projectGrid.onTerminalPaste(packet => {
+    const offPaste = window.agentrix.onTerminalPaste(packet => {
       if (disposed || packet.id !== id || packet.sessionId !== sessionId) return;
       if (packet.lineBreak) terminal.input(packet.text.replace(/\r\n?|\n/g, packet.lineBreak), true);
       else terminal.paste(packet.text);
     });
     const selection = terminal.onSelectionChange(() => { if (host.current) host.current.dataset.hasSelection = String(terminal.hasSelection()); });
-    const resized = terminal.onResize(({ cols, rows }) => window.projectGrid.resizeTerminal(id, cols, rows));
+    const resized = terminal.onResize(({ cols, rows }) => window.agentrix.resizeTerminal(id, cols, rows));
     terminal.attachCustomKeyEventHandler(event => {
       if (event.type !== 'keydown') return true;
       if (!event.isComposing && event.key === 'Enter' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
         event.preventDefault();
         // xterm's legacy Enter mapping drops Shift. ConPTY needs native key
         // records; Linux and macOS TUIs understand the modified Enter CSI-u sequence.
-        window.projectGrid.writeTerminal(id, remote || !isWindows ? '\x1b[13;2u' : '\x1b[13;28;13;1;16;1_\x1b[13;28;13;0;16;1_');
+        window.agentrix.writeTerminal(id, remote || !isWindows ? '\x1b[13;2u' : '\x1b[13;28;13;1;16;1_\x1b[13;28;13;0;16;1_');
         return false;
       }
       // macOS: ⌘C copies, ⌘V pastes and ⌘A selects all; Control keys all go to the program (Control+C interrupts).
@@ -180,8 +180,8 @@ export function TerminalPane({ id, sessionId, fontSize, onError, focused, onOpen
       // Ctrl+C without a selection still interrupts the command.
       return true;
     });
-    const focusIn = () => window.projectGrid.terminalFocus(id, true);
-    const focusOut = () => window.projectGrid.terminalFocus(id, false);
+    const focusIn = () => window.agentrix.terminalFocus(id, true);
+    const focusOut = () => window.agentrix.terminalFocus(id, false);
     terminal.textarea?.addEventListener('focus', focusIn);
     terminal.textarea?.addEventListener('blur', focusOut);
     const resize = () => {

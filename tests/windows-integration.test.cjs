@@ -16,7 +16,7 @@ test('development, portable and isolated test windows never reuse the installed 
 });
 
 test('search refresh backs up only this application cached icons and runs once per icon revision', t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-search-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-search-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const userData = path.join(root, 'profile'), iconSource = path.join(root, 'icon.ico');
   const cache = path.join(root, 'Packages', 'Microsoft.Windows.Search_cw5n1h2txyewy', 'LocalState', 'AppIconCache', '150');
@@ -38,12 +38,12 @@ test('search refresh backs up only this application cached icons and runs once p
 });
 
 test('repair quarantines only the conflicting Electron shortcut and keeps an idempotent branded search entry', t => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-shortcuts-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-shortcuts-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const folders = Object.fromEntries(['userData', 'programs', 'commonPrograms', 'desktop'].map(name => { const folder = path.join(root, name); fs.mkdirSync(folder); return [name, folder]; }));
-  const executable = path.join(root, 'Project Grid.exe'), iconSource = path.join(root, 'icon.ico');
+  const executable = path.join(root, 'Agentrix.exe'), iconSource = path.join(root, 'icon.ico');
   fs.writeFileSync(iconSource, 'fixture icon');
-  const old = path.join(folders.programs, 'Electron.lnk'), foreign = path.join(folders.commonPrograms, 'Electron.lnk'), menu = path.join(folders.programs, 'Project Grid.lnk');
+  const old = path.join(folders.programs, 'Electron.lnk'), foreign = path.join(folders.commonPrograms, 'Electron.lnk'), menu = path.join(folders.programs, 'Agentrix.lnk');
   fs.writeFileSync(old, JSON.stringify({ target: path.join(root, 'electron.exe'), appUserModelId: APP_ID }));
   fs.writeFileSync(foreign, JSON.stringify({ target: path.join(root, 'electron.exe'), appUserModelId: 'another.application' }));
   fs.writeFileSync(menu, JSON.stringify({ target: executable, appUserModelId: APP_ID, args: '--preserve-user-argument' }));
@@ -57,6 +57,27 @@ test('repair quarantines only the conflicting Electron shortcut and keeps an ide
   assert.equal(shell.readShortcutLink(menu).icon, result.icon);
   assert.equal(shell.readShortcutLink(menu).target, executable);
   assert.equal(shell.readShortcutLink(menu).args, '--preserve-user-argument');
-  assert.equal(fs.existsSync(path.join(folders.desktop, 'Project Grid.lnk')), false, 'startup does not recreate a desktop shortcut the user removed');
+  assert.equal(fs.existsSync(path.join(folders.desktop, 'Agentrix.lnk')), false, 'startup does not recreate a desktop shortcut the user removed');
   assert.deepEqual(repairShortcuts(options).changes, []);
+});
+
+test('shortcuts from when the app was called Project Grid become Agentrix ones in the same places; another app\'s stay', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-renamed-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const folders = Object.fromEntries(['userData', 'programs', 'commonPrograms', 'desktop'].map(name => { const folder = path.join(root, name); fs.mkdirSync(folder); return [name, folder]; }));
+  const executable = path.join(root, 'Agentrix.exe'), iconSource = path.join(root, 'icon.ico');
+  fs.writeFileSync(iconSource, 'fixture icon');
+  const ours = name => JSON.stringify({ target: path.join(root, 'old', 'Project Grid.exe'), appUserModelId: APP_ID, name });
+  fs.writeFileSync(path.join(folders.programs, 'Project Grid.lnk'), ours('menu'));
+  fs.writeFileSync(path.join(folders.desktop, 'Project Grid.lnk'), ours('desktop'));
+  fs.writeFileSync(path.join(folders.commonPrograms, 'Project Grid.lnk'), JSON.stringify({ target: path.join(root, 'other.exe'), appUserModelId: 'someone.else' }));
+  const shell = { readShortcutLink: file => JSON.parse(fs.readFileSync(file)), writeShortcutLink: (file, mode, options) => { const previous = mode === 'update' ? JSON.parse(fs.readFileSync(file)) : {}; fs.writeFileSync(file, JSON.stringify({ ...previous, ...options })); return true; } };
+  const result = repairShortcuts({ ...folders, executable, iconSource, shell });
+  assert.deepEqual(result.warnings, []);
+  assert.equal(fs.existsSync(path.join(folders.programs, 'Project Grid.lnk')), false);
+  assert.equal(fs.existsSync(path.join(folders.desktop, 'Project Grid.lnk')), false);
+  assert.equal(shell.readShortcutLink(path.join(folders.programs, 'Agentrix.lnk')).target, executable);
+  assert.equal(shell.readShortcutLink(path.join(folders.desktop, 'Agentrix.lnk')).target, executable, 'the desktop shortcut the user had is kept, renamed');
+  assert.equal(shell.readShortcutLink(path.join(folders.commonPrograms, 'Project Grid.lnk')).appUserModelId, 'someone.else', 'another app\'s shortcut is left alone');
+  assert.equal(fs.existsSync(path.join(folders.commonPrograms, 'Agentrix.lnk')), false);
 });

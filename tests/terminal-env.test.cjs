@@ -11,14 +11,14 @@ test('PTYs advertise color support even when launched by a monochrome host', () 
   assert.equal(env.TERM, 'xterm-256color');
   assert.equal(env.COLORTERM, 'truecolor');
   assert.equal(env.CLICOLOR, '1');
-  assert.equal(env.TERM_PROGRAM, 'project-grid');
+  assert.equal(env.TERM_PROGRAM, 'agentrix');
   assert.equal(env.PATH, 'existing-path');
   assert.equal(source.NO_COLOR, '1');
 });
 
 test('Windows environment casing cannot leave duplicate color-disabling variables', () => {
-  const env = createTerminalEnvironment({ No_Color: '1', Node_Disable_Colors: '1', Term: 'dumb', ColorTerm: '', CliColor: '0', Force_Color: 'false', PROJECT_GRID_DATA_DIR: 'test-data', ELECTRON_RUN_AS_NODE: '1' }, 'bootstrap.json');
-  assert.deepEqual(Object.keys(env).sort(), ['CLICOLOR', 'COLORTERM', 'PROJECT_GRID_BOOTSTRAP', 'TERM', 'TERM_PROGRAM'].sort());
+  const env = createTerminalEnvironment({ No_Color: '1', Node_Disable_Colors: '1', Term: 'dumb', ColorTerm: '', CliColor: '0', Force_Color: 'false', AGENTRIX_DATA_DIR: 'test-data', ELECTRON_RUN_AS_NODE: '1' }, 'bootstrap.json');
+  assert.deepEqual(Object.keys(env).sort(), ['CLICOLOR', 'COLORTERM', 'AGENTRIX_BOOTSTRAP', 'TERM', 'TERM_PROGRAM'].sort());
 });
 
 test('unrelated environment values and positive color preferences are preserved', () => {
@@ -26,5 +26,5 @@ test('unrelated environment values and positive color preferences are preserved'
   assert.equal(env.FORCE_COLOR, '3');
   assert.equal(env.LANG, 'zh_CN.UTF-8');
   assert.equal(env.SSH_AUTH_SOCK, 'socket');
-  assert.equal(env.PROJECT_GRID_BOOTSTRAP, 'bootstrap.json');
+  assert.equal(env.AGENTRIX_BOOTSTRAP, 'bootstrap.json');
 });

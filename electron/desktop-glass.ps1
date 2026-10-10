@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 Add-Type -TypeDefinition @"
 using System;
 using System.Runtime.InteropServices;
-public class ProjectGridDesktopGlass {
+public class AgentrixDesktopGlass {
  [StructLayout(LayoutKind.Sequential)] public struct Accent { public int State; public int Flags; public int Color; public int Animation; }
  [StructLayout(LayoutKind.Sequential)] public struct Data { public int Attribute; public IntPtr Policy; public int Size; }
  [DllImport("user32.dll")] public static extern int SetWindowCompositionAttribute(IntPtr window, ref Data data);
@@ -17,4 +17,4 @@ public class ProjectGridDesktopGlass {
  }
 }
 "@
-if (-not [ProjectGridDesktopGlass]::Apply($WindowHandle,$Mode)) { throw 'Native backdrop rejected' }
+if (-not [AgentrixDesktopGlass]::Apply($WindowHandle,$Mode)) { throw 'Native backdrop rejected' }

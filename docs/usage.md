@@ -1,4 +1,4 @@
-# Project Grid 使用与开发文档
+# Agentrix 使用与开发文档
 
 [返回项目首页](../README.md)
 
@@ -8,9 +8,9 @@ Windows 多项目终端工作台。每个目录对应一个真实终端，Codex 
 
 从 [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 下载 Windows `.exe` 即可使用。正式版本在 Releases 中长期保留，普通 CI 构建仍可从 Actions 的 Artifacts 下载。
 
-打包后的应用位于 `release/`。运行 `Project-Grid-Setup-<版本>-x64.exe` 安装，获得自动更新功能。从 0.6.12 起不再发布便携版。迁移旧版时，先等任务结束，从设置或托盘退出旧版，再运行安装包。项目列表与会话历史会保留，旧人工完成项目保持停止。
+打包后的应用位于 `release/`。运行 `Agentrix-Setup-<版本>-x64.exe` 安装，获得自动更新功能。从 0.6.12 起不再发布便携版。迁移旧版时，先等任务结束，从设置或托盘退出旧版，再运行安装包。项目列表与会话历史会保留，旧人工完成项目保持停止。
 
-安装版使用独立的 Windows 应用标识，开始菜单登记为 **Project Grid**，可在 Windows 搜索中查找。桌面、任务栏和搜索使用多尺寸的项目矩阵图标。启动时会修复本应用的快捷方式，并把早期与正式版标识冲突的开发版 Electron 快捷方式备份到应用数据目录；开发和测试窗口不再复用正式版标识。
+安装版使用独立的 Windows 应用标识，开始菜单登记为 **Agentrix**，可在 Windows 搜索中查找。桌面、任务栏和搜索使用多尺寸的 Agentrix 图标。启动时会修复本应用的快捷方式，并把早期与正式版标识冲突的开发版 Electron 快捷方式备份到应用数据目录；开发和测试窗口不再复用正式版标识。
 
 ## 代理
 
@@ -27,7 +27,7 @@ Windows 多项目终端工作台。每个目录对应一个真实终端，Codex 
 ## 日常操作
 
 1. 按 **Ctrl+Shift+N** 打开「添加项目」（快捷键可在设置的「键盘快捷键」中修改），选择「本地项目」后选择一个或多个目录；或选择「SSH 远程项目」连接 Linux 主机。「本地项目」下方列出最近打开过、现在未打开的项目（最多 30 个），点击即可重新添加并启动终端；悬停后点 × 从列表删除，「清空」删除全部。文件夹已不存在的项目显示为灰色。
-2. 在每个方框里输入 `codex` 或 `claude`。已经保存的对话可以用 `codex resume` 或 `claude --resume` 选择；若会话仍在其他窗口运行，先在原窗口结束当前会话，再在这里恢复。
+2. 新项目的方框里有两个按钮：**Claude Code** 和 **Codex**。上方选「开始新开发」或「继承开发历史」，继承会接上这个文件夹最近的那次对话（按钮下注明上次是什么时候）。其他命令行助手点「只打开终端」后自己运行；终端里也可以照常用 `codex resume` 或 `claude --resume` 挑选更早的对话。若会话仍在其他窗口运行，先在原窗口结束当前会话，再在这里恢复。阅读视图目前支持 Claude Code 和 Codex，之后会陆续支持更多 CLI。
 3. Codex 或 Claude Code **一轮结束**后，方框缓缓呼吸并显示「等待你查看」。在终端输入 `claude` 即可让 Claude Code 的每轮对话同样被识别。如果开启桌面通知，后台也会提醒。
 4. **点击红框**：方框从原位置逐渐放大进入全屏，并标记本轮已查看。直接在终端里继续输入指令。
 5. 点击左侧的 **返回总览**，或按 **Ctrl+Shift+G**，方框平滑缩回网格。终端进程、未发送的输入和任务继续保留；默认使用平滑缩放，可在设置中选择“跟随系统”或“关闭”。
@@ -35,7 +35,7 @@ Windows 多项目终端工作台。每个目录对应一个真实终端，Codex 
 
 每个方框右上角的菜单可以新建终端、打开项目目录、重启终端或移除项目。本地目录通过系统资源管理器打开，SSH 目录在应用内展开。移除项目不会删除项目文件。
 
-安装 MiMo 等命令行工具后，如果安装程序已经把目录加入 Windows PATH，点击项目菜单的 **重启当前终端** 即可识别，无需退出整个 Project Grid。每个新建、重启或重新打开的本地终端都会补入最新的系统/用户 PATH 目录；原有工具链目录保持优先，其他终端保留自己的环境和任务。该行为仅补充本地 PATH，不替换其他环境变量；SSH 继续使用远端 shell 的环境配置。
+安装 MiMo 等命令行工具后，如果安装程序已经把目录加入 Windows PATH，点击项目菜单的 **重启当前终端** 即可识别，无需退出整个 Agentrix。每个新建、重启或重新打开的本地终端都会补入最新的系统/用户 PATH 目录；原有工具链目录保持优先，其他终端保留自己的环境和任务。该行为仅补充本地 PATH，不替换其他环境变量；SSH 继续使用远端 shell 的环境配置。
 
 点击项目标题栏「⋯」菜单里的 **新建终端并分屏**，在同一项目新增独立终端。界面按窗口宽度和终端数量自动排列，每个分屏可以单独运行 Codex 或 Claude Code、语音输入、重启或关闭；分屏之间只有细分隔线，不在方框边缘再画一圈。重开应用后，各个终端恢复各自的 Codex 或 Claude Code 会话；关闭一个分屏不会关闭其余分屏。项目状态优先显示仍在运行的任务，各终端同时显示自己的状态。
 
@@ -196,7 +196,7 @@ Markdown（`.md`、`.markdown`、`.mdown`、`.mkd`）提供「编辑 / 预览」
 - 默认关闭到系统托盘，任务继续运行；点击托盘图标恢复窗口。
 - 真正退出需要从托盘菜单或设置里点击「退出应用」。存在终端时会提示任务将被结束。
 - 重新启动应用会恢复目录、未读记录，以及按设置恢复上次的终端和 Codex 会话；旧人工完成项目保持停止，原有可见终端仍可手动启动。
-- 数据保存在 `%APPDATA%/Project Grid/workspace.json`，记录项目路径、SSH 主机和恢复状态，不保存密码、终端文字或对话内容。
+- 数据保存在 `%APPDATA%/Agentrix/workspace.json`，记录项目路径、SSH 主机和恢复状态，不保存密码、终端文字或对话内容。
 - 终端回看缓冲区在内存中，每个终端最多约 1 MiB，退出应用后释放。
 - 窗口遵循系统减少动态效果偏好，启用时保留红色状态而停止闪烁。
 
@@ -204,7 +204,7 @@ Markdown（`.md`、`.markdown`、`.mdown`、`.mkd`）提供「编辑 / 预览」
 
 ### macOS 安装
 
-支持 Apple 芯片 Mac（M1 或更新型号）和 macOS 12 或更高版本。GitHub [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 提供 `Project-Grid-<version>-mac-arm64.dmg`、`Project-Grid-<version>-mac-arm64.zip` 和校验文件 `SHA256SUMS-mac.txt`。
+支持 Apple 芯片 Mac（M1 或更新型号）和 macOS 12 或更高版本。GitHub [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 提供 `Agentrix-<version>-mac-arm64.dmg`、`Agentrix-<version>-mac-arm64.zip` 和校验文件 `SHA256SUMS-mac.txt`。
 
 推荐在终端运行以下命令安装，更新时也用同一条命令：
 
@@ -216,31 +216,31 @@ curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/
 
 可以在管道后的 `bash` 前设置这些变量：
 
-- `PROJECT_GRID_VERSION=0.6.16`：安装指定版本。
-- `PROJECT_GRID_INSTALL_DIR=~/Applications`：指定安装目录。
-- `PROJECT_GRID_OPEN=0`：安装后不打开应用。
+- `AGENTRIX_VERSION=0.6.16`：安装指定版本。
+- `AGENTRIX_INSTALL_DIR=~/Applications`：指定安装目录。
+- `AGENTRIX_OPEN=0`：安装后不打开应用。
 
 例如，安装 0.6.16：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | PROJECT_GRID_VERSION=0.6.16 bash
+curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | AGENTRIX_VERSION=0.6.16 bash
 ```
 
 如果已经下载了 ZIP，也可以用本地的安装脚本安装：
 
 ```bash
-bash install-macos.sh ~/Downloads/Project-Grid-0.6.16-mac-arm64.zip
+bash install-macos.sh ~/Downloads/Agentrix-0.6.16-mac-arm64.zip
 ```
 
 应用使用临时签名（ad-hoc），没有 Apple Developer ID，也未经过 Apple 公证。如果用浏览器下载 DMG，再将应用拖到「应用程序」，首次打开时 macOS 会提示「无法验证开发者」。在「系统设置 › 隐私与安全性」中点一次「仍要打开」，或运行：
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Project Grid.app"
+xattr -dr com.apple.quarantine "/Applications/Agentrix.app"
 ```
 
 ### macOS 终端与快捷键
 
-本地终端以登录 shell 方式运行 zsh（`/bin/zsh`），照常加载你自己的 `~/.zshenv`、`~/.zprofile`、`~/.zshrc` 和 `~/.zlogin`。Project Grid 在此基础上加入提示符状态报告和 `codex` / `claude` 包装层，支持轮次状态、Claude Code hooks、完成提醒和会话恢复，不修改任何用户文件。你为 `codex` 或 `claude` 定义的别名仍然有效。SSH 项目的用法与 Windows 相同。
+本地终端以登录 shell 方式运行 zsh（`/bin/zsh`），照常加载你自己的 `~/.zshenv`、`~/.zprofile`、`~/.zshrc` 和 `~/.zlogin`。Agentrix 在此基础上加入提示符状态报告和 `codex` / `claude` 包装层，支持轮次状态、Claude Code hooks、完成提醒和会话恢复，不修改任何用户文件。你为 `codex` 或 `claude` 定义的别名仍然有效。SSH 项目的用法与 Windows 相同。
 
 终端中用 `⌘C` / `⌘V` / `⌘A` 复制、粘贴和全选，`Control+C` 中断命令，`⌘+点击`打开链接。`⌘Q` 退出（终端仍在运行时会先询问），`⌘H` 隐藏，`⌘M` 最小化。设置里的项目快捷键仍默认使用 Control，例如 `Control+Shift+N` 添加项目。
 
@@ -248,20 +248,20 @@ xattr -dr com.apple.quarantine "/Applications/Project Grid.app"
 
 ### Linux 安装
 
-支持 x64 和 arm64。GitHub [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 提供 `Project-Grid-<version>-linux-x86_64.AppImage`、`Project-Grid-<version>-linux-arm64.AppImage`、同内容的 `.tar.gz` 压缩包，以及校验文件 `SHA256SUMS-linux-x64.txt` / `SHA256SUMS-linux-arm64.txt`。
+支持 x64 和 arm64。GitHub [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 提供 `Agentrix-<version>-linux-x86_64.AppImage`、`Agentrix-<version>-linux-arm64.AppImage`、同内容的 `.tar.gz` 压缩包，以及校验文件 `SHA256SUMS-linux-x64.txt` / `SHA256SUMS-linux-arm64.txt`。
 
 推荐用 AppImage，下载后无需安装：
 
 ```bash
-chmod +x Project-Grid-*-linux-*.AppImage
-./Project-Grid-*-linux-*.AppImage
+chmod +x Agentrix-*-linux-*.AppImage
+./Agentrix-*-linux-*.AppImage
 ```
 
-也可以解压 `.tar.gz`，运行其中的 `./project-grid`。Ubuntu 23.10 及更新版本默认禁止未登记的程序使用 Chromium 沙箱所需的用户命名空间，这时运行压缩包里的程序要加上 `--no-sandbox`；AppImage 会自动检测并处理。**Linux 版不会自动更新**，下载新版本替换即可。
+也可以解压 `.tar.gz`，运行其中的 `./agentrix`。Ubuntu 23.10 及更新版本默认禁止未登记的程序使用 Chromium 沙箱所需的用户命名空间，这时运行压缩包里的程序要加上 `--no-sandbox`；AppImage 会自动检测并处理。**Linux 版不会自动更新**，下载新版本替换即可。
 
 ### Linux 终端与快捷键
 
-本地终端可在「设置 › 终端与编辑 › 终端」中选择 Bash 或 zsh，默认跟随你的登录 shell（`$SHELL`）。没装 zsh 时只能选 Bash。Bash 与普通终端一样读取 `/etc/bash.bashrc`（如有）和你自己的 `~/.bashrc`；zsh 照常加载 `~/.zshenv`、`~/.zprofile`、`~/.zshrc` 和 `~/.zlogin`。Project Grid 在此基础上加入提示符状态报告和 `codex` / `claude` 包装层，支持轮次状态、Claude Code hooks、完成提醒和会话恢复，不修改任何用户文件；你为 `codex` 或 `claude` 定义的别名仍然有效。SSH 项目的用法与 Windows 相同。
+本地终端可在「设置 › 终端与编辑 › 终端」中选择 Bash 或 zsh，默认跟随你的登录 shell（`$SHELL`）。没装 zsh 时只能选 Bash。Bash 与普通终端一样读取 `/etc/bash.bashrc`（如有）和你自己的 `~/.bashrc`；zsh 照常加载 `~/.zshenv`、`~/.zprofile`、`~/.zshrc` 和 `~/.zlogin`。Agentrix 在此基础上加入提示符状态报告和 `codex` / `claude` 包装层，支持轮次状态、Claude Code hooks、完成提醒和会话恢复，不修改任何用户文件；你为 `codex` 或 `claude` 定义的别名仍然有效。SSH 项目的用法与 Windows 相同。
 
 快捷键与 Windows 一致：终端里选中文字后 `Ctrl+C` 复制（或 `Ctrl+Shift+C`），`Ctrl+V` 粘贴，`Ctrl+Shift+A` 全选，没有选中时 `Ctrl+C` 中断命令，`Ctrl+点击`打开链接。目录栏的文件可以和系统文件管理器（Files、Dolphin、Thunar 等）互相复制粘贴；读取剪贴板时优先使用已安装的 `wl-paste` 或 `xclip`。
 
@@ -320,10 +320,10 @@ npm run dist
 - 推送到 `main`、推送 `v*` 标签、提交面向 `main` 的 PR，或在 Actions 页面点击 **Run workflow** 都会触发。
 - 流程：`npm ci` → 单元测试 → 生成 Windows 安装版 → 校验自动更新文件 → 打包版桌面测试 → 上传可执行文件和 SHA-256 校验信息。
 - 独立的 Ubuntu job 使用真实 OpenSSH 连接测试服务，运行 Linux Python worker、Bash PTY、文件读取与 Codex 通知测试；发布前必须同时通过 Windows 和 Linux 检查。
-- Linux 桌面版在 `ubuntu-24.04`（x64）和 `ubuntu-24.04-arm`（arm64）上构建：单元测试（含真实 Bash 和 zsh 终端）→ 生成 AppImage 与 tar.gz → 检查包内容 → 在虚拟显示器中用打包版分别验证 Bash 与 zsh 终端和 Codex 状态 → 检查 AppImage 的终端环境，产物为 **Project-Grid-linux-x64** 和 **Project-Grid-linux-arm64**。
-- 桌面回归测试会实际点击「启动终端」，覆盖网格和全屏，确认按键不被遮挡，再检查真实 PowerShell 与 Codex CLI 启动。
+- Linux 桌面版在 `ubuntu-24.04`（x64）和 `ubuntu-24.04-arm`（arm64）上构建：单元测试（含真实 Bash 和 zsh 终端）→ 生成 AppImage 与 tar.gz → 检查包内容 → 在虚拟显示器中用打包版分别验证 Bash 与 zsh 终端和 Codex 状态 → 检查 AppImage 的终端环境，产物为 **Agentrix-linux-x64** 和 **Agentrix-linux-arm64**。
+- 桌面回归测试会实际点击「只打开终端」，覆盖网格和全屏，确认按键不被遮挡，再检查真实 PowerShell 与 Codex CLI 启动。
 - Codex 检查只运行版本和配置命令，不调用模型，不需要 API 密钥或 ChatGPT 登录。
-- 构建通过后，在对应运行的 **Artifacts** 中下载 **Project-Grid-windows-x64**，解压后双击 `.exe`。产物保留 30 天；测试截图保留 7 天。
+- 构建通过后，在对应运行的 **Artifacts** 中下载 **Agentrix-windows-x64**，解压后双击 `.exe`。产物保留 30 天；测试截图保留 7 天。
 - 推送与 `package.json` 一致的版本标签（如 `v0.3.0`）时，构建与测试通过后会自动创建 GitHub Release，附上两个 `.exe`、`latest.yml`、`.blockmap`、macOS 的 DMG 与 ZIP、Linux 两种架构的 AppImage 与 tar.gz、SHA-256 校验文件和构建信息；普通 `main` 推送只生成 Artifacts。
 - 发布任务会重新校验下载产物，只为发布阶段申请仓库写权限。已发布的版本不会被重跑任务覆盖；预发布版本会标为 prerelease。
 - GitHub Packages 面向 npm、NuGet、容器等软件包；本项目以 Windows 可执行文件交付，下载入口是 Releases。

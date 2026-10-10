@@ -7,7 +7,7 @@ const entry = id => ({ id, role: 'assistant', at: 0 });
 function conversationHarness(t) {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const requests = [], subscribers = new Set(), previous = Object.getOwnPropertyDescriptor(globalThis, 'window');
-  Object.defineProperty(globalThis, 'window', { configurable: true, value: { projectGrid: {
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { agentrix: {
     terminalConversation: id => new Promise(resolve => requests.push({ id, resolve })),
     onTerminalConversation: callback => { subscribers.add(callback); return () => subscribers.delete(callback); },
   } } });

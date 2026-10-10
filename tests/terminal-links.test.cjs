@@ -49,7 +49,7 @@ test('Codex relative references exclude surrounding punctuation and preserve fil
 });
 
 test('detected relative report and archive paths resolve against their own project directory', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-relative-links-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-relative-links-');
   const directory = await fs.mkdtemp(prefix);
   t.after(async () => { assert.ok(path.resolve(directory).startsWith(prefix)); await fs.rm(directory, { recursive: true, force: true }); });
   const project = { path: path.join(directory, '项目 空格') };
@@ -66,7 +66,7 @@ test('detected relative report and archive paths resolve against their own proje
 });
 
 test('link resolution opens HTTP URLs and project files while rejecting executable protocols and escapes', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-links-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-links-');
   const directory = await fs.mkdtemp(prefix);
   const project = { path: path.join(directory, 'project') };
   await fs.mkdir(project.path);

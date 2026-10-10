@@ -12,10 +12,10 @@ const { desktopGlassKind } = require('../electron/desktop-glass.cjs');
 const backend = desktopGlassKind(), output = await testRun('readability'), profile = path.join(output, 'profile'), project = path.join(output, 'project');
 await fs.mkdir(profile); await fs.mkdir(project);
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [{ id: 'readability', name: '字体对照', path: project, kind: 'local', restore: { terminal: false, codex: false } }], settings: { theme: 'mono-amber', surface: 'glass', glassBackground: backend ? 'desktop' : 'theme', glassTransparency: 0, fontSize: 16, terminalFontWeight: 400, terminalRenderer: 'gpu', restoreSessions: false, closeToTray: false, notifications: false, sound: false, announce: false } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 let app, page; const errors = [], results = { backend, fonts: [], checks: [] };
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
-const write = data => page.evaluate(data => window.projectGrid.writeTerminal('readability', data), data);
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
+const write = data => page.evaluate(data => window.agentrix.writeTerminal('readability', data), data);
 async function launch() {
   app = await electron.launch({ executablePath: require('electron'), args: [root], cwd: root, env }); page = await app.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
@@ -48,10 +48,10 @@ async function capture(name) {
 }
 try {
   await launch();
-  await page.getByRole('button', { name: '启动终端', exact: true }).click(); await waitFor(async () => (await state()).projects[0].shellReady, 'real shell');
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click(); await waitFor(async () => (await state()).projects[0].shellReady, 'real shell');
   const session = (await state()).projects[0].sessionId;
   const marker = path.join(output, 'sample.done').replaceAll("'", "''");
-  await write("Clear-Host; Write-Host 'PROJECT GRID / Readability'; Write-Host ''; Write-Host '这是正文与代码：清晰、明显、稳定。中文字体和 English 0123456789'; Write-Host 'const needsAttention = unread || waitingForInput;'; Write-Host 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'; Write-Host ''; Write-Host '普通文字保持不透明，背景透明度独立调节。'; [System.IO.File]::WriteAllText('" + marker + "', 'done')\r");
+  await write("Clear-Host; Write-Host 'AGENTRIX / Readability'; Write-Host ''; Write-Host '这是正文与代码：清晰、明显、稳定。中文字体和 English 0123456789'; Write-Host 'const needsAttention = unread || waitingForInput;'; Write-Host 'ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'; Write-Host ''; Write-Host '普通文字保持不透明，背景透明度独立调节。'; [System.IO.File]::WriteAllText('" + marker + "', 'done')\r");
   await waitFor(() => fs.access(path.join(output, 'sample.done')).then(() => true, () => false), 'sample completed'); await page.waitForTimeout(300);
   console.log('sample ready'); await page.mouse.move(100, 200); await page.waitForTimeout(150);
   const cursor = await page.locator('.xterm').evaluate(node => getComputedStyle(node).cursor);
@@ -62,16 +62,16 @@ try {
     await page.locator('.xterm').evaluate(node => node.classList.add('enable-mouse-events')); assert.equal(await page.locator('.xterm').evaluate(node => getComputedStyle(node).cursor), 'default');
     await page.locator('.xterm').evaluate(node => { node.classList.remove('enable-mouse-events'); node.classList.add('xterm-cursor-pointer'); }); assert.equal(await page.locator('.xterm').evaluate(node => getComputedStyle(node).cursor), 'pointer');
     await page.locator('.xterm').evaluate(node => node.classList.remove('xterm-cursor-pointer'));
-    await page.evaluate(() => window.projectGrid.settings({ surface: 'solid' })); await page.waitForFunction(() => document.documentElement.dataset.surface === 'solid');
+    await page.evaluate(() => window.agentrix.settings({ surface: 'solid' })); await page.waitForFunction(() => document.documentElement.dataset.surface === 'solid');
     assert.ok((await page.locator('.xterm').evaluate(node => getComputedStyle(node).cursor)).includes('data:image/svg+xml'), 'native window keeps its color cursor while showing solid surfaces');
-    await page.evaluate(() => window.projectGrid.settings({ surface: 'glass', glassBackground: 'desktop' })); await page.waitForFunction(() => document.documentElement.dataset.surface === 'desktop-glass');
+    await page.evaluate(() => window.agentrix.settings({ surface: 'glass', glassBackground: 'desktop' })); await page.waitForFunction(() => document.documentElement.dataset.surface === 'desktop-glass');
     results.checks.push('opaque outlined cursor bitmap retained through surface changes; terminal mouse protocol and links retain original cursors');
   }
   console.log('cursor verified'); await app.evaluate(() => { readabilityWindow.setAlwaysOnTop(true); readabilityWindow.showInactive(); });
   for (const renderer of ['gpu', 'dom']) {
     const counts = [];
     for (const weight of [400, 500, 600]) {
-      await page.evaluate(patch => window.projectGrid.settings(patch), { terminalRenderer: renderer, terminalFontWeight: weight });
+      await page.evaluate(patch => window.agentrix.settings(patch), { terminalRenderer: renderer, terminalFontWeight: weight });
       await page.waitForFunction(weight => document.documentElement.dataset.terminalWeight === String(weight), weight); await page.waitForTimeout(300);
       if (renderer === 'dom') {
         await page.waitForFunction(weight => [...document.querySelectorAll('.xterm-rows span')].some(node => getComputedStyle(node).fontWeight === String(weight) && node.textContent.includes('Readability')), weight);
@@ -79,7 +79,7 @@ try {
       console.log(renderer + ' weight ' + weight); const ink = await capture(renderer + '-' + weight + '.png'); counts.push(ink); results.fonts.push({ renderer, weight, ink }); assert.equal((await state()).projects[0].sessionId, session);
     }
     assert.ok(counts[2] > counts[0] * 1.15, renderer + ' heavier text must cover more pixels');
-    await page.evaluate(() => window.projectGrid.settings({ terminalFontWeight: 400 })); await page.waitForTimeout(300); assert.equal(await capture(renderer + '-restored.png'), counts[0], 'standard weight restores the same raster');
+    await page.evaluate(() => window.agentrix.settings({ terminalFontWeight: 400 })); await page.waitForTimeout(300); assert.equal(await capture(renderer + '-restored.png'), counts[0], 'standard weight restores the same raster');
   }
   const cdp = await page.context().newCDPSession(page); await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
   async function platformFonts() {
@@ -99,7 +99,7 @@ try {
   results.originalFamilies = await platformFonts(); console.log('Original platform fonts: ' + JSON.stringify(results.originalFamilies));
   results.familyComparisons = [];
   for (const renderer of ['gpu', 'dom']) for (const [latin, chinese] of [['Cascadia Code', 'Microsoft YaHei UI'], ['Consolas', 'Microsoft YaHei UI'], ['Cascadia Code', 'Noto Sans SC']]) {
-    await page.evaluate(patch => window.projectGrid.settings(patch), { terminalRenderer: renderer, terminalFontFamily: latin, terminalCjkFontFamily: chinese, terminalFontWeight: 400 });
+    await page.evaluate(patch => window.agentrix.settings(patch), { terminalRenderer: renderer, terminalFontFamily: latin, terminalCjkFontFamily: chinese, terminalFontWeight: 400 });
     await page.waitForFunction(latin => document.documentElement.dataset.terminalFontFamily?.startsWith("'" + latin + "'"), latin); await page.waitForTimeout(350);
     if (renderer === 'dom') {
       const first = await page.locator('.xterm-rows').evaluate(node => getComputedStyle(node).fontFamily.split(',')[0].trim().replace(/^['"]|['"]$/g, ''));
@@ -109,9 +109,9 @@ try {
     await capture(name); results.familyComparisons.push({ renderer, latin, chinese, actual, screenshot: name });
     assert.equal((await state()).projects[0].sessionId, session);
   }
-  await page.evaluate(() => window.projectGrid.settings({ terminalFontFamily: '__ProjectGridMissingLatin__', terminalCjkFontFamily: '__ProjectGridMissingChinese__' })); await page.waitForTimeout(300);
+  await page.evaluate(() => window.agentrix.settings({ terminalFontFamily: '__AgentrixMissingLatin__', terminalCjkFontFamily: '__AgentrixMissingChinese__' })); await page.waitForTimeout(300);
   assert.deepEqual(await platformFonts(), results.originalFamilies, 'unavailable fonts must use the original fallback');
-  await page.evaluate(() => window.projectGrid.settings({ terminalFontFamily: '', terminalCjkFontFamily: '' })); await page.waitForTimeout(300);
+  await page.evaluate(() => window.agentrix.settings({ terminalFontFamily: '', terminalCjkFontFamily: '' })); await page.waitForTimeout(300);
   assert.deepEqual(await platformFonts(), results.originalFamilies, 'empty fields must restore exact original families');
   await cdp.detach();
   results.checks.push('actual Latin/CJK platform families recorded; GPU and DOM live changes; missing and empty families fall back to original fonts');
@@ -128,18 +128,18 @@ try {
     assert.equal(await page.locator('.project-panel').evaluate(node => getComputedStyle(node).opacity), '1');
   }
   await page.getByRole('button', { name: '完成', exact: true }).click(); assert.equal((await state()).projects[0].sessionId, session);
-  assert.ok((await page.evaluate(() => window.projectGrid.attachTerminal('readability'))).value.data.includes('READABILITY_UNSENT_DRAFT'));
-  const host = await page.locator('.xterm').elementHandle(); await page.evaluate(() => window.projectGrid.settings({ terminalFontWeight: 500 })); await page.waitForFunction(() => document.documentElement.dataset.terminalWeight === '500');
+  assert.ok((await page.evaluate(() => window.agentrix.attachTerminal('readability'))).value.data.includes('READABILITY_UNSENT_DRAFT'));
+  const host = await page.locator('.xterm').elementHandle(); await page.evaluate(() => window.agentrix.settings({ terminalFontWeight: 500 })); await page.waitForFunction(() => document.documentElement.dataset.terminalWeight === '500');
   assert.ok(await host.evaluate(node => node.isConnected), 'weight change must preserve the terminal host');
-  await page.evaluate(() => window.projectGrid.settings({ terminalFontWeight: 600 })); await write('\x03');
+  await page.evaluate(() => window.agentrix.settings({ terminalFontWeight: 600 })); await write('\x03');
   results.checks.push('GPU/DOM weight 400/500/600 actual raster and standard restoration; live setting preserves session, host and unsent draft; 0 opaque/100 transparent; content opacity stays 1');
   await app.close(); app = null; await launch();
   assert.equal((await state()).settings.terminalFontFamily, 'Consolas'); assert.equal((await state()).settings.terminalCjkFontFamily, 'Noto Sans SC'); assert.equal((await state()).settings.terminalFontWeight, 600); assert.equal((await state()).settings.glassTransparency, 25); await page.waitForFunction(() => document.documentElement.dataset.terminalWeight === '600');
   results.checks.push('font families, weight and transparency persist on restart');
   if (backend === 'windows-compat') {
-    await page.evaluate(() => window.projectGrid.settings({ surface: 'glass', glassBackground: 'theme' })); await app.close(); app = null; await launch();
+    await page.evaluate(() => window.agentrix.settings({ surface: 'glass', glassBackground: 'theme' })); await app.close(); app = null; await launch();
     assert.equal((await state()).desktopGlass.active, false);
-    await page.getByRole('button', { name: '启动终端', exact: true }).click(); await waitFor(async () => (await state()).projects[0].shellReady, 'ordinary window shell');
+    await page.getByRole('button', { name: '只打开终端', exact: true }).click(); await waitFor(async () => (await state()).projects[0].shellReady, 'ordinary window shell');
     assert.equal(await page.locator('.xterm').evaluate(node => getComputedStyle(node).cursor), 'text');
     results.checks.push('ordinary windows keep the stock system text cursor');
   }

@@ -69,7 +69,7 @@ test('public state exposes waiting messages and null for terminals without a not
   const context = vm.createContext({
     store: { projects: [{ id: 'p' }], settings: { language: 'zh' } }, sessions: new Map([['waiting', { needsInput: { message: 'Approve tool' } }]]),
     terminalIds: () => ['waiting', 'stopped'], getBranch: () => undefined, startupErrors: new Map(), t: text => text, localShell: () => ({ kind: 'powershell' }),
-    process: { platform: 'win32', env: { PROJECT_GRID_DATA_DIR: 'isolated' } }, app: { getVersion: () => '1' },
+    process: { platform: 'win32', env: { AGENTRIX_DATA_DIR: 'isolated' } }, app: { getVersion: () => '1' },
     desktopGlassBackend: null, desktopGlassWindow: false, desktopGlassActive: false,
   });
   vm.runInContext(main.slice(main.indexOf('function publicState('), main.indexOf('function terminalIds(')), context);

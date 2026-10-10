@@ -50,7 +50,7 @@ export type PendingPrompt = { id: string; text: string; state: 'queued' | 'worki
 export type AgentAction = AgentActionBrief & { id: string; at: number; description: string; failed: boolean; server?: string; files?: { path: string; change: 'add' | 'update' | 'delete' | 'write' }[] };
 export type AgentActionPacket = { id: string; list?: AgentAction[]; changes?: AgentAction[] };
 // One message or tool call of an agent's conversation, for the reading view.
-export type ConversationEntry = { id: string; at: number; role: 'user' | 'assistant' | 'tool'; text?: string; images?: string[]; tool?: AgentActionBrief & { failed: boolean } };
+export type ConversationEntry = { id: string; at: number; role: 'user' | 'assistant' | 'tool'; text?: string; images?: string[]; generated?: { path: string; prompt: string }; tool?: AgentActionBrief & { failed: boolean } };
 export type ConversationPacket = { id: string; list?: ConversationEntry[]; changes?: ConversationEntry[] };
 type GitDiffLine = { type: ' ' | '+' | '-' | '\\'; text: string };
 export type GitHunk = { header: string; oldStart: number; oldLines: number; newStart: number; newLines: number; lines: GitDiffLine[]; patch: string };
@@ -140,6 +140,9 @@ type Bridge = {
   attachTerminal(id: string): Promise<Result<TerminalSnapshot>>;
   terminalCommands(id: string): Promise<Result<AgentCommand[]>>;
   agentStart(id: string): Promise<Result<boolean>>;
+  agentOpenImage(file: string): Promise<Result<boolean>>;
+  agentHistory(id: string): Promise<Result<{ claude: { id: string; at: number } | null; codex: { id: string; at: number } | null }>>;
+  agentLaunch(id: string, agent: 'claude' | 'codex', mode: 'new' | 'continue'): Promise<Result<boolean>>;
   agentSend(id: string, text: string, images?: string[]): Promise<Result<boolean>>;
   agentInterrupt(id: string): Promise<Result<boolean>>;
   agentAnswer(id: string, answer: { decision?: string; answers?: Record<string, string | string[]> }): Promise<Result<boolean>>;
@@ -158,4 +161,4 @@ type Bridge = {
   minimize(): void; maximize(): void; toggleFullScreen(): void; isFullScreen(): Promise<Result<boolean>>; onFullScreen(callback: (fullScreen: boolean) => void): () => void; terminalActions(id: string): Promise<Result<AgentAction[]>>; terminalConversation(id: string): Promise<Result<ConversationEntry[]>>; onTerminalConversation(callback: (packet: ConversationPacket) => void): () => void; onTerminalAction(callback: (packet: AgentActionPacket) => void): () => void; close(): void; focusMode(enabled: boolean): void;
   quit(): Promise<Result<boolean>>;
 };
-declare global { interface Window { projectGrid: Bridge; } }
+declare global { interface Window { agentrix: Bridge; } }

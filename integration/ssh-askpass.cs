@@ -18,18 +18,18 @@ class Askpass {
                 Console.WriteLine(length > 0 && length < shortened.Capacity ? shortened.ToString() : args[1]);
                 return 0;
             }
-            var endpoint = new Uri(Environment.GetEnvironmentVariable("PROJECT_GRID_ASKPASS_URL"));
+            var endpoint = new Uri(Environment.GetEnvironmentVariable("AGENTRIX_ASKPASS_URL"));
             if (endpoint.Scheme != "http" || endpoint.Host != "127.0.0.1") return 1;
             var serializer = new JavaScriptSerializer();
             var bytes = Encoding.UTF8.GetBytes(serializer.Serialize(new {
-                connectionId = Environment.GetEnvironmentVariable("PROJECT_GRID_ASKPASS_ID"),
+                connectionId = Environment.GetEnvironmentVariable("AGENTRIX_ASKPASS_ID"),
                 prompt = String.Join(" ", args), hint = Environment.GetEnvironmentVariable("SSH_ASKPASS_PROMPT")
             }));
             var request = (HttpWebRequest)WebRequest.Create(endpoint);
             request.Proxy = null;
             request.Method = "POST";
             request.ContentType = "application/json";
-            request.Headers["Authorization"] = "Bearer " + Environment.GetEnvironmentVariable("PROJECT_GRID_ASKPASS_TOKEN");
+            request.Headers["Authorization"] = "Bearer " + Environment.GetEnvironmentVariable("AGENTRIX_ASKPASS_TOKEN");
             request.Timeout = 300000;
             request.ReadWriteTimeout = 300000;
             request.ContentLength = bytes.Length;

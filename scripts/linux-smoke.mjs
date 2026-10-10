@@ -38,12 +38,12 @@ setTimeout(() => import('node:child_process').then(({ spawnSync }) => {
 `, { mode: 0o755 });
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 1, projects: [project], settings: { shell: shellName, terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false } }));
 
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, HOME: home, SHELL: `/bin/${shellName}` };
-for (const name of ['ELECTRON_RUN_AS_NODE', 'PROJECT_GRID_DEV_URL', 'ZDOTDIR', 'CODEX_HOME', 'PROMPT_COMMAND']) delete env[name];
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, HOME: home, SHELL: `/bin/${shellName}` };
+for (const name of ['ELECTRON_RUN_AS_NODE', 'AGENTRIX_DEV_URL', 'ZDOTDIR', 'CODEX_HOME', 'PROMPT_COMMAND']) delete env[name];
 const appImage = process.argv.includes('--appimage') ? path.resolve(process.argv[process.argv.indexOf('--appimage') + 1]) : null;
 const packaged = !!appImage || process.argv.includes('--packaged');
 const unpacked = process.arch === 'x64' ? 'linux-unpacked' : `linux-${process.arch}-unpacked`;
-const executablePath = appImage || (packaged ? path.join(root, 'release', unpacked, 'project-grid') : require('electron'));
+const executablePath = appImage || (packaged ? path.join(root, 'release', unpacked, 'agentrix') : require('electron'));
 // Ubuntu 23.10 and later keep unprivileged user namespaces from programs without an AppArmor profile; the
 // AppImage turns Chromium's sandbox off by itself there, and this check does the same.
 const args = [...(packaged ? [] : [root]), '--no-sandbox'];
@@ -55,21 +55,21 @@ try {
   const page = await application.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
   await page.waitForSelector('.project-panel', { timeout: 20000 });
-  const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0];
+  const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0];
 
   // A frameless window: the page draws its own window buttons.
   assert.equal(await page.evaluate(() => document.documentElement.dataset.platform), 'linux');
   assert.equal(await page.locator('.window-actions').isVisible(), true, 'page-drawn window buttons');
   await page.locator('.titlebar').screenshot({ path: path.join(output, 'titlebar.png') });
 
-  await page.getByRole('button', { name: '启动终端', exact: true }).click();
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => { const value = await state(); return value.terminals[0].status === 'shell' && value.terminals[0].shellReady && value.codexAvailable === true; }, `${shellName} reports its prompt with codex available`);
   assert.equal((await state()).terminals[0].shell, shellName);
   const terminal = page.locator('.project-panel .xterm');
   await terminal.click();
-  await page.keyboard.type('echo PG_LINUX_$((6*7)) "${PROJECT_GRID_SESSION_KEY-clean}" "${APPDIR-no-appdir}"');
+  await page.keyboard.type('echo PG_LINUX_$((6*7)) "${AGENTRIX_SESSION_KEY-clean}" "${APPDIR-no-appdir}"');
   await page.keyboard.press('Enter');
-  await waitFor(async () => /PG_LINUX_42 clean no-appdir/.test(await terminal.innerText()), `the command runs in ${shellName} without Project Grid's or the AppImage's variables`);
+  await waitFor(async () => /PG_LINUX_42 clean no-appdir/.test(await terminal.innerText()), `the command runs in ${shellName} without Agentrix's or the AppImage's variables`);
 
   await page.keyboard.type('codex');
   await page.keyboard.press('Enter');

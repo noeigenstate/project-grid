@@ -79,6 +79,6 @@ README 可直接使用以下片段；发布时沿用已有章节结构即可：
 
 [验证记录](appearance-validation.md)列出范围、可复现命令与平台边界；[机器可读摘要](appearance-evidence.json)保存单元测试、GUI 检查、背景对照及打包审计结果。图片和摘要随本次贡献提交；完整原始日志保留在本地测试输出，不在文档中链接未提交的日志。
 
-截图可用 `npm run test:monochrome` 与 `PROJECT_GRID_MONO_THEME=mono-amber-dark` 的同一检查重新生成，输出目录由脚本打印。素材来自其中的 `overview.png` / `reading.png` / `git-diff.png`。测试均使用独立资料并顺序执行，不操作用户正在使用的窗口或会话。
+截图可用 `npm run test:monochrome` 与 `AGENTRIX_MONO_THEME=mono-amber-dark` 的同一检查重新生成，输出目录由脚本打印。素材来自其中的 `overview.png` / `reading.png` / `git-diff.png`。测试均使用独立资料并顺序执行，不操作用户正在使用的窗口或会话。
 
 合并前仍需维护者安排 Windows 11 22H2+/macOS 实机材质验证；Linux 的系统背景保持回退，字体候选顺序经过检查但尚未进行 Linux 实机观感验证。README 不应宣传所有平台效果一致或任意背景下的透明文字都可读。版本号与发布说明由主分支维护者按发布计划决定。

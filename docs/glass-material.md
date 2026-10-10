@@ -1,6 +1,6 @@
 # 液态玻璃材质
 
-Project Grid 参考 [Apple 的材质设计说明](https://developer.apple.com/design/human-interface-guidelines/materials)及 [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/) 的通透、透镜折射和轮廓高光方向，采用自有 CSS 与 SVG 实现。效果覆盖用户指定的顶栏、底栏、终端及其余应用外壳；这是 Electron 实现，非 Apple 原生材质引擎。
+Agentrix 参考 [Apple 的材质设计说明](https://developer.apple.com/design/human-interface-guidelines/materials)及 [Meet Liquid Glass](https://developer.apple.com/videos/play/wwdc2025/219/) 的通透、透镜折射和轮廓高光方向，采用自有 CSS 与 SVG 实现。效果覆盖用户指定的顶栏、底栏、终端及其余应用外壳；这是 Electron 实现，非 Apple 原生材质引擎。
 
 视觉主线是清透的浮动玻璃表面：树影、蓝天、白云直接透过背景，弧面亮边和内侧暗边建立厚度。下面的数值是本项目调参，不是苹果官方 CSS 令牌。材质由代码绘制，没有引入第三方玻璃库或额外位图。
 

@@ -11,7 +11,7 @@ export function SSHAuthDialog({ request }: { request: SSHAuthPrompt }) {
   useEffect(() => { dialog.current?.showModal(); }, []);
   const answer = async (response: string | null) => {
     setBusy(true);
-    try { const result = await window.projectGrid.answerSSHAuth(request.id, response); if (!result.ok) { setError(result.error); setBusy(false); } }
+    try { const result = await window.agentrix.answerSSHAuth(request.id, response); if (!result.ok) { setError(result.error); setBusy(false); } }
     catch (error) { setError(String(error)); setBusy(false); }
     setValue('');
   };

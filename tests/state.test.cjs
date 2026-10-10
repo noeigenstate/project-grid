@@ -6,7 +6,7 @@ const path = require('node:path');
 const { WorkspaceStore, cleanSettings } = require('../electron/state.cjs');
 
 function fixture(t) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-test-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-test-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const projectDir = path.join(directory, "中文项目 & 空格 [a] 'b' $c");
   fs.mkdirSync(projectDir);

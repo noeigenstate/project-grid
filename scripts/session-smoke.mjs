@@ -50,16 +50,16 @@ await fs.writeFile(path.join(fixture.project, 'README.md'), 'REMOTE_TEXT_PREVIEW
 await fs.copyFile(path.join(root, 'assets/icon.png'), path.join(fixture.project, '图片.png'));
 await fs.writeFile(path.join(fixture.project, 'page.html'), '<h1>REMOTE_HTML_READY</h1><img src="./图片.png">');
 await fs.copyFile(path.join(root, 'tests/fixtures/preview.webm'), path.join(fixture.project, 'preview.webm'));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_RESTORE: '1', PROJECT_GRID_TEST_SSH_CONFIG: fixture.configFile, CODEX_HOME: codexHome };
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, AGENTRIX_TEST_RESTORE: '1', AGENTRIX_TEST_SSH_CONFIG: fixture.configFile, CODEX_HOME: codexHome };
 const originalPath = Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1] || '';
 for (const key of Object.keys(env)) if (key.toLowerCase() === 'path') delete env[key];
 env.Path = bin + path.delimiter + originalPath;
-delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged');
 let application; let page;
 const errors = [];
 async function launch() {
-  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: [...(packaged ? [] : [root]), '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'], cwd: root, env, timeout: 30000 });
+  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: [...(packaged ? [] : [root]), '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'], cwd: root, env, timeout: 30000 });
   page = await application.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
@@ -83,8 +83,8 @@ async function verifyResume() {
   assert.equal((await receipt(claudeProjects[0])).args[0], '--settings');
   assert.deepEqual((await receipt(claudeProjects[0])).args.slice(2), ['--resume', claudeProjects[0].sessionId, '继续']);
   assert.deepEqual((await receipt(claudeProjects[1])).args.slice(2), ['--resume', claudeProjects[1].sessionId]);
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects.filter(p => p.codexActive).length === 4, 'four active restored conversations');
-  assert.deepEqual((await page.evaluate(() => window.projectGrid.getState())).value.projects.filter(p => p.agent === 'claude').map(p => p.id).sort(), claudeProjects.map(p => p.id).sort());
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects.filter(p => p.codexActive).length === 4, 'four active restored conversations');
+  assert.deepEqual((await page.evaluate(() => window.agentrix.getState())).value.projects.filter(p => p.agent === 'claude').map(p => p.id).sort(), claudeProjects.map(p => p.id).sort());
   const stored = JSON.parse(await fs.readFile(path.join(dataDir, 'workspace.json'), 'utf8'));
   assert.equal(stored.projects.find(project => project.id === projects[0].id).completionArmed, true, 'automatic continuation arms a completion alert');
   assert.equal(stored.projects.find(project => project.id === projects[1].id).completionArmed, false, 'opening completed history stays quiet');
@@ -112,7 +112,7 @@ async function restoreClipboard() {
 }
 try {
   await launch(); await verifyResume();
-  assert.ok((await page.evaluate(() => window.projectGrid.getState())).value.projects.every(project => !('done' in project)));
+  assert.ok((await page.evaluate(() => window.agentrix.getState())).value.projects.every(project => !('done' in project)));
   console.log('PASS: interrupted session resumes with 继续; completed round resumes without a prompt; closed and legacy-finished projects stay stopped after migration');
   await application.close(); application = null;
   for (const project of [...projects.slice(0, 2), ...claudeProjects]) await fs.unlink(path.join(project.path, 'resume-receipt.json'));
@@ -134,7 +134,7 @@ try {
   await application.evaluate(async ({ clipboard }) => { globalThis.testClipboardLast = await clipboard.readText(); });
   assert.ok((await clipboardText()).includes('COPY_SAMPLE_START'), 'selection includes scrollback');
   assert.equal(await page.locator('.focus-mode').count(), 0, 'selection in red card leaves overview visible');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].codexActive, true, 'Ctrl+C with selection did not interrupt');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].codexActive, true, 'Ctrl+C with selection did not interrupt');
   const selectionRect = await panel.locator('.xterm-rows > div').filter({ hasText: 'COPY_SAMPLE_END' }).evaluate(row => {
     const node = row.querySelector('span').firstChild;
     const range = document.createRange(); range.setStart(node, 0); range.setEnd(node, 15);
@@ -185,10 +185,10 @@ try {
   await page.getByRole('button', { name: '信任并连接', exact: true }).click({ timeout: 15000 });
   await page.getByLabel('SSH 密码或口令', { exact: true }).fill(fixture.secret);
   await page.getByRole('button', { name: '继续连接', exact: true }).click();
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects.some(p => p.kind === 'ssh' && p.shellReady), 'remote terminal ready after UI authentication');
-  const remote = (await page.evaluate(() => window.projectGrid.getState())).value.projects.find(p => p.kind === 'ssh');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects.some(p => p.kind === 'ssh' && p.shellReady), 'remote terminal ready after UI authentication');
+  const remote = (await page.evaluate(() => window.agentrix.getState())).value.projects.find(p => p.kind === 'ssh');
   for (const target of ['page.html', './page.html', '/srv/fixture/page.html']) {
-    const resolved = await page.evaluate(({ id, target }) => window.projectGrid.openLink(id, target), { id: remote.id, target });
+    const resolved = await page.evaluate(({ id, target }) => window.agentrix.openLink(id, target), { id: remote.id, target });
     assert.deepEqual(resolved, { ok: true, value: { kind: 'file', path: 'page.html' } }, 'SSH relative links use the remote project root');
   }
   const remotePanel = page.locator(`[data-project-id="${remote.id}"]`);

@@ -1,12 +1,8 @@
 function registerWorkspaceIpc({ handle, publicState, dialog, getWindow, t, addProject, startTerminal, setStartupError, getRecentProjects, existsSync, getRecentEntry, forgetRecent, clearHistory, getEditorFile, allowEditorClose, confirmTerminalClose, disposeProjectTerminals, findProject, closeProjectPreviews, removeProject, forgetBranch, broadcast, acknowledgeProject, reorderProjects, getSettings, updateStoreSettings, rebuildMenus, clearRestorePlans, chooseVoiceModel }) {
-  // Adds a local folder as a project and opens its terminal; an already open folder just returns its id.
+  // Adds a local folder as a project; an already open folder just returns its id. Its card then offers Claude Code
+  // and Codex (new or continuing), so no terminal is opened before one is chosen.
   function addLocalProject(folder, name) {
-    const { project, added } = addProject(folder, name);
-    if (added) {
-      try { startTerminal(project.id); }
-      catch (error) { setStartupError(project.id, error.message); }
-    }
-    return project.id;
+    return addProject(folder, name).project.id;
   }
 
   handle('workspace:state', publicState);

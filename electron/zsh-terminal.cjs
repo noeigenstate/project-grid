@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 
-// Local terminals on macOS run zsh with the user's own start-up files and Project Grid's integration
+// Local terminals on macOS run zsh with the user's own start-up files and Agentrix's integration
 // (integration/zsh-integration.zsh). zsh reads its start-up files from ZDOTDIR, so that names a folder of
 // stubs, and each stub sources the integration with its phase. On Linux the user chooses zsh or Bash
 // (integration/bash-integration.bash, started with --rcfile).
@@ -34,12 +34,12 @@ function shellEnvironment(env, { socket, projectId, sessionKey, node, helper, st
   return {
     ...env,
     ...(!env.LANG && !env.LC_ALL && !env.LC_CTYPE ? { LANG: locale || 'en_US.UTF-8' } : {}),
-    PROJECT_GRID_SOCKET: socket, PROJECT_GRID_PROJECT_ID: projectId, PROJECT_GRID_SESSION_KEY: sessionKey,
-    PROJECT_GRID_NODE: node, PROJECT_GRID_EVENT_HELPER: helper, PROJECT_GRID_START_DIR: startDir,
+    AGENTRIX_SOCKET: socket, AGENTRIX_PROJECT_ID: projectId, AGENTRIX_SESSION_KEY: sessionKey,
+    AGENTRIX_NODE: node, AGENTRIX_EVENT_HELPER: helper, AGENTRIX_START_DIR: startDir,
   };
 }
 function zshEnvironment(env, options) {
-  return { ...shellEnvironment(env, options), ZDOTDIR: options.folder, PROJECT_GRID_USER_ZDOTDIR: env.ZDOTDIR || '' };
+  return { ...shellEnvironment(env, options), ZDOTDIR: options.folder, AGENTRIX_USER_ZDOTDIR: env.ZDOTDIR || '' };
 }
 // Bash reads /etc/bash.bashrc (where the system has one) and then the --rcfile, which sources ~/.bashrc.
 function bashArguments(integrationDir) { return ['--rcfile', path.posix.join(integrationDir, 'bash-integration.bash'), '-i']; }
@@ -82,7 +82,7 @@ function terminalLocale(languages = [], exists = name => fs.existsSync(path.join
 // codex, claude and npm live in folders the user's login shell adds (Homebrew, nvm, ~/.local/bin). Asks that
 // shell once and gives its PATH, or null. printenv prints the exported PATH the same way from any shell.
 function loginShellPath({ shell = process.env.SHELL || ZSH, env = process.env, timeout = 10000, run = execFile } = {}) {
-  const marker = '__PROJECT_GRID_PATH__';
+  const marker = '__AGENTRIX_PATH__';
   return new Promise(resolve => {
     try {
       run(shell, ['-ilc', `echo ${marker}; /usr/bin/printenv PATH; echo ${marker}`], { env, timeout, encoding: 'utf8', maxBuffer: 1024 * 1024 }, (_error, stdout) => {

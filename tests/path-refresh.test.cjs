@@ -7,16 +7,16 @@ const { promisify } = require('node:util');
 const exec = promisify(require('node:child_process').execFile);
 
 test('new Windows terminals supplement stale PATH without replacing inherited toolchains', { skip: process.platform !== 'win32' }, async t => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'project-grid-path-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'agentrix-path-'));
   t.after(async () => {
     assert.equal(path.dirname(path.resolve(dir)).toLowerCase(), path.resolve(os.tmpdir()).toLowerCase());
-    assert.ok(path.basename(dir).startsWith('project-grid-path-'));
+    assert.ok(path.basename(dir).startsWith('agentrix-path-'));
     await fs.rm(dir, { recursive: true, force: true });
   });
   const cases = [
     { name: 'new tool', inherited: 'C:\\venv;C:\\System', Machine: 'C:\\System', User: 'C:\\Users\\测试 用户\\.mimocode\\bin', expected: 'C:\\venv;C:\\System;C:\\Users\\测试 用户\\.mimocode\\bin' },
     { name: 'deduplicate', inherited: 'C:\\Tools\\;"C:\\With Space";C:\\;C:', Machine: 'c:\\TOOLS;C:/With Space;;C:\\', User: ' C:\\New ', expected: 'C:\\Tools\\;"C:\\With Space";C:\\;C:;C:\\New' },
-    { name: 'expand known only', inherited: 'C:\\preferred', Machine: '%PG_PATH_ROOT%\\bin', User: '%PROJECT_GRID_UNDEFINED_PATH_TEST%\\bin', expected: 'C:\\preferred;C:\\Known Root\\bin;%PROJECT_GRID_UNDEFINED_PATH_TEST%\\bin' },
+    { name: 'expand known only', inherited: 'C:\\preferred', Machine: '%PG_PATH_ROOT%\\bin', User: '%AGENTRIX_UNDEFINED_PATH_TEST%\\bin', expected: 'C:\\preferred;C:\\Known Root\\bin;%AGENTRIX_UNDEFINED_PATH_TEST%\\bin' },
     { name: 'machine denied', inherited: 'C:\\keep', Machine: 'C:\\ignored', User: 'C:\\UserTool', fail: 'Machine', expected: 'C:\\keep;C:\\UserTool' },
     { name: 'user denied', inherited: 'C:\\keep', Machine: 'C:\\MachineTool', User: 'C:\\ignored', fail: 'User', expected: 'C:\\keep;C:\\MachineTool' },
     { name: 'empty persistent paths', inherited: 'C:\\keep', Machine: '', User: null, expected: 'C:\\keep' },

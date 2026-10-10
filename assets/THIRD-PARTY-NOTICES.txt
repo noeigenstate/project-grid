@@ -1,7 +1,7 @@
 macOS landscape wallpapers
 
 High Sierra, Big Sur and Sierra wallpapers: Apple Inc. and their respective
-rights holders. These third-party images are not original Project Grid artwork
+rights holders. These third-party images are not original Agentrix artwork
 and are not licensed under the project's MIT code license.
 
 Source archive maintained by Stephen Hackett / 512 Pixels:
@@ -12,4 +12,4 @@ Big Sur Day: https://media.512pixels.net/downloads/macos-wallpapers-6k/11-Big-Su
 Sierra: https://media.512pixels.net/downloads/macos-wallpapers-6k/10-12-6k.jpg
 
 Images are proportionally resized and encoded as WebP for local display.
-Project Grid is an independent project and is not affiliated with Apple.
+Agentrix is an independent project and is not affiliated with Apple.

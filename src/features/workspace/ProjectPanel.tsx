@@ -6,22 +6,14 @@ import { projectAccent } from './project-colors';
 import { ActivityPane } from '../agents/ActivityPane';
 import { readingShown, setReading, useTerminalChoice } from '../reading/reading-mode';
 import { VoiceButton } from '../voice/VoiceButton';
-import { currentLanguage, t } from '../../shared/i18n';
+import { t } from '../../shared/i18n';
 import { shortcut } from '../shortcuts/shortcuts';
 
-const api = window.projectGrid;
+const api = window.agentrix;
 
 import { IconButton } from '../../shared/IconButton';
+import { relativeTime } from '../../shared/time';
 
-export function relativeTime(timestamp: number | null, now: number) {
-  if (!timestamp) return '';
-  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000));
-  if (seconds < 10) return t('刚刚');
-  if (seconds < 60) return t('{n} 秒前', { n: seconds });
-  if (seconds < 3600) return t('{n} 分钟前', { n: Math.floor(seconds / 60) });
-  if (seconds < 86400) return t('{n} 小时前', { n: Math.floor(seconds / 3600) });
-  return new Date(timestamp).toLocaleDateString(currentLanguage() === 'en' ? 'en-US' : 'zh-CN');
-}
 
 export function statusText(project: Project) {
   if (project.codexActive && project.codexActivity === 'working') return t('正在处理');

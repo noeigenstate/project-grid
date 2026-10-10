@@ -11,7 +11,7 @@ let app;
 try {
   const dataDir = await testRun('dev-check');
   await fs.mkdir(dataDir, { recursive: true });
-  const env = { ...process.env, PROJECT_GRID_DEV_URL: 'http://127.0.0.1:5178', PROJECT_GRID_DATA_DIR: dataDir };
+  const env = { ...process.env, AGENTRIX_DEV_URL: 'http://127.0.0.1:5178', AGENTRIX_DATA_DIR: dataDir };
   delete env.ELECTRON_RUN_AS_NODE;
   app = await _electron.launch({ executablePath: require('electron'), args: [process.cwd()], env });
   const page = await app.firstWindow();

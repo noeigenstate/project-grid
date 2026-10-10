@@ -25,7 +25,7 @@ try { git('rev-parse', '--git-dir'); } catch {
 }
 await fs.writeFile(path.join(project.path, 'notes.txt'), `changed ${new Date().toISOString()}\n`);
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [project], settings: { terminalRenderer: 'dom', restoreSessions: false, closeToTray: false, notifications: false, sound: false, announce: false, language: 'zh' } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 // Started from inside Claude Code, the test would hand the CLI this session's markers (which turn transcripts off).
 for (const name of Object.keys(env)) if (/^(CLAUDECODE|CLAUDE_CODE_|CLAUDE_EFFORT$|CLAUDE_PID$)/.test(name)) delete env[name];
 
@@ -40,9 +40,9 @@ const agents = process.argv[2] ? [process.argv[2]] : ['claude', 'codex'];
 const strip = text => text.replace(/\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[PX^_][^\x1b]*\x1b\\|\x1b./g, '').replace(/\r/g, '');
 let app, page, card, terminal, composer;
 const results = [];
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].terminals[0];
-const write = data => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id: project.id, data });
-const screenText = async () => strip((await page.evaluate(id => window.projectGrid.attachTerminal(id), project.id)).value.data);
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].terminals[0];
+const write = data => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id: project.id, data });
+const screenText = async () => strip((await page.evaluate(id => window.agentrix.attachTerminal(id), project.id)).value.data);
 const visible = locator => locator.first().isVisible().catch(() => false);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const view = async () => ({
@@ -173,7 +173,7 @@ try {
   card = page.locator(`[data-project-id="${project.id}"]`); terminal = page.locator(`[data-terminal-id="${project.id}"]`);
   composer = terminal.locator('.reading-composer textarea');
   await card.getByRole('button', { name: `全屏查看 ${project.name}`, exact: true }).click();
-  await card.getByRole('button', { name: '启动终端', exact: true }).click();
+  await card.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).shellReady, 'PowerShell ready', 60000);
   for (const agent of agents) {
     await start(agent);
@@ -195,7 +195,7 @@ try {
   const failed = results.filter(item => item.ok === false), passed = results.filter(item => item.ok === true).length, skipped = results.filter(item => item.ok === null).length;
   console.log(`\n${passed} worked, ${failed.length} failed, ${skipped} skipped. Evidence: ${output}`);
   if (app) {
-    try { await page.evaluate(id => window.projectGrid.closeTerminal(id), project.id); } catch { }
+    try { await page.evaluate(id => window.agentrix.closeTerminal(id), project.id); } catch { }
     await app.evaluate(({ app }) => app.exit(0)).catch(() => {});
   }
   if (failed.length) process.exitCode = 1;

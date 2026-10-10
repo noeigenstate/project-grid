@@ -13,20 +13,20 @@ const output = await testRun('appearance'), profile = path.join(output, 'profile
 for (const folder of [profile, project, home]) await fs.mkdir(folder);
 await fs.writeFile(path.join(project, 'README.md'), '# 六套主题\n\n中文与 English 0123456789。\n\n```ts\nconst theme = "optional";\n```\n');
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [{ id: 'appearance', name: '主题与字体', path: project, kind: 'local', restore: { terminal: false, codex: false } }], settings: { theme: 'mono-amber', surface: 'glass', glassBackground: backend ? 'desktop' : 'theme', terminalRenderer: 'dom', fontSize: 16, terminalFontFamily: 'Cascadia Code', terminalCjkFontFamily: 'Noto Sans SC', glassTransparency: 25, restoreSessions: false, closeToTray: false, notifications: false, sound: false, announce: false, shortcuts: { search: 'Ctrl+K' } } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const themes = ['daylight', 'forest', 'mountain-blue', 'wild-red', 'mono-amber', 'mono-amber-dark'];
 const modes = [{ surface: 'glass', glassBackground: 'theme', visual: 'glass' }, ...(backend ? [{ surface: 'glass', glassBackground: 'desktop', visual: 'desktop-glass' }] : []), { surface: 'solid', glassBackground: 'desktop', visual: 'solid' }];
 const errors = [], fontRequests = [], results = { backend, cases: [], recommendations: [] }; let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
 async function launch() {
-  const packaged = process.env.PROJECT_GRID_APPEARANCE_EXE;
+  const packaged = process.env.AGENTRIX_APPEARANCE_EXE;
   app = await electron.launch({ executablePath: packaged || require('electron'), args: packaged ? [] : [root], cwd: root, env }); page = await app.firstWindow(); page.setDefaultTimeout(30000);
   page.on('pageerror', error => errors.push(error.message)); page.on('request', request => { if (request.resourceType() === 'font') fontRequests.push(request.url()); });
   await app.evaluate(({ BrowserWindow, dialog }) => { globalThis.appearanceWindow = BrowserWindow.getAllWindows()[0]; appearanceWindow.setBounds({ x: 180, y: 100, width: 1500, height: 940 }); appearanceWindow.setAlwaysOnTop(true); appearanceWindow.showInactive(); dialog.showMessageBox = async () => ({ response: 1 }); });
   await page.waitForSelector('.project-panel');
 }
 async function settings(patch) {
-  await page.evaluate(patch => window.projectGrid.settings(patch), patch);
+  await page.evaluate(patch => window.agentrix.settings(patch), patch);
   await waitFor(async () => { const saved = (await state()).settings; return Object.entries(patch).every(([key, value]) => saved[key] === value); }, 'settings stored'); await page.waitForTimeout(120);
 }
 async function capture(name) {
@@ -41,9 +41,9 @@ async function capture(name) {
 }
 try {
   await launch(); if (backend) assert.ok((await state()).desktopGlass.active);
-  await page.getByRole('button', { name: '启动终端', exact: true }).click(); await waitFor(async () => (await state()).projects[0].shellReady, 'real terminal');
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click(); await waitFor(async () => (await state()).projects[0].shellReady, 'real terminal');
   const session = (await state()).projects[0].sessionId;
-  await page.evaluate(() => window.projectGrid.writeTerminal('appearance', "Clear-Host; Write-Host 'APPEARANCE / THEME MATRIX'; Write-Host '中文清晰与 English 0123456789'; Write-Host 'const attention = unread || waitingForInput;'; Write-Host (([string][char]27)+'[48;2;30;30;30m'+([string][char]27)+'[38;2;255;255;255mTRUECOLOR_SURFACE'+([string][char]27)+'[0m')\r"));
+  await page.evaluate(() => window.agentrix.writeTerminal('appearance', "Clear-Host; Write-Host 'APPEARANCE / THEME MATRIX'; Write-Host '中文清晰与 English 0123456789'; Write-Host 'const attention = unread || waitingForInput;'; Write-Host (([string][char]27)+'[48;2;30;30;30m'+([string][char]27)+'[38;2;255;255;255mTRUECOLOR_SURFACE'+([string][char]27)+'[0m')\r"));
   await waitFor(() => page.locator('.xterm-rows').innerText().then(text => text.includes('TRUECOLOR_SURFACE')), 'terminal sample');
   const terminal = await page.locator('.terminal-host').elementHandle();
   for (const theme of themes) for (const renderer of ['gpu', 'dom']) for (const mode of modes) {
@@ -74,7 +74,7 @@ try {
     results.cases.push({ theme, renderer, mode: mode.visual, ...sample });
     if (mode.surface === 'solid' && renderer === 'dom' && theme.startsWith('mono-amber')) await capture(theme + '-solid.png');
   }
-  await page.evaluate(() => window.projectGrid.writeTerminal('appearance', "Write-Output 'APPEARANCE_UNSENT_DRAFT'"));
+  await page.evaluate(() => window.agentrix.writeTerminal('appearance', "Write-Output 'APPEARANCE_UNSENT_DRAFT'"));
   for (const theme of themes) {
     await settings({ theme, fontSize: 18, terminalFontWeight: 600, terminalFontFamily: 'Consolas', terminalCjkFontFamily: 'Noto Sans SC', surface: 'glass', glassBackground: backend ? 'desktop' : 'theme' });
     assert.equal((await state()).settings.fontSize, 18);
@@ -101,9 +101,9 @@ try {
     if (theme === 'mono-amber-dark') await capture('dark-settings.png');
     await page.getByRole('button', { name: '完成', exact: true }).click();
   }
-  assert.ok((await page.evaluate(() => window.projectGrid.attachTerminal('appearance'))).value.data.includes('APPEARANCE_UNSENT_DRAFT')); await page.evaluate(() => window.projectGrid.writeTerminal('appearance', '\x03'));
+  assert.ok((await page.evaluate(() => window.agentrix.attachTerminal('appearance'))).value.data.includes('APPEARANCE_UNSENT_DRAFT')); await page.evaluate(() => window.agentrix.writeTerminal('appearance', '\x03'));
   const marker = path.join(output, 'after-font-change.done').replaceAll("'", "''");
-  await page.evaluate(command => window.projectGrid.writeTerminal('appearance', command), "[System.IO.File]::WriteAllText('" + marker + "','ok')\r");
+  await page.evaluate(command => window.agentrix.writeTerminal('appearance', command), "[System.IO.File]::WriteAllText('" + marker + "','ok')\r");
   await waitFor(() => fs.access(path.join(output, 'after-font-change.done')).then(() => true, () => false), 'typing works after font and grid reflow');
   for (const theme of themes) {
     await settings({ theme }); await page.getByRole('button', { name: '全屏查看 主题与字体', exact: true }).click(); await page.waitForFunction(() => !document.querySelector('[data-focus-motion]'));

@@ -25,7 +25,7 @@ import { SettingsDialog } from './features/settings/SettingsDialog';
 const FilePreview = lazy(() => import('./features/files/FilePreview').then(module => ({ default: module.FilePreview })));
 const GitDiffView = lazy(() => import('./features/git/GitDiffView').then(module => ({ default: module.GitDiffView })));
 
-const api = window.projectGrid;
+const api = window.agentrix;
 
 // A terminal added by shortcut appears after the next state update; focus it once its input exists.
 function focusTerminalWhenReady(id: string, tries = 60) {
@@ -230,7 +230,7 @@ export function App() {
     return () => document.removeEventListener('keydown', handler, true);
   }, [focusedId, returnToGrid, focusProject, perform, reportError, showProjectSwitch, workspace?.settings.explorerCollapsed]);
 
-  if (!api) return <div className="startup-message"><SquaresFour size={38} /><h1>Project Grid 是桌面应用</h1><p>请在项目目录运行 npm start，或双击打包后的应用。</p></div>;
+  if (!api) return <div className="startup-message"><SquaresFour size={38} /><h1>Agentrix 是桌面应用</h1><p>请在项目目录运行 npm start，或双击打包后的应用。</p></div>;
   if (!workspace) return <div className="startup-message"><SquaresFour size={34} /><p>{error || t('正在打开工作区…')}</p></div>;
   const { projects, settings } = workspace;
   // Set before the children render, so every t() in this render uses the chosen language.
@@ -254,7 +254,7 @@ export function App() {
   return <div ref={focusMotionRoot} className={`app-shell ${focusedId ? 'focus-mode' : ''} ${fullScreen ? 'is-fullscreen' : ''} ${fullScreen && workspace.autoHideTitlebar ? 'titlebar-auto' : ''}`} style={{ '--terminal-font-size': `${settings.fontSize}px` } as CSSProperties}>
     {fullScreen && workspace.autoHideTitlebar && <div className="titlebar-reveal" aria-hidden="true" />}
     <div className="titlebar">
-      <div className="titlebar-brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>Project Grid</span></div>
+      <div className="titlebar-brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>Agentrix</span></div>
       {!!projects.length && <div className="workspace-summary" role="status" aria-label={t('工作区概况')}>
         <span>{projects.length === 1 ? t('1 个项目') : t('{count} 个项目', { count: projects.length })}{projects.some(project => project.kind === 'ssh') ? t(' · 含 SSH') : ''}</span>
         {!!unread && <span className="summary-unread"><i className="legend-red" />{t('{count} 待查看', { count: unread })}</span>}
@@ -280,7 +280,7 @@ export function App() {
         onSelectFile={async path => { if (previewFile?.projectId === focus.id && previewFile.path === path && !previewFile.diff) return; if (await allowNavigation()) setPreviewFile({ projectId: focus.id, path }); }} onReturn={returnToGrid} />}
       <main className="main-workspace">
         <ProjectSwitchHud target={projectSwitch && switchProject && switchPosition > 0 ? { name: switchProject.name, index: orderedProjects.indexOf(switchProject) + 1, position: switchPosition, total: navigation.current.length, sequence: projectSwitch.sequence } : null} />
-        {agents && !agents.codex.installed && !agents.claude.installed && !agentsDismissed && <div className="workspace-warning agents-warning"><Info size={15} /><span>{t('未检测到 Codex 或 Claude Code。Project Grid 基于这两个命令行工具工作，安装其中一个后才能使用任务提醒和会话恢复。')}</span><button type="button" className="button secondary small" onClick={() => { setSettingsSection('agents'); setSettingsOpen(true); }}>{t('去安装')}</button><IconButton label={t('关闭提示')} onClick={() => setAgentsDismissed(true)}><X size={14} /></IconButton></div>}
+        {agents && !agents.codex.installed && !agents.claude.installed && !agentsDismissed && <div className="workspace-warning agents-warning"><Info size={15} /><span>{t('未检测到 Codex 或 Claude Code。Agentrix 基于这两个命令行工具工作，安装其中一个后才能使用任务提醒和会话恢复。')}</span><button type="button" className="button secondary small" onClick={() => { setSettingsSection('agents'); setSettingsOpen(true); }}>{t('去安装')}</button><IconButton label={t('关闭提示')} onClick={() => setAgentsDismissed(true)}><X size={14} /></IconButton></div>}
         {workspace.warning && <div className="workspace-warning"><Info size={15} />{t(workspace.warning)}</div>}
         {focusedId && previewFile?.projectId === focusedId && previewFile.diff && <Suspense fallback={null}><GitDiffView key={`${focusedId}:${previewFile.path}:${previewFile.diff}`} projectId={focusedId} filePath={previewFile.path} mode={previewFile.diff} onClose={() => setPreviewFile(null)} onOpenFile={() => setPreviewFile({ projectId: focusedId, path: previewFile.path })} onError={reportError} onChanged={() => setChangeRevision(value => value + 1)} /></Suspense>}
         {focusedId && previewFile?.projectId === focusedId && !previewFile.diff && <Suspense fallback={null}><FilePreview key={`${focusedId}:${previewFile.path}`} projectId={focusedId} filePath={previewFile.path} onClose={async () => { if (await allowNavigation()) setPreviewFile(null); }} autoSave={settings.autoSave} onOpenLink={target => openTerminalLink(focusedId, target)} onError={reportError} registerGuard={registerEditorGuard} /></Suspense>}
@@ -293,7 +293,7 @@ export function App() {
             <div className="empty-hints"><span><Circle weight="fill" size={7} />{t('粉色呼吸 · 等待查看')}</span><span><CheckCircle weight="fill" size={12} />{t('绿色常亮 · 本轮完成')}</span></div>
           </div> : <>
             {!focusedId && !visible.length && <div className="no-results"><MagnifyingGlass size={30} weight="light" /><h2>{t('没有找到匹配项目')}</h2><p>{t('试试其他项目名称或目录。')}</p><button className="button secondary small" onClick={() => setQuery('')}>{t('重置搜索')}</button></div>}
-            <div className={`project-grid ${reorder.drag ? 'is-reordering' : ''}`} onPointerDown={reorder.onPointerDown} onClickCapture={reorder.onClickCapture} style={{ '--columns': columns, '--rows': rows, display: !focusedId && !visible.length ? 'none' : undefined } as CSSProperties}>
+            <div className={`agentrix ${reorder.drag ? 'is-reordering' : ''}`} onPointerDown={reorder.onPointerDown} onClickCapture={reorder.onClickCapture} style={{ '--columns': columns, '--rows': rows, display: !focusedId && !visible.length ? 'none' : undefined } as CSSProperties}>
               {orderedProjects.map((project, index) => <div key={project.id} className={`project-slot ${reorder.drag?.id === project.id ? 'drag-placeholder' : ''}`} data-project-slot={project.id} style={{ display: focusedId ? focusedId !== project.id ? 'none' : undefined : !visibleIds.has(project.id) ? 'none' : undefined }}><ProjectPanel project={project} index={index}
                 hidden={focusedId ? focusedId !== project.id : !visibleIds.has(project.id)} focused={focusedId === project.id && !previewFile}
                 navTarget={projectSwitch?.id === project.id ? projectSwitch.sequence : undefined}

@@ -2,6 +2,7 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { codexActions } = require('../../agent-actions.cjs');
+const { generatedImage } = require('../../conversation.cjs');
 
 // Codex without its terminal: the reading view talks to `codex app-server` (JSON-RPC, one message per line on
 // stdio), the same protocol Codex's IDE extensions use. The answer arrives word by word, a round starts and ends
@@ -13,6 +14,8 @@ const WRAPPED = /^\s*"?[^"]*?(?:powershell|pwsh)(?:\.exe)?"?\s+(?:-NoProfile\s+)
 const innerCommand = command => { const match = WRAPPED.exec(String(command || '')); return match ? match[2] ?? match[4] : String(command || ''); };
 const text = content => (Array.isArray(content) ? content : []).filter(part => part?.type === 'text' && typeof part.text === 'string').map(part => part.text).join('\n').trim();
 const FILE_CHANGES = { add: 'add', delete: 'delete', update: 'update' };
+// What the reading view shows of an answer, as for Codex in a terminal: the first 20,000 characters.
+const shown = answer => answer.length > 20000 ? `${answer.slice(0, 20000)}\n\n…` : answer;
 // The pictures a message carried, as data URLs the reading view shows: at most four, none over about 2 MB.
 const IMAGE_TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp' };
 function pictures(content) {
@@ -59,6 +62,8 @@ class CodexEvents {
     if (method === 'turn/started') { this.turnId = params.turn?.id || null; this.turn('working', this.turnId); return; }
     if (method === 'turn/completed') {
       const status = params.turn?.status;
+      // An answer cut short never completes; what it said stays in the conversation, not here.
+      this.answers.clear();
       this.actions.settle(); this.conversation.settle();
       this.turn(status === 'interrupted' ? 'interrupted' : 'complete', params.turn?.id || this.turnId, status === 'failed' ? params.turn?.error?.message || '' : '');
       this.turnId = null; return;
@@ -66,7 +71,7 @@ class CodexEvents {
     if (method === 'item/agentMessage/delta') {
       const id = String(params.itemId || ''), so = (this.answers.get(id) || '') + String(params.delta || '');
       this.answers.set(id, so);
-      if (so.trim()) this.conversation.put({ id: `a:${id}`, at, role: 'assistant', text: so });
+      if (so.trim()) this.conversation.put({ id: `a:${id}`, at, role: 'assistant', text: shown(so) });
       return;
     }
     if (method !== 'item/started' && method !== 'item/completed') return;
@@ -76,10 +81,12 @@ class CodexEvents {
       if (done && (said || shown.length)) this.conversation.put({ id: `u:${item.id}`, at, role: 'user', text: said, ...(shown.length ? { images: shown } : {}) });
       return;
     }
+    const picture = done ? generatedImage(item, at) : null;
+    if (picture) { this.conversation.put(picture); return; }
     if (item.type === 'agentMessage') {
       if (!done) return;
       this.answers.delete(String(item.id));
-      if (String(item.text || '').trim()) this.conversation.put({ id: `a:${item.id}`, at, role: 'assistant', text: String(item.text) });
+      if (String(item.text || '').trim()) this.conversation.put({ id: `a:${item.id}`, at, role: 'assistant', text: shown(String(item.text)) });
       return;
     }
     const action = itemAction(item, at, this.cwd);
@@ -130,11 +137,17 @@ class AppServer {
     this.child.on('exit', code => end(new Error(`Codex 已退出（代码 ${code ?? '?'}）。`)));
   }
   on(event, listener) { this.listeners[event].push(listener); }
+  // A message can arrive in many chunks: only what came in is searched for its line end, and complete lines are cut
+  // from the buffer once per chunk.
   read(chunk) {
+    const searched = this.buffer.length;
     this.buffer += chunk;
-    let at;
-    while ((at = this.buffer.indexOf('\n')) >= 0) {
-      const line = this.buffer.slice(0, at).trim(); this.buffer = this.buffer.slice(at + 1);
+    let start = 0, at = this.buffer.indexOf('\n', searched);
+    const lines = [];
+    while (at >= 0) { lines.push(this.buffer.slice(start, at)); start = at + 1; at = this.buffer.indexOf('\n', start); }
+    if (start) this.buffer = this.buffer.slice(start);
+    for (const raw of lines) {
+      const line = raw.trim();
       if (!line) continue;
       let message; try { message = JSON.parse(line); } catch { continue; }
       if (message.id !== undefined && !message.method) {
@@ -172,13 +185,13 @@ class CodexDirect {
     this.server.on('request', (id, method, params) => {
       const shown = cardFor(method, params);
       // Nothing the reader can answer (a token refresh, an attestation): decline so Codex is never left waiting.
-      if (!shown) { this.server.write({ id, error: { code: -32601, message: 'Not supported by Project Grid' } }); return; }
+      if (!shown) { this.server.write({ id, error: { code: -32601, message: 'Not supported by Agentrix' } }); return; }
       this.waiting = { id, method }; card(shown);
     });
     this.server.on('exit', exit);
   }
   async start(threadId = null) {
-    await this.server.request('initialize', { clientInfo: { name: 'project-grid', title: 'Project Grid', version: this.version }, capabilities: { experimentalApi: false, requestAttestation: false } });
+    await this.server.request('initialize', { clientInfo: { name: 'agentrix', title: 'Agentrix', version: this.version }, capabilities: { experimentalApi: false, requestAttestation: false } });
     this.server.notify('initialized');
     const result = threadId ? await this.server.request('thread/resume', { threadId, cwd: this.cwd }) : await this.server.request('thread/start', { cwd: this.cwd });
     this.threadId = result.thread.id;
@@ -188,7 +201,9 @@ class CodexDirect {
     if (turns.length) {
       const { conversation, actions } = this.events;
       conversation.beginHistory();
-      for (const turn of turns) for (const item of turn.items || []) this.events.notify('item/completed', { item });
+      // The reading view keeps the latest 400 entries: older items are not converted at all.
+      const items = turns.flatMap(turn => turn.items || []).slice(-conversation.limit);
+      for (const item of items) this.events.notify('item/completed', { item });
       conversation.settle(); conversation.endHistory(); actions.reset();
     }
     this.info({ threadId: this.threadId, model: result.model || '', effort: result.reasoningEffort || '' });

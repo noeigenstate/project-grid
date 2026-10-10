@@ -48,7 +48,7 @@ test('the login shell PATH comes first and keeps the folders only the current PA
   assert.equal(mergePath('/opt/homebrew/bin:/usr/bin:/bin', '/usr/bin:/bin:/usr/sbin:/sbin'), '/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin');
   assert.equal(mergePath(null, '/usr/bin:/bin'), '/usr/bin:/bin');
   const reply = output => loginShellPath({ shell: '/bin/zsh', run: (_file, _args, _options, done) => done(null, output) });
-  assert.equal(await reply('Last login: today\n__PROJECT_GRID_PATH__\n/a:/b\n__PROJECT_GRID_PATH__\n'), '/a:/b');
+  assert.equal(await reply('Last login: today\n__AGENTRIX_PATH__\n/a:/b\n__AGENTRIX_PATH__\n'), '/a:/b');
   assert.equal(await reply('no markers'), null);
   assert.equal(await loginShellPath({ run: () => { throw new Error('ENOENT'); } }), null);
 });
@@ -126,13 +126,13 @@ test('a real zsh terminal keeps the user start-up files and reports prompts, Cod
     assert.equal(event.codexAvailable, true); assert.equal(event.claudeAvailable, true);
     assert.equal(event.codexHome, path.join(home, '.codex'));
   }
-  assert.match(output, /PROJECT GRID/);
+  assert.match(output, /AGENTRIX/);
 
-  // The shell itself: the user's files all ran, nothing of Project Grid leaks into programs started here.
-  type('print -r -- "${ZDOTDIR-unset}|$HISTFILE|${+PROJECT_GRID_SESSION_KEY}${+PROJECT_GRID_SOCKET}|$PG_TEST_ZSHENV$PG_TEST_ZSHRC$PG_TEST_ZLOGIN|$LANG|$TERM_PROGRAM" > "$PG_TEST_LOG/state"');
+  // The shell itself: the user's files all ran, nothing of Agentrix leaks into programs started here.
+  type('print -r -- "${ZDOTDIR-unset}|$HISTFILE|${+AGENTRIX_SESSION_KEY}${+AGENTRIX_SOCKET}|$PG_TEST_ZSHENV$PG_TEST_ZSHRC$PG_TEST_ZLOGIN|$LANG|$TERM_PROGRAM" > "$PG_TEST_LOG/state"');
   const state = await eventually(() => { try { return fs.readFileSync(path.join(log, 'state'), 'utf8').trim(); } catch { return null; } }, 'the shell state');
   // macOS's /etc/zshrc names a history file; Linux leaves that to the user's own files.
-  assert.equal(state, `unset|${process.platform === 'darwin' ? path.join(home, '.zsh_history') : ''}|00|111|en_US.UTF-8|project-grid`);
+  assert.equal(state, `unset|${process.platform === 'darwin' ? path.join(home, '.zsh_history') : ''}|00|111|en_US.UTF-8|agentrix`);
 
   // codex: started and exited around the real program, which gets notify and the title setting first.
   type('codex resume --last');
@@ -171,8 +171,8 @@ test('a real zsh terminal keeps the user start-up files and reports prompts, Cod
   // Every report from this shell is newer than the one before it.
   const sequences = events.filter(event => typeof event.sequence === 'number').map(event => event.sequence);
   assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
-  // A closed Project Grid never stops the shell or the agent.
+  // A closed Agentrix never stops the shell or the agent.
   server.close();
   type('codex; print -r -- done > "$PG_TEST_LOG/after-close"');
-  await eventually(() => fs.existsSync(path.join(log, 'after-close')), 'the shell to continue without Project Grid');
+  await eventually(() => fs.existsSync(path.join(log, 'after-close')), 'the shell to continue without Agentrix');
 });

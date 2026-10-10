@@ -17,7 +17,7 @@ export function ReadingDirectCard({ card, terminalId, onError }: { card: DirectC
     if (pending) return;
     setPending(true);
     try {
-      const result = await window.projectGrid.agentAnswer(terminalId, answer);
+      const result = await window.agentrix.agentAnswer(terminalId, answer);
       if (!result.ok) throw new Error(result.error);
     } catch (error) { if (active.current) { setPending(false); onError(error instanceof Error ? error.message : String(error)); } }
   };

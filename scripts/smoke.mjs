@@ -26,7 +26,7 @@ for (const name of names) {
   await fs.mkdir(folder, { recursive: true });
   await fs.mkdir(path.join(folder, 'src', 'components'), { recursive: true });
   await fs.mkdir(path.join(folder, 'assets'));
-  await fs.writeFile(path.join(folder, 'README.md'), '# Project Grid fixture\n\n目录预览验证\n<script>globalThis.fileCodeRan = true</script>\n');
+  await fs.writeFile(path.join(folder, 'README.md'), '# Agentrix fixture\n\n目录预览验证\n<script>globalThis.fileCodeRan = true</script>\n');
   await fs.writeFile(path.join(folder, 'package.json'), JSON.stringify({ name: 'fixture', private: true }, null, 2));
   await fs.writeFile(path.join(folder, '.gitignore'), 'node_modules\n');
   await fs.writeFile(path.join(folder, 'src', 'main.ts'), 'export const message = "中文文件预览";\n');
@@ -53,20 +53,20 @@ await fs.writeFile(path.join(previewProject, 'assets', 'preview.mjs'), 'import {
 await fs.writeFile(path.join(previewProject, 'reports', 'preview.html'), '<!doctype html><html lang="zh-CN"><meta charset="UTF-8"><title>HTML preview fixture</title><link rel="stylesheet" href="../assets/preview.css"><main><h1>HTML 页面已渲染</h1><img src="../image-preview.png" alt="相对路径图片"><p id="script-status">Loading scripts</p><p id="data-status"></p><button id="increment">点击计数</button><output id="count">0</output></main><script type="module" src="../assets/preview.mjs"></script></html>');
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 1, projects, settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, closeToTray: true, fontSize: 12 } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir };
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir };
 env.NO_COLOR = '1';
 env.NODE_DISABLE_COLORS = '1';
 env.FORCE_COLOR = '0';
 env.TERM = 'dumb';
 delete env.ELECTRON_RUN_AS_NODE;
-delete env.PROJECT_GRID_DEV_URL;
+delete env.AGENTRIX_DEV_URL;
 let application;
 const packaged = process.argv.includes('--packaged');
 const errors = [];
 try {
   const captureFlags = ['--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'];
   if (process.argv.includes('--compact-screen')) captureFlags.push('--force-device-scale-factor=2');
-  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: [...(packaged ? [] : [root]), ...captureFlags], cwd: root, env, timeout: 30000 });
+  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: [...(packaged ? [] : [root]), ...captureFlags], cwd: root, env, timeout: 30000 });
   console.log(`Desktop test process: ${application.process().pid}; screenshots: ${output}`);
   application.process().stderr.on('data', data => { const text = data.toString(); if (/Uncaught|Error:|failed to load/i.test(text)) errors.push(text); });
   const page = await application.firstWindow();
@@ -129,7 +129,7 @@ try {
     if (index === 0) await projectPanel.getByRole('button', { name: `全屏查看 ${project.name}`, exact: true }).click();
     await page.waitForFunction(() => !document.querySelector('.focus-motion-panel'));
     assert.equal(await projectPanel.locator('.terminal-host').count(), 0, 'no empty terminal layer may intercept the start button');
-    const startButton = projectPanel.getByRole('button', { name: '启动终端', exact: true });
+    const startButton = projectPanel.getByRole('button', { name: '只打开终端', exact: true });
     assert.ok(await startButton.evaluate(button => {
       const rect = button.getBoundingClientRect();
       const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
@@ -139,20 +139,20 @@ try {
     if (index === 0) await page.getByRole('button', { name: '返回总览', exact: true }).click();
   }
   await waitFor(async () => {
-    const result = await page.evaluate(() => window.projectGrid.getState());
+    const result = await page.evaluate(() => window.agentrix.getState());
     return result.ok && result.value.projects.every(p => p.status === 'shell' && p.shellReady);
   }, 'six PowerShell terminals ready');
   console.log('PASS: real button clicks start six ConPTY terminals in grid and fullscreen views');
 
   const colorProof = path.join(projects[0].path, 'color-env.json');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "[IO.File]::WriteAllText((Join-Path (Get-Location).Path 'color-env.json'), (@{NoColor=$env:NO_COLOR;DisableColors=$env:NODE_DISABLE_COLORS;ForceColor=$env:FORCE_COLOR;Term=$env:TERM;ColorTerm=$env:COLORTERM} | ConvertTo-Json -Compress))\r"), projects[0].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "[IO.File]::WriteAllText((Join-Path (Get-Location).Path 'color-env.json'), (@{NoColor=$env:NO_COLOR;DisableColors=$env:NODE_DISABLE_COLORS;ForceColor=$env:FORCE_COLOR;Term=$env:TERM;ColorTerm=$env:COLORTERM} | ConvertTo-Json -Compress))\r"), projects[0].id);
   await waitFor(async () => { try { return !!JSON.parse(await fs.readFile(colorProof, 'utf8')); } catch { return false; } }, 'color environment proof');
   const colorEnv = JSON.parse(await fs.readFile(colorProof, 'utf8'));
   assert.ok(!colorEnv.NoColor && !colorEnv.DisableColors && !colorEnv.ForceColor);
   assert.equal(colorEnv.Term, 'xterm-256color');
   assert.equal(colorEnv.ColorTerm, 'truecolor');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'prompt after color check');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Write-Host (([string][char]27) + '[31mRED ' + ([string][char]27) + '[32mGREEN ' + ([string][char]27) + '[34mBLUE ' + ([string][char]27) + '[38;2;255;140;40mTRUECOLOR' + ([string][char]27) + '[0m')\r"), projects[0].id);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'prompt after color check');
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Write-Host (([string][char]27) + '[31mRED ' + ([string][char]27) + '[32mGREEN ' + ([string][char]27) + '[34mBLUE ' + ([string][char]27) + '[38;2;255;140;40mTRUECOLOR' + ([string][char]27) + '[0m')\r"), projects[0].id);
   await waitFor(async () => {
     return page.locator(`[data-project-id="${projects[0].id}"] .xterm-rows > div`).evaluateAll(rows => rows.some(row => {
       if (row.textContent.trim() !== 'RED GREEN BLUE TRUECOLOR') return false;
@@ -162,33 +162,33 @@ try {
   }, 'ANSI and truecolor text render as four distinct colors');
   await page.screenshot({ path: path.join(output, 'terminal-colors.png') });
   console.log('PASS: inherited NO_COLOR is removed and ANSI/truecolor output reaches the terminal');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'prompt after ANSI color output');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'prompt after ANSI color output');
 
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "[IO.File]::WriteAllText((Join-Path (Get-Location).Path 'cwd-proof.txt'), (Get-Location).Path)\r"), projects[3].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "[IO.File]::WriteAllText((Join-Path (Get-Location).Path 'cwd-proof.txt'), (Get-Location).Path)\r"), projects[3].id);
   await waitFor(async () => { try { return await fs.readFile(path.join(projects[3].path, 'cwd-proof.txt'), 'utf8') === projects[3].path; } catch { return false; } }, 'literal working directory with brackets, quotes, ampersand and dollar');
 
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Write-Output 'PROJECT_GRID_STREAM_OK'\r"), projects[0].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Write-Output 'AGENTRIX_STREAM_OK'\r"), projects[0].id);
   await waitFor(async () => {
-    return page.locator(`[data-project-id="${projects[0].id}"] .xterm-rows > div`).evaluateAll(rows => rows.some(row => row.textContent.trim() === 'PROJECT_GRID_STREAM_OK'));
+    return page.locator(`[data-project-id="${projects[0].id}"] .xterm-rows > div`).evaluateAll(rows => rows.some(row => row.textContent.trim() === 'AGENTRIX_STREAM_OK'));
   }, 'terminal output');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, 'codex --version\r'), projects[1].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, 'codex --version\r'), projects[1].id);
   await waitFor(async () => {
-    const result = await page.evaluate(id => window.projectGrid.attachTerminal(id), projects[1].id);
+    const result = await page.evaluate(id => window.agentrix.attachTerminal(id), projects[1].id);
     return result.ok && result.value.data.includes('codex-cli');
   }, 'Codex wrapper returns version without a model request');
   await waitFor(async () => {
-    const result = await page.evaluate(() => window.projectGrid.getState());
+    const result = await page.evaluate(() => window.agentrix.getState());
     return result.ok && result.value.projects[1].status === 'shell';
   }, 'Codex process exit returns to shell');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[1].unread, 0);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[1].unread, 0);
   console.log('PASS: actual Codex CLI launches through the wrapper; command exit does not mean turn complete');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, 'codex features list\r'), projects[1].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, 'codex features list\r'), projects[1].id);
   await waitFor(async () => {
-    const result = await page.evaluate(id => window.projectGrid.attachTerminal(id), projects[1].id);
+    const result = await page.evaluate(id => window.agentrix.attachTerminal(id), projects[1].id);
     return result.ok && result.value.data.includes('stable');
   }, 'Codex parses notification config without losing Windows argument quotes');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[1].shellReady, 'Codex config check returns prompt');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[1].error, null);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[1].shellReady, 'Codex config check returns prompt');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[1].error, null);
 
   const runtime = (await fs.readdir(dataDir)).find(name => name.startsWith('runtime-'));
   const bootstraps = [];
@@ -200,13 +200,13 @@ try {
   };
   await runDesktopTask(page, projects[0], path.join(output, 'codex-home'), 'turn-1', waitFor);
   await complete('turn-1');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].unread === 1, 'real notify.ps1 marks red');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].unread === 1, 'real notify.ps1 marks red');
   await complete('turn-1');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].unread, 1);
-  const firstCompletedAt = (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].lastCompletedAt;
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].unread, 1);
+  const firstCompletedAt = (await page.evaluate(() => window.agentrix.getState())).value.projects[0].lastCompletedAt;
   await complete('background-turn', info, 'background-thread');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].unread, 1, 'different background IDs do not mean a fresh user submission');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].lastCompletedAt, firstCompletedAt);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].unread, 1, 'different background IDs do not mean a fresh user submission');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].lastCompletedAt, firstCompletedAt);
   const animation = await page.locator(`[data-project-id="${projects[0].id}"]`).evaluate(el => ({
     panel: getComputedStyle(el).animationName,
     lights: ['.panel-signal', '.status-dot', '.panel-glow'].map(selector => {
@@ -218,7 +218,7 @@ try {
   assert.deepEqual(animation.lights, Array(3).fill(['signal-breathe', '3s', '3']), 'ring, dot and inner glow slowly breathe together after a finished turn');
   console.log('PASS: parent lifecycle lights the red panel; unrelated notify callbacks are ignored');
 
-  const projectOrder = () => page.locator('.project-grid > .project-slot > .project-panel').evaluateAll(panels => panels.map(panel => panel.dataset.projectId));
+  const projectOrder = () => page.locator('.agentrix > .project-slot > .project-panel').evaluateAll(panels => panels.map(panel => panel.dataset.projectId));
   const beginProjectDrag = async (sourceId, targetId) => {
     const source = page.locator(`[data-project-id="${sourceId}"] .panel-name`);
     const target = page.locator(`[data-project-id="${targetId}"] .panel-header`);
@@ -230,7 +230,7 @@ try {
     await page.locator(`[data-project-slot="${sourceId}"].drag-placeholder`).waitFor();
   };
   const originalOrder = projects.map(project => project.id);
-  const sessionIds = Object.fromEntries((await page.evaluate(() => window.projectGrid.getState())).value.projects.map(project => [project.id, project.sessionId]));
+  const sessionIds = Object.fromEntries((await page.evaluate(() => window.agentrix.getState())).value.projects.map(project => [project.id, project.sessionId]));
   await beginProjectDrag(projects[0].id, projects[2].id);
   await page.screenshot({ path: path.join(output, 'project-drag.png') });
   // Follow the dropped card every frame: it glides into its slot and never flashes back to where it started.
@@ -250,7 +250,7 @@ try {
   const settled = dropTrack.at(-1);
   assert.ok(Math.abs(settled[0] - landed.x) < 2 && landed.y - settled[1] > -2 && landed.y - settled[1] < 6, `the dropped card ends in its slot: ${JSON.stringify({ settled, landed })}`);
   assert.deepEqual(JSON.parse(await fs.readFile(path.join(dataDir, 'workspace.json'), 'utf8')).projects.map(project => project.id), swappedOrder);
-  const afterDrag = (await page.evaluate(() => window.projectGrid.getState())).value.projects;
+  const afterDrag = (await page.evaluate(() => window.agentrix.getState())).value.projects;
   assert.deepEqual(Object.fromEntries(afterDrag.map(project => [project.id, project.sessionId])), sessionIds);
   assert.equal(afterDrag.find(project => project.id === projects[0].id).unread, 1, 'drag does not acknowledge the red card');
   assert.equal(await page.locator('.focus-mode').count(), 0, 'drop does not trigger fullscreen');
@@ -267,11 +267,11 @@ try {
   console.log('PASS: whole-card insertion reordering preserves PTYs, persists positions, cancels with Escape and keeps ordinary clicks');
 
   const panel = page.locator(`[data-project-id="${projects[0].id}"]`);
-  const sessionBefore = (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].sessionId;
+  const sessionBefore = (await page.evaluate(() => window.agentrix.getState())).value.projects[0].sessionId;
   await panel.getByRole('button', { name: `查看 ${projects[0].name} 的完成结果` }).click();
   await page.waitForSelector('.focus-mode');
   await waitFor(async () => application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFullScreen()), 'native fullscreen');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].unread, 0);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].unread, 0);
   await page.getByRole('treeitem', { name: 'src', exact: true }).waitFor();
   assert.equal(await page.locator('.focus-toolbar').count(), 0, 'old top toolbar removed');
   assert.equal(await page.locator('.focus-sidebar').getByRole('button', { name: '返回总览', exact: true }).count(), 1);
@@ -282,7 +282,7 @@ try {
   await page.getByLabel('文件编辑器', { exact: true }).waitFor();
   assert.ok((await page.getByLabel('文件编辑器', { exact: true }).inputValue()).includes('目录预览验证'));
   assert.equal(await page.evaluate(() => globalThis.fileCodeRan), undefined, 'file markup is displayed as text');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].sessionId, sessionBefore);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].sessionId, sessionBefore);
   await page.screenshot({ path: path.join(output, 'file-preview.png') });
   await page.getByRole('button', { name: '关闭文件预览', exact: true }).click();
   await page.getByRole('treeitem', { name: 'image-preview.png', exact: true }).click();
@@ -316,7 +316,7 @@ try {
   const isolated = await htmlFrame.locator('body').evaluate(() => {
     let parentAccessible = false;
     try { parentAccessible = !!parent.document; } catch {}
-    return { parentAccessible, bridge: typeof window.projectGrid, node: typeof window.require };
+    return { parentAccessible, bridge: typeof window.agentrix, node: typeof window.require };
   });
   assert.deepEqual(isolated, { parentAccessible: false, bridge: 'undefined', node: 'undefined' });
   await page.screenshot({ path: path.join(output, 'html-preview.png') });
@@ -325,7 +325,7 @@ try {
   await page.getByRole('button', { name: '页面', exact: true }).click();
   await htmlFrame.getByRole('heading', { name: 'HTML 页面已渲染' }).waitFor();
   await page.getByRole('button', { name: '返回终端', exact: true }).click();
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].sessionId, sessionBefore);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].sessionId, sessionBefore);
   console.log('PASS: PNG fit/original size/refresh and isolated HTML with CSS, modules, images, JSON and source toggle');
 
   await page.getByRole('treeitem', { name: 'image-without-extension', exact: true }).click();
@@ -380,12 +380,12 @@ try {
   }
   console.log('PASS: actual WebM and MP4 decoding, playback, pause, seeking and partial-content protocol responses');
 
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, 'node ./alt-screen.cjs\r'), projects[0].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, 'node ./alt-screen.cjs\r'), projects[0].id);
   await waitFor(async () => panel.locator('.xterm-rows > div').evaluateAll(rows => rows.some(row => row.textContent.includes('CONPTY_ALT_SCREEN_OK') && !row.textContent.includes('node '))), 'interactive alternate-screen terminal');
   await page.getByRole('button', { name: '收起目录栏', exact: true }).click();
   await page.locator('.explorer-rail').getByRole('button', { name: '资源管理器', exact: true }).click();
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, 'q'), projects[0].id);
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'alternate-screen app exits after resizing without a cursor-report loop');
+  await page.evaluate(id => window.agentrix.writeTerminal(id, 'q'), projects[0].id);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'alternate-screen app exits after resizing without a cursor-report loop');
   console.log('PASS: interactive alternate-screen app remains responsive through terminal resizing');
 
   const clickTerminalText = async (text, control = true) => {
@@ -429,9 +429,9 @@ try {
     await screen.click({ position, modifiers: control ? ['Control'] : [] });
   };
   const printLine = async text => {
-    await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'shell prompt before printing links');
-    await page.evaluate(({ id, command }) => window.projectGrid.writeTerminal(id, command), { id: projects[0].id, command: `Write-Output '${text.replaceAll("'", "''")}'\r` });
-    await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'shell prompt after printing links');
+    await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'shell prompt before printing links');
+    await page.evaluate(({ id, command }) => window.agentrix.writeTerminal(id, command), { id: projects[0].id, command: `Write-Output '${text.replaceAll("'", "''")}'\r` });
+    await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'shell prompt after printing links');
   };
   await printLine('中文链接 image-preview.png');
   await waitFor(async () => panel.locator('.xterm-rows > div').evaluateAll(rows => rows.some(row => row.textContent.trim() === '中文链接 image-preview.png')), 'terminal output after preview and fullscreen resizing is not overwritten by an old prompt');
@@ -448,9 +448,9 @@ try {
   await waitFor(async () => (await application.evaluate(() => globalThis.openedLinks)).at(-1) === wrappedUrl, 'Ctrl click opens the full wrapped URL');
   const reportUrl = pathToFileURL(path.join(previewProject, 'reports', 'preview.html')).href;
   const osc = `[Console]::WriteLine(([string][char]27) + ']8;;${reportUrl}' + [char]7 + 'REPORT_LINK' + [char]27 + ']8;;' + [char]7)\r`;
-  await page.evaluate(({ id, command }) => window.projectGrid.writeTerminal(id, command), { id: projects[0].id, command: osc });
+  await page.evaluate(({ id, command }) => window.agentrix.writeTerminal(id, command), { id: projects[0].id, command: osc });
   await waitFor(async () => panel.locator('.xterm-rows > div').evaluateAll(rows => rows.some(row => row.textContent.trim() === 'REPORT_LINK')), 'OSC 8 link rendered');
-  const oscSnapshot = await page.evaluate(id => window.projectGrid.attachTerminal(id), projects[0].id);
+  const oscSnapshot = await page.evaluate(id => window.agentrix.attachTerminal(id), projects[0].id);
   assert.ok(oscSnapshot.ok && oscSnapshot.value.data.includes('\x1b]8;'), 'bundled ConPTY preserves OSC 8 metadata');
   await clickTerminalText('REPORT_LINK');
   await page.frameLocator('iframe[title="HTML 页面预览"]').getByRole('heading', { name: 'HTML 页面已渲染' }).waitFor();
@@ -466,7 +466,7 @@ try {
   await waitFor(async () => page.locator('img.preview-image').evaluate(image => image.complete && image.naturalWidth === 256), 'parenthesized relative PNG with literal filename parentheses');
   await page.getByRole('button', { name: '返回终端', exact: true }).click();
   console.log('PASS: Codex-style parenthesized relative HTML and PNG links complete from the project root');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].sessionId, sessionBefore);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].sessionId, sessionBefore);
   console.log('PASS: Ctrl-click local files and wrapped web URLs, with ordinary clicks and terminal sessions preserved');
   const fullWidth = (await panel.boundingBox()).width;
   await page.getByRole('button', { name: '收起目录栏', exact: true }).click();
@@ -485,29 +485,29 @@ try {
   await fs.writeFile(path.join(projects[0].path, 'auto-refresh.txt'), 'automatic directory refresh');
   await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].focus());
   await page.getByRole('treeitem', { name: 'auto-refresh.txt', exact: true }).waitFor({ timeout: 7000 });
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].sessionId, sessionBefore);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].sessionId, sessionBefore);
   console.log('PASS: focused explorer, nested folders, safe file preview, refresh, collapse and Ctrl+B preserve the terminal session');
   await page.screenshot({ path: path.join(output, 'fullscreen.png') });
   await page.getByRole('button', { name: '返回总览', exact: true }).click();
   await waitFor(async () => !await page.locator('.focus-mode').count(), 'back to grid');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[0].sessionId, sessionBefore);
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Write-Output 'SECOND_USER_INSTRUCTION'\r"), projects[0].id);
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'new submitted instruction completes');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].sessionId, sessionBefore);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Write-Output 'SECOND_USER_INSTRUCTION'\r"), projects[0].id);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'new submitted instruction completes');
   await runDesktopTask(page, projects[0], path.join(output, 'codex-home'), 'turn-2', waitFor);
   await complete('turn-2');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].unread === 1, 'second round red');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].unread === 1, 'second round red');
   console.log('PASS: red tile opens native fullscreen, marks viewed, returns without restarting terminal, and next turn lights red');
 
   await panel.getByRole('button', { name: `查看 ${projects[0].name} 的完成结果` }).click();
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].unread === 0, 'viewing acknowledges the automatic completion');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].unread === 0, 'viewing acknowledges the automatic completion');
   await page.getByRole('button', { name: '返回总览', exact: true }).click();
   await waitFor(async () => !await page.locator('.focus-mode').count(), 'viewed result returns to grid');
   assert.equal(await panel.evaluate(el => getComputedStyle(el).animationName), 'none');
   console.log('PASS: viewing an automatic completion clears attention without a manual project-finish action');
 
   const target = bootstraps.find(b => b.projectId === projects[2].id);
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Write-Output 'IDLE_ALERT_FIXTURE'\r"), projects[2].id);
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[2].shellReady, 'idle notification fixture command completes');
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Write-Output 'IDLE_ALERT_FIXTURE'\r"), projects[2].id);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[2].shellReady, 'idle notification fixture command completes');
   await runDesktopTask(page, projects[2], path.join(output, 'codex-home'), 'other-project-turn', waitFor);
   await complete('other-project-turn', target);
   await page.keyboard.press('Control+Shift+F'); await page.getByRole('textbox', { name: '搜索项目' }).fill('不存在');
@@ -520,31 +520,31 @@ try {
   // Settings show one category at a time; updates live under "更新与关于".
   await page.locator('.settings-nav').getByRole('button', { name: '更新与关于', exact: true }).click();
   await page.getByRole('region', { name: '应用更新', exact: true }).waitFor();
-  assert.equal((await page.evaluate(() => window.projectGrid.getUpdateState())).value.supported, false, 'unpacked and development builds cannot install over an installed app');
-  assert.equal((await page.evaluate(() => window.projectGrid.installUpdate())).ok, false, 'installing before a verified download is rejected');
+  assert.equal((await page.evaluate(() => window.agentrix.getUpdateState())).value.supported, false, 'unpacked and development builds cannot install over an installed app');
+  assert.equal((await page.evaluate(() => window.agentrix.installUpdate())).ok, false, 'installing before a verified download is rejected');
   await page.screenshot({ path: path.join(output, 'settings.png') });
   await page.getByRole('button', { name: '完成', exact: true }).click();
   const idlePanel = page.locator(`[data-project-id="${projects[2].id}"]`);
   await waitFor(async () => idlePanel.evaluate(element => !element.classList.contains('attention-active') && element.getAnimations({ subtree: true }).every(animation => animation.animationName !== 'signal-breathe')), 'completed idle project becomes quiet after its initial alert', 13000);
   await complete('other-project-turn', target);
-  const idleCompletedAt = (await page.evaluate(() => window.projectGrid.getState())).value.projects[2].lastCompletedAt;
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x1b[I\x1b[O\x1b[1;1R'), projects[2].id);
+  const idleCompletedAt = (await page.evaluate(() => window.agentrix.getState())).value.projects[2].lastCompletedAt;
+  await page.evaluate(id => window.agentrix.writeTerminal(id, '\x1b[I\x1b[O\x1b[1;1R'), projects[2].id);
   await complete('idle-background-turn', target, 'another-thread');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[2].lastCompletedAt, idleCompletedAt);
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[2].unread, 1, 'same completed turn never repeats the notification');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[2].lastCompletedAt, idleCompletedAt);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[2].unread, 1, 'same completed turn never repeats the notification');
   assert.equal(await idlePanel.evaluate(element => element.getAnimations({ subtree: true }).some(animation => animation.animationName === 'signal-breathe')), false);
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, 'draft-only'), projects[2].id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, 'draft-only'), projects[2].id);
   await complete('draft-background-turn', target, 'yet-another-thread');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[2].unread, 1, 'an unsubmitted draft does not rearm notifications');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x03'), projects[2].id);
-  await page.evaluate(id => window.projectGrid.acknowledge(id), projects[2].id);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[2].unread, 1, 'an unsubmitted draft does not rearm notifications');
+  await page.evaluate(id => window.agentrix.writeTerminal(id, '\x03'), projects[2].id);
+  await page.evaluate(id => window.agentrix.acknowledge(id), projects[2].id);
   await complete('after-acknowledgment', target);
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[2].unread, 0, 'viewing a completed turn never rearms it');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Write-Output 'NEW_REQUEST_AFTER_IDLE'\r"), projects[2].id);
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[2].shellReady, 'new request after a quiet idle period');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[2].unread, 0, 'viewing a completed turn never rearms it');
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Write-Output 'NEW_REQUEST_AFTER_IDLE'\r"), projects[2].id);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[2].shellReady, 'new request after a quiet idle period');
   await runDesktopTask(page, projects[2], path.join(output, 'codex-home'), 'actual-next-turn', waitFor);
   await complete('actual-next-turn', target);
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[2].unread, 1, 'newly submitted work can notify once again');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[2].unread, 1, 'newly submitted work can notify once again');
   console.log('PASS: idle callbacks with different IDs, focus reports and unsubmitted drafts stay quiet; only a new submission rearms the next alert');
   for (const width of process.argv.includes('--compact-screen') ? [1600, 1400] : [1600, 1200, 900, 820]) {
     await application.evaluate(({ BrowserWindow }, width) => BrowserWindow.getAllWindows()[0].setSize(width, 700), width);
@@ -561,7 +561,7 @@ try {
   assert.equal(overflow, false);
   await page.getByRole('button', { name: `${projects[0].name} 的更多操作`, exact: true }).click();
   assert.equal(await page.getByRole('menuitem', { name: /继续开发|标记开发完成|VS Code/ }).count(), 0);
-  assert.deepEqual(await page.evaluate(() => ['markDone', 'openInCode'].filter(key => key in window.projectGrid)), []);
+  assert.deepEqual(await page.evaluate(() => ['markDone', 'openInCode'].filter(key => key in window.agentrix)), []);
   await page.getByRole('button', { name: `${projects[0].name} 的更多操作`, exact: true }).click();
   console.log('PASS: compact top titlebar, search, settings and 820–1600px windows');
 
@@ -571,7 +571,7 @@ try {
     socket.on('connect', () => socket.end(JSON.stringify({ projectId: projects[1].id, sessionKey: 'wrong', type: 'turn-complete', eventId: 'spoof' }) + '\n'));
     socket.on('close', resolve); socket.on('error', reject);
   });
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects[1].unread, 0);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[1].unread, 0);
   const saved = JSON.parse(await fs.readFile(path.join(dataDir, 'workspace.json'), 'utf8'));
   assert.ok(saved.projects.every(project => !('done' in project)));
   assert.equal(saved.projects[2].unread, 1);
@@ -584,7 +584,7 @@ try {
   if (application) {
     try {
       const page = await application.firstWindow();
-      console.error('Desktop state:', JSON.stringify(await page.evaluate(() => window.projectGrid.getState())));
+      console.error('Desktop state:', JSON.stringify(await page.evaluate(() => window.agentrix.getState())));
       console.error('Test terminal input:', JSON.stringify(await application.evaluate(() => globalThis.terminalTestInputs)));
       await page.screenshot({ path: path.join(output, 'failure.png') });
     } catch {}
@@ -596,8 +596,8 @@ try {
     // at once; forced parallel disposal can stall Windows runner teardown.
     try {
       const testPage = await application.firstWindow();
-      await testPage.evaluate(async () => { const state = await window.projectGrid.getState(); if (state.ok) for (const project of state.value.projects) if (project.shellReady && !project.codexActive) window.projectGrid.writeTerminal(project.id, 'exit\r'); });
-      await waitFor(async () => (await testPage.evaluate(() => window.projectGrid.getState())).value.projects.every(project => project.status === 'exited' || project.status === 'stopped'), 'fixture shells exit', 4000);
+      await testPage.evaluate(async () => { const state = await window.agentrix.getState(); if (state.ok) for (const project of state.value.projects) if (project.shellReady && !project.codexActive) window.agentrix.writeTerminal(project.id, 'exit\r'); });
+      await waitFor(async () => (await testPage.evaluate(() => window.agentrix.getState())).value.projects.every(project => project.status === 'exited' || project.status === 'stopped'), 'fixture shells exit', 4000);
     } catch {}
     await application.close();
   }

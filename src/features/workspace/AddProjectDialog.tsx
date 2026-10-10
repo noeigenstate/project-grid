@@ -15,15 +15,15 @@ function RecentProjects({ busy, onOpen, onError }: { busy: boolean; onOpen: (ite
   const update = async (request: Promise<{ ok: true; value: RecentProject[] } | { ok: false; error: string }>) => {
     const result = await request; if (result.ok) setItems(result.value); else onError(result.error);
   };
-  useEffect(() => { void update(window.projectGrid.getRecentProjects()); }, []);
+  useEffect(() => { void update(window.agentrix.getRecentProjects()); }, []);
   if (!items.length) return null;
   return <section className="recent-projects" aria-label={t('最近的项目')}>
-    <div className="recent-heading"><span><ClockCounterClockwise size={14} />{t('最近的项目')}</span><button type="button" className="text-button" disabled={busy} onClick={() => void update(window.projectGrid.clearRecentProjects())}>{t('清空')}</button></div>
+    <div className="recent-heading"><span><ClockCounterClockwise size={14} />{t('最近的项目')}</span><button type="button" className="text-button" disabled={busy} onClick={() => void update(window.agentrix.clearRecentProjects())}>{t('清空')}</button></div>
     <ul>{items.map(item => <li key={item.path} className={item.exists ? '' : 'is-missing'}>
       <button type="button" className="recent-open" disabled={busy || !item.exists} title={item.exists ? t('添加 {path}', { path: item.path }) : t('文件夹已不存在')} onClick={() => onOpen(item)}>
         <FolderSimple size={17} /><span><b>{item.name}</b><small>{item.exists ? item.path : t('文件夹不存在 · {path}', { path: item.path })}</small></span><time>{openedAt(item.lastOpenedAt)}</time>
       </button>
-      <button type="button" className="icon-button" disabled={busy} title={t('从最近列表删除')} aria-label={t('从最近列表删除 {name}', { name: item.name })} onClick={() => void update(window.projectGrid.forgetRecentProject(item.path))}><X size={13} /></button>
+      <button type="button" className="icon-button" disabled={busy} title={t('从最近列表删除')} aria-label={t('从最近列表删除 {name}', { name: item.name })} onClick={() => void update(window.agentrix.forgetRecentProject(item.path))}><X size={13} /></button>
     </li>)}</ul>
   </section>;
 }
@@ -39,12 +39,12 @@ export function AddProjectDialog({ onClose, onAdded, onError }: { onClose: () =>
   const [error, setError] = useState('');
   useEffect(() => {
     dialog.current?.showModal();
-    window.projectGrid.getSSHInfo().then(result => { if (result.ok) setInfo(result.value); }).catch(() => {});
+    window.agentrix.getSSHInfo().then(result => { if (result.ok) setInfo(result.value); }).catch(() => {});
   }, []);
   const add = async () => {
     setBusy(true); setError('');
     try {
-      const result = kind === 'local' ? await window.projectGrid.addProjects() : await window.projectGrid.addSSHProject({ host, path: folder, name });
+      const result = kind === 'local' ? await window.agentrix.addProjects() : await window.agentrix.addSSHProject({ host, path: folder, name });
       if (!result.ok) { setError(result.error); return; }
       if (typeof result.value === 'string' || result.value.length) { onAdded(); onClose(); }
     } catch (error) { const message = String(error); setError(message); onError(message); }
@@ -53,7 +53,7 @@ export function AddProjectDialog({ onClose, onAdded, onError }: { onClose: () =>
   const openRecent = async (item: RecentProject) => {
     setBusy(true); setError('');
     try {
-      const result = await window.projectGrid.addRecentProject(item.path);
+      const result = await window.agentrix.addRecentProject(item.path);
       if (!result.ok) { setError(result.error); return; }
       onAdded(); onClose();
     } catch (error) { const message = String(error); setError(message); onError(message); }

@@ -1,4 +1,4 @@
-"""Project Grid's session-scoped Linux worker, transported over one SSH connection."""
+"""Agentrix's session-scoped Linux worker, transported over one SSH connection."""
 import base64
 import concurrent.futures
 import glob
@@ -28,7 +28,7 @@ VIDEO_TYPES = {".mp4": "video/mp4", ".m4v": "video/mp4", ".webm": "video/webm", 
 NOTIFY_SOURCE = r'''import hashlib,json,os,socket,sys,time
 try:
     mode=sys.argv[1]
-    event={"type":mode,"token":os.environ["PROJECT_GRID_TOKEN"],"cwd":os.getcwd(),"codexHome":os.environ.get("CODEX_HOME",os.path.expanduser("~/.codex")),"sentAt":int(time.time()*1000)}
+    event={"type":mode,"token":os.environ["AGENTRIX_TOKEN"],"cwd":os.getcwd(),"codexHome":os.environ.get("CODEX_HOME",os.path.expanduser("~/.codex")),"sentAt":int(time.time()*1000)}
     if mode=="notify":
         payload=json.loads(sys.argv[2])
         if payload.get("type")!="agent-turn-complete": sys.exit(0)
@@ -39,21 +39,21 @@ try:
     elif mode=="codex-exited": event["exitCode"]=int(sys.argv[2])
     with socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as client:
         client.settimeout(2)
-        client.connect(os.environ["PROJECT_GRID_SOCKET"])
+        client.connect(os.environ["AGENTRIX_SOCKET"])
         client.sendall((json.dumps(event)+"\n").encode())
 except Exception: pass
 '''
 
 BASH_SOURCE = r'''if [ -r "$HOME/.bashrc" ]; then . "$HOME/.bashrc"; fi
-cd -- "$PROJECT_GRID_ROOT" || exit 1
+cd -- "$AGENTRIX_ROOT" || exit 1
 unalias codex 2>/dev/null || true
-__pg_emit() { "$PROJECT_GRID_PYTHON" "$PROJECT_GRID_NOTIFY_FILE" "$@" >/dev/null 2>&1; }
+__pg_emit() { "$AGENTRIX_PYTHON" "$AGENTRIX_NOTIFY_FILE" "$@" >/dev/null 2>&1; }
 function codex {
     local executable result
     executable=$(type -P codex)
     if [ -z "$executable" ]; then printf 'Codex CLI was not found on this SSH host.\n'; return 127; fi
     __pg_emit codex-started
-    "$executable" -c "notify=$PROJECT_GRID_NOTIFY_COMMAND" -c 'tui.terminal_title=["session-id"]' "$@"
+    "$executable" -c "notify=$AGENTRIX_NOTIFY_COMMAND" -c 'tui.terminal_title=["session-id"]' "$@"
     result=$?
     __pg_emit codex-exited "$result"
     return "$result"
@@ -73,7 +73,7 @@ fi
 # TUIs such as Codex. These bindings are private to this generated shell rc.
 bind -m emacs-standard '"\e[13;2u":"\C-v\C-j"' 2>/dev/null || true
 bind -m vi-insertion '"\e[13;2u":"\C-v\C-j"' 2>/dev/null || true
-printf '\033[36m  PROJECT GRID / SSH\033[0m\n  Type codex to start, or codex resume to continue.\n\n'
+printf '\033[36m  AGENTRIX / SSH\033[0m\n  Type codex to start, or codex resume to continue.\n\n'
 '''
 
 def image_type(data):
@@ -380,7 +380,7 @@ class Worker:
         if type(size) is not int or size < 0 or size > 9007199254740991: raise ValueError("无效的文件大小。")
         parent = self.resolve(relative)
         name = self.unique_name(parent, self.name(name))
-        descriptor, temporary = tempfile.mkstemp(prefix=".project-grid-upload-", dir=parent)
+        descriptor, temporary = tempfile.mkstemp(prefix=".agentrix-upload-", dir=parent)
         identity = os.urandom(16).hex()
         self.uploads[identity] = {"file": os.fdopen(descriptor, "wb"), "temporary": temporary, "target": os.path.join(parent, name), "size": size, "written": 0}
         return {"id": identity}
@@ -482,7 +482,7 @@ class Worker:
             info, opened = os.stat(filename), os.fstat(source.fileno())
             if (info.st_dev, info.st_ino) != (opened.st_dev, opened.st_ino) or self.file_revision(info) != revision: raise ValueError("文件已变化，请刷新后重新编辑。")
             if "\r\n" in preview["content"]: content = re.sub(r"\r?\n", "\r\n", content)
-            descriptor, temporary = tempfile.mkstemp(prefix=".project-grid-edit-", dir=os.path.dirname(filename))
+            descriptor, temporary = tempfile.mkstemp(prefix=".agentrix-edit-", dir=os.path.dirname(filename))
             try:
                 with os.fdopen(descriptor, "wb") as destination:
                     os.chmod(temporary, stat.S_IMODE(info.st_mode))
@@ -511,7 +511,7 @@ class Worker:
         import pty
         bash = shutil.which("bash")
         if not bash: raise ValueError("远端没有找到 Bash。")
-        self.temp = tempfile.mkdtemp(prefix="project-grid-")
+        self.temp = tempfile.mkdtemp(prefix="agentrix-")
         notify_file = os.path.join(self.temp, "notify.py")
         rc_file = os.path.join(self.temp, "bashrc")
         for filename, content in ((notify_file, NOTIFY_SOURCE), (rc_file, BASH_SOURCE)):
@@ -523,7 +523,7 @@ class Worker:
         os.chmod(self.socket_path, 0o600)
         self.listener.listen(8)
         self.listener.settimeout(0.5)
-        env = dict(os.environ, TERM="xterm-256color", COLORTERM="truecolor", PROJECT_GRID_ROOT=self.coding_root, PROJECT_GRID_PYTHON=sys.executable, PROJECT_GRID_NOTIFY_FILE=notify_file, PROJECT_GRID_SOCKET=self.socket_path, PROJECT_GRID_TOKEN=self.token, PROJECT_GRID_NOTIFY_COMMAND=json.dumps([sys.executable, notify_file, "notify"]))
+        env = dict(os.environ, TERM="xterm-256color", COLORTERM="truecolor", AGENTRIX_ROOT=self.coding_root, AGENTRIX_PYTHON=sys.executable, AGENTRIX_NOTIFY_FILE=notify_file, AGENTRIX_SOCKET=self.socket_path, AGENTRIX_TOKEN=self.token, AGENTRIX_NOTIFY_COMMAND=json.dumps([sys.executable, notify_file, "notify"]))
         for key in ("NO_COLOR", "NODE_DISABLE_COLORS"): env.pop(key, None)
         if env.get("FORCE_COLOR") == "0": env.pop("FORCE_COLOR", None)
         child, master = pty.fork()
@@ -601,7 +601,7 @@ class Worker:
             try: os.killpg(self.child, signal.SIGHUP)
             except OSError: pass
         if hasattr(self, "listener"): self.listener.close()
-        if self.temp and os.path.dirname(os.path.realpath(self.temp)) == os.path.realpath(tempfile.gettempdir()) and os.path.basename(self.temp).startswith("project-grid-"):
+        if self.temp and os.path.dirname(os.path.realpath(self.temp)) == os.path.realpath(tempfile.gettempdir()) and os.path.basename(self.temp).startswith("agentrix-"):
             shutil.rmtree(self.temp, ignore_errors=True)
 
 def main():

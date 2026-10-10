@@ -24,7 +24,7 @@ export function ReadingSessions({ terminalId, onClose, onSent, onError }: {
   useEffect(() => {
     active.current = true;
     card.current?.focus();
-    void window.projectGrid.agentSessions(terminalId).then(result => {
+    void window.agentrix.agentSessions(terminalId).then(result => {
       if (!active.current) return;
       if (result.ok) setSessions(result.value);
       else { setFailed(true); setSessions([]); onError(result.error); }
@@ -38,8 +38,8 @@ export function ReadingSessions({ terminalId, onClose, onSent, onError }: {
     sending.current = true; setPending(session.id); card.current?.focus();
     try {
       const followed = await resumeReadingSession(session.id,
-        text => window.projectGrid.writeTerminal(terminalId, text),
-        id => window.projectGrid.followAgentSession(terminalId, id), () => active.current);
+        text => window.agentrix.writeTerminal(terminalId, text),
+        id => window.agentrix.followAgentSession(terminalId, id), () => active.current);
       if (!active.current) return;
       onSent(`/resume ${session.id}`);
       if (!followed) onError(t('无法读取这个 Claude 会话的历史。'));
@@ -60,7 +60,7 @@ export function ReadingSessions({ terminalId, onClose, onSent, onError }: {
     else setHighlight(index => Math.max(0, Math.min((sessions?.length || 1) - 1, index + (event.key === 'ArrowUp' ? -1 : 1))));
   };
   return <div ref={card} className="reading-choice reading-sessions" role="group" aria-label={t('恢复会话')} aria-busy={sessions === null || pending !== null} tabIndex={-1} onKeyDown={keys}
-    onFocus={() => window.projectGrid.terminalFocus(terminalId, false)}>
+    onFocus={() => window.agentrix.terminalFocus(terminalId, false)}>
     <div className="reading-choice-head"><strong>{t('恢复会话')}</strong><button type="button" className="text-button" disabled={pending !== null} onClick={close}>{t('取消')}</button></div>
     {sessions === null ? <p className="reading-sessions-empty"><CircleNotch size={13} className="loading-spinner" />{t('正在加载会话…')}</p>
       : !sessions.length ? <p className="reading-sessions-empty">{failed ? t('无法加载 Claude 会话。') : t('这个项目还没有其他 Claude 会话')}</p>

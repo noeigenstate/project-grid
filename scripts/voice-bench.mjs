@@ -364,7 +364,7 @@ function table(results, noise) {
 async function main() {
   const options = argumentsFor(process.argv.slice(2));
   if (options.help) { console.log('Usage: node scripts/voice-bench.mjs --models <dir> [--out <dir>] [--only name1,name2] [--noise] [--tts <dir>]'); return; }
-  const appVoice = path.resolve(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Project Grid', 'voice');
+  const appVoice = path.resolve(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), 'Agentrix', 'voice');
   await fs.mkdir(options.out, { recursive: true });
   const report = { startedAt: new Date().toISOString(), options, sherpaVersion: require('sherpa-onnx-node/package.json').version, numThreads, corpus, sources,
     normalization: 'NFKC, lowercase, strip SenseVoice tags and punctuation/symbols; Han characters and Latin/digit words; no traditional-to-simplified conversion',

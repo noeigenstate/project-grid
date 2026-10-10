@@ -8,7 +8,7 @@ const { listDirectory, readProjectFile, saveProjectFile, resolveProjectPath } = 
 const { readGitRaw } = require('../../electron/project-git.cjs');
 
 async function createSSHFixture({ password = false, unknownHost = false, nativeWorker = process.platform !== 'win32' } = {}) {
-  const prefix = path.join(os.tmpdir(), 'project-grid-ssh-test-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-ssh-test-');
   const directory = await fs.mkdtemp(prefix);
   const hostKey = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs1', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } }).privateKey;
   const clientKey = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs1', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } }).privateKey;

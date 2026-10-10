@@ -40,8 +40,8 @@ function start() {
   if (started) return; started = true;
   navigator.mediaDevices?.addEventListener('devicechange', () => void refreshMicrophone());
   void refreshMicrophone();
-  window.projectGrid.onVoiceState(model => set({ model }));
-  void window.projectGrid.getVoiceState().then(result => { if (result.ok) set({ model: result.value }); });
+  window.agentrix.onVoiceState(model => set({ model }));
+  void window.agentrix.getVoiceState().then(result => { if (result.ok) set({ model: result.value }); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && snapshot.recording) void cancelDictation(); });
   document.addEventListener('focusin', event => {
     const id = (event.target as Element | null)?.closest?.<HTMLElement>('[data-terminal-id]')?.dataset.terminalId;
@@ -60,7 +60,7 @@ export function useVoice() { return useSyncExternalStore(subscribe, () => snapsh
 
 function microphoneMessage(error: unknown) {
   const name = (error as DOMException)?.name;
-  if (name === 'NotAllowedError') return isMac ? t('麦克风访问被拒绝，请在“系统设置 › 隐私与安全性 › 麦克风”中允许 Project Grid。') : isLinux ? t('麦克风访问被拒绝，请在系统的隐私或声音设置中允许 Project Grid 使用麦克风。') : t('麦克风访问被拒绝，请在 Windows 设置中允许桌面应用使用麦克风。');
+  if (name === 'NotAllowedError') return isMac ? t('麦克风访问被拒绝，请在“系统设置 › 隐私与安全性 › 麦克风”中允许 Agentrix。') : isLinux ? t('麦克风访问被拒绝，请在系统的隐私或声音设置中允许 Agentrix 使用麦克风。') : t('麦克风访问被拒绝，请在 Windows 设置中允许桌面应用使用麦克风。');
   if (name === 'NotFoundError' || name === 'OverconstrainedError') return t('未检测到麦克风，请连接后重试。');
   if (name === 'NotReadableError') return t('麦克风无法使用，可能正被其他程序占用。');
   // Messages thrown in Chinese by the capture code (voice-audio.ts) are looked up here.
@@ -86,14 +86,14 @@ async function finish(submit = false) {
   target = null; set({ recording: null, busy: current.id, sending: submit, level: 0 });
   try {
     const wav = await capture.stopRecording(); await capture.close();
-    const text = await window.projectGrid.transcribe(wav);
+    const text = await window.agentrix.transcribe(wav);
     if (!text.ok) throw new Error(text.error);
     if (!text.value.trim()) throw new Error(t('没有识别出文字，请再说一遍。'));
     const composer = composers.get(current.id);
     if (composer) { composer(text.value.trim(), submit); return; }
-    const pasted = await window.projectGrid.pasteTerminal(current.id, text.value, current.sessionId);
+    const pasted = await window.agentrix.pasteTerminal(current.id, text.value, current.sessionId);
     if (!pasted.ok) throw new Error(pasted.error);
-    if (submit) { await new Promise(resolve => setTimeout(resolve, SUBMIT_DELAY)); window.projectGrid.writeTerminal(current.id, '\r'); }
+    if (submit) { await new Promise(resolve => setTimeout(resolve, SUBMIT_DELAY)); window.agentrix.writeTerminal(current.id, '\r'); }
     focusTerminal(current.id);
   } catch (error) { current.onError(microphoneMessage(error)); }
   finally { await capture.close(); set({ busy: null, sending: false, label: null }); }
@@ -107,14 +107,14 @@ export async function toggleDictation(id: string, sessionId: string | null, onEr
   if (!sessionId) return onError(t('请先启动终端，再使用语音输入。'));
   if (snapshot.microphone === false) { void refreshMicrophone(); return onError(t('未检测到麦克风，请连接后重试。')); }
   if (!snapshot.model?.ready) {
-    if (snapshot.model?.phase !== 'downloading') void window.projectGrid.prepareVoice();
+    if (snapshot.model?.phase !== 'downloading') void window.agentrix.prepareVoice();
     return onError(modelMessage(snapshot.model));
   }
   // Recording counts from the keypress or click, so an Escape while the microphone is still opening cancels it.
   const pending = { id, sessionId, onError };
   target = pending; set({ recording: id, label: label || null });
   // The recognizer is released after a few idle minutes; load it again while the user is speaking.
-  void window.projectGrid.warmVoice();
+  void window.agentrix.warmVoice();
   const opened = opening.then(() => target === pending ? capture.open('', level => set({ level: Math.min(1, level * 5) })) : undefined);
   opening = opened.catch(() => {});
   try {

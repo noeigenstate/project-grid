@@ -6,7 +6,7 @@ const path = require('node:path');
 const { findFiles, listDirectory, readProjectFile, TEXT_PAGE_BYTES } = require('../electron/project-files.cjs');
 
 async function fixture(t) {
-  const prefix = path.join(os.tmpdir(), 'project-grid-files-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-files-');
   const directory = await fs.mkdtemp(prefix);
   const projectPath = path.join(directory, "中文 [项目] & '空格'");
   await fs.mkdir(projectPath);

@@ -17,7 +17,7 @@ test('microphone encoder makes bounded mono 16 kHz WAV with safe clipping', () =
 });
 
 test('offline model download resumes verified bytes and rejects corrupt content', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-voice-test-'); const folder = await fs.mkdtemp(prefix);
+  const prefix = path.join(os.tmpdir(), 'agentrix-voice-test-'); const folder = await fs.mkdtemp(prefix);
   t.after(async () => { assert.ok(path.resolve(folder).startsWith(prefix)); await fs.rm(folder, { recursive: true, force: true }); });
   const bytes = Buffer.from('verified model fixture');
   const asset = { url: 'https://example.invalid/model', size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
@@ -31,7 +31,7 @@ test('offline model download resumes verified bytes and rejects corrupt content'
 });
 
 test('model download falls back to the mirror and keeps the partial bytes', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-voice-test-'); const folder = await fs.mkdtemp(prefix);
+  const prefix = path.join(os.tmpdir(), 'agentrix-voice-test-'); const folder = await fs.mkdtemp(prefix);
   t.after(async () => { assert.ok(path.resolve(folder).startsWith(prefix)); await fs.rm(folder, { recursive: true, force: true }); });
   const bytes = Buffer.from('mirrored model fixture');
   const asset = { urls: ['https://primary.invalid/model', 'https://mirror.invalid/model'], size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
@@ -82,7 +82,7 @@ test('the recognizer is released when idle and loads again for the next recordin
 });
 
 test('a chosen model downloads while dictation keeps using the default, then takes over between recordings', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-voice-test-'); const folder = await fs.mkdtemp(prefix);
+  const prefix = path.join(os.tmpdir(), 'agentrix-voice-test-'); const folder = await fs.mkdtemp(prefix);
   const bytes = Buffer.from('larger model fixture');
   MODELS.fixture = { label: 'Fixture', directory: 'fixture', files: [{ name: 'model.onnx', urls: ['https://example.invalid/model'], size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') }], config: file => ({ fixture: file('model.onnx') }) };
   let release; const served = new Promise(resolve => { release = resolve; });
@@ -117,7 +117,7 @@ test('a downloaded model stays in use when the chosen one and the default are bo
 });
 
 test('choosing a model back while its download is being stopped starts it again', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-voice-test-'); const folder = await fs.mkdtemp(prefix);
+  const prefix = path.join(os.tmpdir(), 'agentrix-voice-test-'); const folder = await fs.mkdtemp(prefix);
   const bytes = Buffer.from('fixture'), sha256 = createHash('sha256').update(bytes).digest('hex');
   MODELS.fixture = { label: 'Fixture', directory: 'fixture', files: [{ name: 'model.onnx', urls: ['https://example.invalid/m'], size: bytes.length, sha256 }], config: file => ({ fixture: file('model.onnx') }) };
   let calls = 0;

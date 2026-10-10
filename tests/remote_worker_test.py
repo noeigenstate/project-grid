@@ -18,7 +18,7 @@ spec.loader.exec_module(remote)
 
 class RemoteFilesTest(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="project-grid-worker-test-")
+        self.temp = tempfile.TemporaryDirectory(prefix="agentrix-worker-test-")
         self.root = Path(self.temp.name) / "project"
         self.root.mkdir()
         self.worker = remote.Worker(lambda _: None)
@@ -225,7 +225,7 @@ class RemoteFilesTest(unittest.TestCase):
         with self.assertRaises(ValueError): self.worker.finish_upload(canceled)
         self.worker.cancel_upload(canceled)
         self.assertFalse((self.root / "新目录/cancel.txt").exists())
-        self.assertFalse(list((self.root / "新目录").glob(".project-grid-upload-*")))
+        self.assertFalse(list((self.root / "新目录").glob(".agentrix-upload-*")))
         self.worker.remove(result["path"])
         self.assertFalse((self.root / result["path"]).exists())
         for relative in ("", "../outside", "/outside"):

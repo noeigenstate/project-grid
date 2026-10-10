@@ -20,7 +20,7 @@ const plain = { id: randomUUID(), name: '普通文件夹', path: ssh.home, resto
 for (const dir of [profile, home, path.join(project.path, 'src')]) await fs.mkdir(dir, { recursive: true });
 const git = async (dir, ...args) => (await exec('git', ['-C', dir, ...args], { env: gitEnvironment(), windowsHide: true, encoding: 'utf8' })).stdout.trim();
 for (const dir of [project.path, ssh.project]) {
-  await git(dir, 'init', '-b', 'main'); await git(dir, 'config', 'user.name', 'Project Grid'); await git(dir, 'config', 'user.email', 'test@example.invalid');
+  await git(dir, 'init', '-b', 'main'); await git(dir, 'config', 'user.name', 'Agentrix'); await git(dir, 'config', 'user.email', 'test@example.invalid');
   await fs.mkdir(path.join(dir, 'src'), { recursive: true });
   await fs.writeFile(path.join(dir, 'src/app.ts'), 'export const value = 1;\n');
   await fs.writeFile(path.join(dir, 'README.md'), '# Git workspace'); await fs.writeFile(path.join(dir, 'obsolete.txt'), 'old');
@@ -33,10 +33,10 @@ for (const dir of [project.path, ssh.project]) {
   await fs.unlink(path.join(dir, 'obsolete.txt')); await fs.writeFile(path.join(dir, '待提交.txt'), '新的未提交文件');
 }
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [project, plain], settings: { autoSave: false, restoreSessions: false, closeToTray: false, notifications: false } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home, PROJECT_GRID_TEST_SSH_CONFIG: ssh.configFile }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, CODEX_HOME: home, AGENTRIX_TEST_SSH_CONFIG: ssh.configFile }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged'), errors = [];
 let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
 async function openGit(name) {
   await page.getByRole('button', { name: `全屏查看 ${name}`, exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
@@ -44,7 +44,7 @@ async function openGit(name) {
   await page.getByRole('region', { name: '未提交更改', exact: true }).waitFor();
 }
 try {
-  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await app.evaluate(({ app, dialog }) => {
     const require = process.getBuiltinModule('module').createRequire(process.getBuiltinModule('path').join(app.getAppPath(), 'package.json'));
@@ -56,9 +56,9 @@ try {
   });
   await page.waitForSelector('.project-panel');
   const card = page.locator(`[data-project-id="${project.id}"]`);
-  await card.getByRole('button', { name: '启动终端', exact: true }).click();
+  await card.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).projects[0].shellReady, 'terminal ready');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Write-Output 'GIT_DRAFT_STAYS'"), project.id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Write-Output 'GIT_DRAFT_STAYS'"), project.id);
   const session = (await state()).projects[0].sessionId;
   await card.getByRole('button', { name: `全屏查看 ${project.name}`, exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
@@ -150,10 +150,10 @@ try {
   await page.screenshot({ path: path.join(output, 'git-narrow.png') });
   assert.ok(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), 'narrow Git panel has no horizontal overflow');
   assert.equal((await state()).projects[0].sessionId, session);
-  assert.ok((await page.evaluate(id => window.projectGrid.attachTerminal(id), project.id)).value.data.includes('GIT_DRAFT_STAYS'));
+  assert.ok((await page.evaluate(id => window.agentrix.attachTerminal(id), project.id)).value.data.includes('GIT_DRAFT_STAYS'));
   await page.getByRole('button', { name: '返回总览', exact: true }).click();
   await page.waitForFunction(() => !document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
-  const remoteId = (await page.evaluate(() => window.projectGrid.addSSHProject({ host: 'fixture', path: '/srv/fixture', name: 'SSH Git' }))).value;
+  const remoteId = (await page.evaluate(() => window.agentrix.addSSHProject({ host: 'fixture', path: '/srv/fixture', name: 'SSH Git' }))).value;
   await waitFor(async () => (await state()).projects.find(item => item.id === remoteId).shellReady, 'SSH ready');
   await openGit('SSH Git');
   await panel.getByRole('button', { name: /查看提交.*合并工具栏功能/ }).waitFor();
@@ -189,7 +189,7 @@ try {
 finally {
   try {
     if (app) {
-      try { if (page && !page.isClosed()) { await app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1 }); }); await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x03exit\r'), project.id); await waitFor(async () => ['exited', 'stopped'].includes((await state()).projects[0].status), 'isolated shell exit'); } }
+      try { if (page && !page.isClosed()) { await app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1 }); }); await page.evaluate(id => window.agentrix.writeTerminal(id, '\x03exit\r'), project.id); await waitFor(async () => ['exited', 'stopped'].includes((await state()).projects[0].status), 'isolated shell exit'); } }
       finally { await app.close(); }
     }
   } finally { await ssh.close(); }

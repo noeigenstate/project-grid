@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Project Grid" width="88" />
+  <img src="assets/icon.png" alt="Agentrix" width="88" />
 </p>
 
-<h1 align="center">Project Grid · 项目矩阵</h1>
+<h1 align="center">Agentrix</h1>
 
 <p align="center"><strong>面向未来的 AI 编辑器：你不再逐行写代码，而是指挥一整张网格的 AI。</strong></p>
 <p align="center">Codex 和 Claude Code 在一张网格里并行开发多个项目，它们干活、汇报、等你拍板。<br />Windows · macOS · Linux</p>
@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/promo.webp" alt="Project Grid 宣传片：霓虹网格中六块面板并行运转，一块点亮后爆发，终端字符重组为文档，语音化作光，红绿碎片取舍归位，最后汇成 Project Grid 标志" width="960" />
+  <img src="docs/images/promo.webp" alt="Agentrix 宣传片：霓虹网格中六块面板并行运转，一块点亮后爆发，终端字符重组为文档，语音化作光，红绿碎片取舍归位，最后汇成 Agentrix 标志" width="960" />
 </p>
 <p align="center"><sub>30 秒宣传片 · <a href="docs/images/promo.mp4">高清版</a></sub></p>
 
@@ -32,7 +32,7 @@
 
 编辑器围着**文件和光标**设计了四十年。AI 写代码之后，真正要管理的是**任务和助手**：哪个在思考，哪个做完了，哪个卡住在等你，它到底改了什么。
 
-Project Grid 从这里重新设计编辑器：
+Agentrix 从这里重新设计编辑器：
 
 - **并行，而不是排队。** 每个项目一张卡片、一个真实终端，Codex 和 Claude Code 同时开工。
 - **感知，而不是盯屏。** 它读取助手自己的会话记录，知道每一轮在做什么、何时结束、何时需要你，并用光、通知和声音叫你回来。
@@ -58,6 +58,8 @@ Project Grid 从这里重新设计编辑器：
 <img src="docs/images/reading-view.jpg" alt="阅读视图：Codex 的回答按文档排版，标题、列表、代码块和折叠的工具调用；右侧活动栏实时显示每一步" width="100%" />
 
 一键把 Claude Code 或 Codex 的对话切换成**阅读视图**：标题、列表、表格、带「复制」按钮的代码块，工具调用折叠成一行。底部输入框直接写进下面的真实终端，随时切回终端。
+
+> 阅读视图目前支持 **Claude Code** 和 **Codex**。OpenCode、Gemini CLI 等其他命令行助手照常在卡片的终端里运行，阅读视图会陆续支持更多 CLI。
 
 - **CLI 的输出也重新渲染。** `/usage`、`/status`、`/context` 这类斜杠命令的结果不再是字符画：边框去掉，统计排成对照表，用量变成进度条，分组加上小标题，直接排进对话，关闭后也留在原处。输入 `/` 列出全部命令，`@` 提及项目文件。
 - **提问和确认变成卡片。** 权限确认、`/model` 之类的选择，以及 Claude Code（AskUserQuestion）和 Codex（Plan 模式）向你提的问题，都是可以直接点选的卡片；它正在做什么也像 CLI 一样写在对话末尾，带计时和「Esc 中断」。
@@ -90,13 +92,13 @@ Project Grid 从这里重新设计编辑器：
 
 1. **安装**：从 [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) 下载对应平台的版本（见下）。
 2. **添加项目**：按 `Ctrl+Shift+N` 选择项目文件夹，可以一次选多个，也可以添加 SSH 远程项目。
-3. **下达指令**：在卡片的终端里运行 `codex` 或 `claude`，说出要做的事，然后去忙别的。粉色亮起时回来看结果。
+3. **下达指令**：在卡片上选 Claude Code 或 Codex——可以接着这个文件夹上次的对话，也可以开始新开发——说出要做的事，然后去忙别的。粉色亮起时回来看结果。其他命令行助手点「只打开终端」运行。
 
 | 平台 | 下载 | 说明 |
 | --- | --- | --- |
-| **Windows** | `Project-Grid-Setup-<版本>-x64.exe` | 安装后自动更新 |
+| **Windows** | `Agentrix-Setup-<版本>-x64.exe` | 安装后自动更新 |
 | **macOS** | 终端运行下面的命令 | 安装或更新都用同一条命令；应用为临时签名，未经 Apple 公证 |
-| **Linux** | `Project-Grid-<版本>-linux-<架构>.AppImage` | `chmod +x` 后直接运行；也提供 `.tar.gz` |
+| **Linux** | `Agentrix-<版本>-linux-<架构>.AppImage` | `chmod +x` 后直接运行；也提供 `.tar.gz` |
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | bash
@@ -127,14 +129,14 @@ curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/
 <details>
 <summary><strong>我的代码和数据会被上传吗？</strong></summary>
 
-Project Grid 本身**不收集任何数据，没有统计上报**。它只会访问 GitHub（检查更新）和 Hugging Face 或其国内镜像（首次下载离线语音模型）。只有你在设置里主动选择用云端模型总结播报时，才会把那一轮的最终回复发给你选的服务商。Codex 和 Claude Code 与各自服务的通信，和你平时在终端里使用时一样。
+Agentrix 本身**不收集任何数据，没有统计上报**。它只会访问 GitHub（检查更新）和 Hugging Face 或其国内镜像（首次下载离线语音模型）。只有你在设置里主动选择用云端模型总结播报时，才会把那一轮的最终回复发给你选的服务商。Codex 和 Claude Code 与各自服务的通信，和你平时在终端里使用时一样。
 
 </details>
 
 <details>
 <summary><strong>和在 IDE 里开几个终端有什么不同？</strong></summary>
 
-终端还是那个终端，区别在于 Project Grid **知道每个 AI 助手处在什么状态**：它读取 Codex 和 Claude Code 的会话记录，准确判断这一轮是在处理、做完了还是被中断，并把回答、命令结果和改动重新排版给你看。它是为「同时指挥多个 AI 任务」设计的，而不是为「一个人编辑一个文件」设计的。
+终端还是那个终端，区别在于 Agentrix **知道每个 AI 助手处在什么状态**：它读取 Codex 和 Claude Code 的会话记录，准确判断这一轮是在处理、做完了还是被中断，并把回答、命令结果和改动重新排版给你看。它是为「同时指挥多个 AI 任务」设计的，而不是为「一个人编辑一个文件」设计的。
 
 </details>
 
@@ -150,7 +152,7 @@ Project Grid 本身**不收集任何数据，没有统计上报**。它只会访
 ## 路线图
 
 - [ ] 项目分组与快捷切换
-- [ ] 更多命令行编码助手
+- [ ] 更多 CLI 的阅读视图（OpenCode、Gemini CLI 等）
 - [ ] 每一轮的结果与产物记录，方便回看
 - [ ] WSL 工作区
 
@@ -160,7 +162,7 @@ Project Grid 本身**不收集任何数据，没有统计上报**。它只会访
 
 ```bash
 git clone https://github.com/noeigenstate/Agentrix.git
-cd project-grid
+cd agentrix
 npm ci
 npm start              # 开发运行
 npm test               # 单元测试

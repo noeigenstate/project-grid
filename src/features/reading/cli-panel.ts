@@ -70,11 +70,15 @@ export function hasCliInput(agent: ScreenAgent, rows: string[], screen: AgentScr
   return !!cliInputArea(agent, rows, screen);
 }
 
-// A dialog of the CLI is open in place of its input, with no work under way: keys sent now would land in it.
+// A dialog of the CLI is open in place of its input: keys sent now would land in it. With no input drawn, Claude's
+// working line alone means it is busy answering; a dialog opened during a round keeps that line above it, and its own
+// "Esc to cancel" hint tells it apart.
+const dialogHint = (row: string) => /\besc to (?:cancel|close|exit|go back|dismiss)\b/i.test(row);
 export function cliDialogOpen(agent: ScreenAgent, rows: string[], screen: AgentScreen): boolean {
   const input = cliInputArea(agent, rows, screen);
   if (agent === 'codex' && input && codexPopupBelow(rows, input).length) return true;
-  return !input && !(agent === 'claude' && claudeWorking(rows)) && rows.some(row => row.trim());
+  if (input || !rows.some(row => row.trim())) return false;
+  return !(agent === 'claude' && claudeWorking(rows)) || rows.some(dialogHint);
 }
 
 // Codex's /side opens a side conversation that only Ctrl+C leaves; Escape there tries to edit the last prompt.

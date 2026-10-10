@@ -54,7 +54,7 @@ test('Linux finds a shell in the system folders or PATH and uses the chosen one 
 
 test('terminals started from an AppImage leave out its folders and variables', () => {
   const env = {
-    APPIMAGE: '/home/u/Project-Grid.AppImage', APPDIR: '/tmp/.mount_ab', ARGV0: 'x', OWD: '/home/u', HOME: '/home/u',
+    APPIMAGE: '/home/u/Agentrix.AppImage', APPDIR: '/tmp/.mount_ab', ARGV0: 'x', OWD: '/home/u', HOME: '/home/u',
     PATH: '/tmp/.mount_ab:/tmp/.mount_ab/usr/sbin:/home/u/.local/bin:/usr/bin', LD_LIBRARY_PATH: '/tmp/.mount_ab/usr/lib',
     XDG_DATA_DIRS: '/tmp/.mount_ab/usr/share/::/usr/share/gnome:/usr/share/', GSETTINGS_SCHEMA_DIR: '/tmp/.mount_ab/usr/share/glib-2.0/schemas:/opt/s',
   };
@@ -147,13 +147,13 @@ test('a real Bash terminal keeps the user start-up files and reports prompts, Co
     assert.equal(event.codexAvailable, true); assert.equal(event.claudeAvailable, true);
     assert.equal(event.codexHome, path.join(home, '.codex'));
   }
-  assert.match(output, /PROJECT GRID/);
+  assert.match(output, /AGENTRIX/);
 
-  // The user's file ran, nothing of Project Grid leaks into programs started here, and the user's own prompt
+  // The user's file ran, nothing of Agentrix leaks into programs started here, and the user's own prompt
   // command still sees the exit status of the last command.
   type('false');
-  type('printf "%s\\n" "${PROJECT_GRID_SESSION_KEY-0}${PROJECT_GRID_SOCKET-0}${PROJECT_GRID_NODE-0}|$PG_TEST_BASHRC|$PG_TEST_LAST|$LANG|$TERM_PROGRAM|$(bash -c \'type -t codex\' 2>/dev/null)" > "$PG_TEST_LOG/state"');
-  assert.equal(await readLog('state'), '000|1|1|C.UTF-8|project-grid|file');
+  type('printf "%s\\n" "${AGENTRIX_SESSION_KEY-0}${AGENTRIX_SOCKET-0}${AGENTRIX_NODE-0}|$PG_TEST_BASHRC|$PG_TEST_LAST|$LANG|$TERM_PROGRAM|$(bash -c \'type -t codex\' 2>/dev/null)" > "$PG_TEST_LOG/state"');
+  assert.equal(await readLog('state'), '000|1|1|C.UTF-8|agentrix|file');
 
   // codex: started and exited around the real program, which gets notify and the title setting first.
   type('codex resume --last');
@@ -186,7 +186,7 @@ test('a real Bash terminal keeps the user start-up files and reports prompts, Co
   // Every report from this shell is newer than the one before it.
   const sequences = events.filter(event => typeof event.sequence === 'number').map(event => event.sequence);
   assert.deepEqual(sequences, [...sequences].sort((a, b) => a - b));
-  // A closed Project Grid never stops the shell or the agent.
+  // A closed Agentrix never stops the shell or the agent.
   server.close();
   type('codex; echo done > "$PG_TEST_LOG/after-close"');
   await readLog('after-close');

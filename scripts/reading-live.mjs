@@ -30,7 +30,7 @@ for (const agent of agents) {
   try { git('rev-parse', '--git-dir'); } catch { git('init', '-b', 'main'); git('config', 'user.name', 'Reading Test'); git('config', 'user.email', 'reading@example.invalid'); await fs.writeFile(path.join(project.path, 'README.md'), '# Reading test\n'); git('add', '.'); git('commit', '-m', 'base'); }
   await fs.writeFile(path.join(project.path, 'notes.txt'), 'alpha\nbeta\ngamma\n');
   await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [project], settings: { terminalRenderer: 'dom', restoreSessions: false, closeToTray: false, notifications: false, sound: false, announce: false, language: 'zh' } }));
-  const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+  const env = { ...process.env, AGENTRIX_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
   for (const name of Object.keys(env)) if (/^(CLAUDECODE|CLAUDE_CODE_|CLAUDE_EFFORT$|CLAUDE_PID$)/.test(name)) delete env[name];
   const app = await electron.launch({ executablePath: require('electron'), args: [root], cwd: root, env });
   const page = await app.firstWindow();
@@ -39,14 +39,14 @@ for (const agent of agents) {
     await app.evaluate(({ BrowserWindow }) => { const window = BrowserWindow.getAllWindows()[0]; window.setContentSize(1500, 950); window.webContents.setBackgroundThrottling(false); window.setFocusable(false); });
     await page.waitForSelector('.project-panel');
     const card = page.locator(`[data-project-id="${project.id}"]`), terminal = page.locator(`[data-terminal-id="${project.id}"]`), composer = terminal.locator('.reading-composer textarea');
-    const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].terminals[0];
+    const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].terminals[0];
     const screenText = async () => (await terminal.locator('.xterm-rows > div').allTextContents()).join('\n');
     const readingText = async () => (await terminal.locator('.reading-content').innerText().catch(() => ''));
     const shot = async name => page.screenshot({ path: path.join(output, agent, `${name}.png`) }).catch(() => {});
     await card.getByRole('button', { name: `全屏查看 ${project.name}`, exact: true }).click();
-    await card.getByRole('button', { name: '启动终端', exact: true }).click();
+    await card.getByRole('button', { name: '只打开终端', exact: true }).click();
     for (let i = 0; i < 150 && !(await state()).shellReady; i++) await sleep(200);
-    await page.evaluate(({ id, agent }) => window.projectGrid.writeTerminal(id, agent + '\r'), { id: project.id, agent });
+    await page.evaluate(({ id, agent }) => window.agentrix.writeTerminal(id, agent + '\r'), { id: project.id, agent });
     for (let i = 0; i < 150 && !(await state()).codexActive; i++) await sleep(300);
     await composer.waitFor({ state: 'visible' }); await sleep(4000);
 
@@ -63,7 +63,7 @@ for (const agent of agents) {
         if (during) await during({ elapsed: Date.now() - sent, text: await readingText() });
         if (marker && inTerminal === null && (await screenText()).includes(marker)) inTerminal = Date.now();
         if (marker && inReading === null && (await readingText()).includes(marker)) inReading = Date.now();
-        if (interruptAfter && !interrupted && Date.now() - sent > interruptAfter) { interrupted = true; await composer.press('Escape').catch(() => {}); await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x1b'), project.id); }
+        if (interruptAfter && !interrupted && Date.now() - sent > interruptAfter) { interrupted = true; await composer.press('Escape').catch(() => {}); await page.evaluate(id => window.agentrix.writeTerminal(id, '\x1b'), project.id); }
         if (Date.now() - sent > 5000 && s.codexActivity !== 'working' && (!marker || inReading !== null || interrupted)) break;
       }
       await sleep(1500);

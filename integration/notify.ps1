@@ -35,6 +35,6 @@ try {
         try { $writer.WriteLine($eventData); $writer.Flush() } finally { $writer.Dispose() }
     } finally { $pipe.Dispose() }
 } catch {
-    # A closed Project Grid must never interrupt Codex.
+    # A closed Agentrix must never interrupt Codex.
 }
 exit 0

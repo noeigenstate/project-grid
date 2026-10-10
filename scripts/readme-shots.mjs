@@ -3,7 +3,7 @@
 // a demo Codex session from the same file. No model is called. Run with `node scripts/readme-shots.mjs`;
 // images are written to docs/images. With --video and an ffmpeg path in FFMPEG, it also records a short demo
 // (docs/images/demo.gif for the README, demo.mp4 to upload to GitHub for an inline video).
-// The demo projects live in C:\ProjectGridDemo while it runs, so no personal path shows in the pictures.
+// The demo projects live in C:\AgentrixDemo while it runs, so no personal path shows in the pictures.
 import { testRun } from './test-output.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -20,7 +20,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const work = await testRun('readme'), dataDir = path.join(work, 'profile'), home = path.join(work, 'codex-home');
 const images = path.join(root, 'docs', 'images');
 const names = ['商城前端', '支付服务', '数据看板', '文档站点', '移动端 App', '运维脚本'];
-const demoRoot = process.platform === 'win32' ? 'C:\\ProjectGridDemo' : path.join(os.tmpdir(), 'ProjectGridDemo');
+const demoRoot = process.platform === 'win32' ? 'C:\\AgentrixDemo' : path.join(os.tmpdir(), 'AgentrixDemo');
 await fs.rm(demoRoot, { recursive: true, force: true });
 const projects = names.map(name => ({ id: randomUUID(), name, path: path.join(demoRoot, name), kind: 'local', restore: { terminal: false, codex: false } }));
 for (const directory of [dataDir, path.join(home, 'sessions'), images, ...projects.map(project => project.path)]) await fs.mkdir(directory, { recursive: true });
@@ -44,7 +44,7 @@ await fs.writeFile(path.join(shop, 'src', 'pages', 'Checkout.tsx'), checkout([
 await fs.writeFile(path.join(shop, 'src', 'pages', 'CouponInput.tsx'), "export function CouponInput({ value, onChange }: Props) {\n  return <input placeholder=\"优惠券\" value={value} onChange={event => onChange(event.target.value)} />;\n}\n");
 
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false, fontSize: 13, guideVersion: '9.9.9' } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const application = await electron.launch({ executablePath: require('electron'), args: [root, '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'], cwd: root, env, timeout: 30000 });
 const shot = name => page.screenshot({ path: path.join(images, name), type: 'jpeg', quality: 90 });
 let page;
@@ -57,9 +57,9 @@ try {
     ipcMain.removeHandler('voice:state'); ipcMain.handle('voice:state', () => ({ ok: true, value: { phase: 'ready', ready: true, percent: 100, model: 'demo', error: null, downloadBytes: 0 } }));
   });
   await page.waitForSelector('.project-panel');
-  const state = async index => (await page.evaluate(() => window.projectGrid.getState())).value.projects[index];
+  const state = async index => (await page.evaluate(() => window.agentrix.getState())).value.projects[index];
   const panel = index => page.locator(`[data-project-id="${projects[index].id}"]`);
-  const write = (index, data) => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id: projects[index].id, data });
+  const write = (index, data) => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id: projects[index].id, data });
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
   // What each card's terminal shows, as the agent would print it, then the shell stays busy so no prompt shows.
   const say = lines => lines.map(([text, colour]) => `Write-Host ${quote(text)}${colour ? ` -ForegroundColor ${colour}` : ''}`).join('; ');
@@ -72,17 +72,17 @@ try {
     [['PS> ./check-disk.ps1', 'DarkGray'], [''], ['  web-01   42%  ok', 'Green'], ['  web-02   38%  ok', 'Green'], ['  db-01    81%  注意：建议清理归档日志', 'Yellow']],
   ];
   for (let index = 0; index < projects.length; index++) {
-    await panel(index).getByRole('button', { name: '启动终端', exact: true }).click();
+    await panel(index).getByRole('button', { name: '只打开终端', exact: true }).click();
     await waitFor(async () => (await state(index)).shellReady, 'shell ready');
   }
   // Agents: a Codex round in the storefront, payments and dashboard, Claude Code in the docs site.
   const sessions = [];
   for (const index of [0, 1, 2]) {
-    await write(index, `$env:CODEX_HOME=${quote(home)}; Clear-Host; Send-ProjectGridEvent 'codex-started'; ${say(screens[index])}; Start-Sleep -Seconds 3600\r`);
+    await write(index, `$env:CODEX_HOME=${quote(home)}; Clear-Host; Send-AgentrixEvent 'codex-started'; ${say(screens[index])}; Start-Sleep -Seconds 3600\r`);
     await waitFor(async () => (await state(index)).codexActive, 'agent session');
     sessions[index] = { thread: randomUUID() };
   }
-  await write(3, `Clear-Host; Send-ProjectGridEvent 'codex-started' -Agent 'claude'; ${say(screens[3])}; Start-Sleep -Seconds 3600\r`);
+  await write(3, `Clear-Host; Send-AgentrixEvent 'codex-started' -Agent 'claude'; ${say(screens[3])}; Start-Sleep -Seconds 3600\r`);
   for (const index of [4, 5]) await write(index, `Clear-Host; ${say(screens[index])}; Start-Sleep -Seconds 3600\r`);
   const stamp = () => new Date().toISOString();
   const event = (type, extra = {}) => ({ type: 'event_msg', timestamp: stamp(), payload: { type, ...extra } });
@@ -114,7 +114,7 @@ try {
   }
   // The docs site's Claude Code has no transcript in this demo: its card shows the terminal.
   await panel(3).locator('.panel-header').getByRole('button', { name: '切换到终端', exact: true }).click();
-  await page.evaluate(id => window.projectGrid.acknowledge(id), projects[2].id);
+  await page.evaluate(id => window.agentrix.acknowledge(id), projects[2].id);
   await waitFor(async () => (await state(2)).unread === 0, 'dashboard viewed');
   await page.evaluate(() => document.activeElement?.blur()); await page.mouse.move(800, 2);
   // Let the completion breathing settle into its quiet glow.
@@ -200,7 +200,7 @@ try {
     console.log(`Demo recorded: ${captured.length} frames`);
   }
 } finally {
-  for (const project of projects) await page?.evaluate(id => window.projectGrid.writeTerminal(id, '\x03exit\r'), project.id).catch(() => {});
+  for (const project of projects) await page?.evaluate(id => window.agentrix.writeTerminal(id, '\x03exit\r'), project.id).catch(() => {});
   await new Promise(resolve => setTimeout(resolve, 1500));
   await application.evaluate(({ app }) => app.exit(0)).catch(() => {});
   await fs.rm(demoRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 400 }).catch(() => {});

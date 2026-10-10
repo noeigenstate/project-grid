@@ -13,7 +13,7 @@ if (dev) {
   const { createServer } = await import('vite');
   server = await createServer({ root });
   await server.listen();
-  env.PROJECT_GRID_DEV_URL = 'http://127.0.0.1:5178';
+  env.AGENTRIX_DEV_URL = 'http://127.0.0.1:5178';
 } else {
   const build = spawnSync(process.execPath, [path.join(root, 'node_modules/vite/bin/vite.js'), 'build'], { cwd: root, stdio: 'inherit' });
   if (build.status !== 0) process.exit(build.status ?? 1);

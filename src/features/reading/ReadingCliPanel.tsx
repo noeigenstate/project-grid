@@ -12,7 +12,7 @@ export function ReadingCliPanel({ command, rows, terminalId, exitOnEscape, onExi
   const card = useRef<HTMLDivElement>(null);
   const [folded, setFolded] = useState(false);
   useLayoutEffect(() => { card.current?.focus({ preventScroll: true }); }, []);
-  const write = (key: string) => window.projectGrid.writeTerminal(terminalId, key);
+  const write = (key: string) => window.agentrix.writeTerminal(terminalId, key);
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
     event.stopPropagation();
     if ((event.target as Element).closest('button') && (event.key === 'Enter' || event.key === ' ')) return;
@@ -26,7 +26,7 @@ export function ReadingCliPanel({ command, rows, terminalId, exitOnEscape, onExi
     onClick={event => { if (!(event.target as Element).closest('button')) card.current?.focus({ preventScroll: true }); }} onKeyDown={keys}
     onCompositionEnd={event => { if (event.data) write(event.data); }}
     onPaste={event => { const text = event.clipboardData.getData('text/plain'); if (text) { event.preventDefault(); write(text); } }}
-    onFocus={() => window.projectGrid.terminalFocus(terminalId, false)}>
+    onFocus={() => window.agentrix.terminalFocus(terminalId, false)}>
     <div className="reading-choice-head"><strong>{command}</strong>
       {rows.length > 0 && <button type="button" className="text-button" aria-expanded={!folded} onClick={() => setFolded(!folded)}>{folded ? t('展开') : t('收起')}</button>}
     </div>

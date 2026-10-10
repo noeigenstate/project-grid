@@ -41,14 +41,14 @@ if (assets) {
   for (const file of sensevoice.files) await fs.copyFile(path.join(assets, file.name), path.join(dataDir, 'voice', sensevoice.directory, file.name));
 }
 const packaged = process.argv.includes('--packaged');
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_GUIDE: '1' }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, AGENTRIX_TEST_GUIDE: '1' }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 let application, page;
-async function filesFinished() { await waitFor(async () => { const result = await page.evaluate(() => window.projectGrid.getFileProgress()); return result.ok && result.value === null; }, 'all files in the paste operation finish'); }
+async function filesFinished() { await waitFor(async () => { const result = await page.evaluate(() => window.agentrix.getFileProgress()); return result.ok && result.value === null; }, 'all files in the paste operation finish'); }
 async function backupClipboard() { await application.evaluate(async ({ clipboard, ClipboardItem }) => { globalThis.clipboardBackup = await Promise.all((await clipboard.read()).filter(item => item.types.length).map(async item => new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)])))))); }); }
 async function ownClipboard() { await application.evaluate(async ({ clipboard }) => { globalThis.clipboardOwnedText = await clipboard.readText(); }); }
 async function restoreClipboard() { if (!application) return; await application.evaluate(async ({ clipboard }) => { if (globalThis.clipboardBackup && await clipboard.readText() === globalThis.clipboardOwnedText) { if (globalThis.clipboardBackup.length) await clipboard.write(globalThis.clipboardBackup); else clipboard.clear(); } globalThis.clipboardBackup = null; }).catch(() => {}); }
 try {
-  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: [...(packaged ? [] : [root]), '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-audio-capture=${speech}`, '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'], cwd: root, env, timeout: 30000 });
+  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: [...(packaged ? [] : [root]), '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', `--use-file-for-fake-audio-capture=${speech}`, '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding'], cwd: root, env, timeout: 30000 });
   page = await application.firstWindow();
   if (process.argv.includes('--slow-copy')) await application.evaluate(({ ipcMain }) => {
     const handler = ipcMain._invokeHandlers.get('project:directory');
@@ -85,7 +85,7 @@ try {
   // Updating from an older version opens the usage guide on what is new; it can be paged and is shown once.
   const guide = page.locator('dialog.guide-dialog[open]');
   await guide.waitFor();
-  const version = (await page.evaluate(() => window.projectGrid.getState())).value.version;
+  const version = (await page.evaluate(() => window.agentrix.getState())).value.version;
   await guide.getByRole('heading', { name: `本次更新 v${version}`, exact: true }).waitFor();
   await guide.getByRole('button', { name: '上一步', exact: true }).click();
   await guide.getByRole('heading', { name: '常用快捷键', exact: true }).waitFor();
@@ -93,14 +93,14 @@ try {
   await page.screenshot({ path: path.join(output, 'guide-shortcuts.png') });
   await guide.getByRole('button', { name: '跳过', exact: true }).click();
   await guide.waitFor({ state: 'detached' });
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.settings.guideVersion === version, 'the guide is marked as seen for this version');
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.guide, false);
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.settings.guideVersion === version, 'the guide is marked as seen for this version');
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.guide, false);
   await page.keyboard.press('Control+,');
   await page.getByRole('button', { name: '使用指南', exact: true }).click();
   // From Settings the tutorial runs in the window itself: a bubble at the place to act, the rest blocked.
   const tour = page.locator('.tour-bubble'); await tour.waitFor();
   await tour.getByRole('heading', { name: '启动编码助手', exact: true }).waitFor();
-  await tour.getByText('先点击「启动终端」，再在终端里输入 codex 或 claude，按回车启动。').waitFor();
+  await tour.getByText('在方框里选择 Claude Code 或 Codex：有开发记录时可以接着上次继续，也可以开始新开发。').waitFor();
   assert.equal(await page.locator('.tour-shade').count(), 4, 'everything but the step\'s target is shaded');
   await page.screenshot({ path: path.join(output, 'guide-step.png') });
   const gear = await page.locator('.titlebar-tools > .icon-button').boundingBox();
@@ -114,8 +114,8 @@ try {
   await page.getByRole('button', { name: '工作台设置', exact: true }).click(); await page.getByRole('button', { name: '使用指南', exact: true }).click();
   await tour.waitFor(); await page.keyboard.press('Escape'); await tour.waitFor({ state: 'detached' });
   console.log('PASS: the usage guide opens on what is new after an update, pages through the steps and shortcuts, and reopens from settings');
-  await page.getByRole('button', { name: '启动终端', exact: true }).click();
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'terminal ready');
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click();
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].shellReady, 'terminal ready');
   await page.getByRole('button', { name: `全屏查看 ${project.name}`, exact: true }).click();
   await page.getByRole('treeitem', { name: 'source.txt', exact: true }).waitFor();
   if (process.argv.includes('--slow-copy')) {
@@ -231,7 +231,7 @@ try {
   // Recent projects: a removed local project is offered again in the add dialog and comes back in one click.
   await page.getByRole('button', { name: `${project.name} 的更多操作`, exact: true }).click();
   await page.getByRole('menuitem', { name: '移除项目', exact: true }).click();
-  await waitFor(async () => !(await page.evaluate(() => window.projectGrid.getState())).value.projects.length, 'project removed');
+  await waitFor(async () => !(await page.evaluate(() => window.agentrix.getState())).value.projects.length, 'project removed');
   await page.getByRole('button', { name: '添加第一个项目', exact: true }).click();
   const recent = page.getByRole('region', { name: '最近的项目', exact: true });
   const entry = recent.getByRole('button', { name: new RegExp(`^${project.name}`) });
@@ -240,14 +240,16 @@ try {
   await page.screenshot({ path: path.join(output, 'recent-projects.png') });
   await entry.click();
   await page.locator('dialog.project-dialog').waitFor({ state: 'detached' });
-  await waitFor(async () => { const state = (await page.evaluate(() => window.projectGrid.getState())).value; return state.projects.length === 1 && state.projects[0].name === project.name; }, 'recent project is added again');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].shellReady, 'its terminal starts');
+  await waitFor(async () => { const state = (await page.evaluate(() => window.agentrix.getState())).value; return state.projects.length === 1 && state.projects[0].name === project.name; }, 'recent project is added again');
+  // A project added again waits for an agent to be chosen; no terminal starts by itself.
+  await page.locator('.agent-launcher').waitFor();
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects[0].terminals[0].sessionId, null, 'no terminal before an agent is chosen');
   await page.evaluate(() => document.activeElement?.blur()); await page.keyboard.press('Control+Shift+N');
   await page.locator('dialog.project-dialog').waitFor();
-  assert.deepEqual((await page.evaluate(() => window.projectGrid.getRecentProjects())).value, [], 'an open project is not listed as recent');
+  assert.deepEqual((await page.evaluate(() => window.agentrix.getRecentProjects())).value, [], 'an open project is not listed as recent');
   assert.equal(await recent.count(), 0);
   await page.keyboard.press('Escape');
-  console.log('PASS: a removed project is listed under recent projects and one click adds it back with a running terminal');
+  console.log('PASS: a removed project is listed under recent projects and one click adds it back, ready to pick an agent');
   // Shortcuts are the user's to change: record a new key for search in settings, use it, then restore defaults.
   await page.evaluate(() => document.activeElement?.blur());
   await page.keyboard.press('Control+,');
@@ -263,7 +265,7 @@ try {
   await page.getByText('Ctrl+T 已用于「语音输入」', { exact: true }).waitFor();
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('dialog[open]').count(), 1, 'Escape while recording cancels the recording, not the dialog');
-  assert.deepEqual((await page.evaluate(() => window.projectGrid.getState())).value.settings.shortcuts, { search: 'Ctrl+Shift+K' });
+  assert.deepEqual((await page.evaluate(() => window.agentrix.getState())).value.settings.shortcuts, { search: 'Ctrl+Shift+K' });
   await page.getByRole('button', { name: '完成', exact: true }).click();
   await page.keyboard.press('Control+Shift+F');
   assert.equal(await page.getByRole('textbox', { name: '搜索项目', exact: true }).count(), 0, 'the old key no longer searches');
@@ -274,25 +276,26 @@ try {
   await page.locator('.settings-nav').getByRole('button', { name: '键盘快捷键', exact: true }).click();
   await page.getByRole('button', { name: '恢复默认', exact: true }).click();
   await waitFor(async () => (await searchKey.innerText()) === 'Ctrl+Shift+F', 'restore defaults');
-  assert.deepEqual((await page.evaluate(() => window.projectGrid.getState())).value.settings.shortcuts, {});
+  assert.deepEqual((await page.evaluate(() => window.agentrix.getState())).value.settings.shortcuts, {});
   await page.getByRole('button', { name: '完成', exact: true }).click();
   console.log('PASS: shortcuts are recorded in settings, conflicts are refused, the new key works and defaults come back');
   // English mode: the window, settings, main-process messages and titles switch together, and back again.
-  await page.evaluate(() => window.projectGrid.settings({ language: 'en' }));
+  await page.evaluate(() => window.agentrix.settings({ language: 'en' }));
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).waitFor();
   assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
-  assert.equal(await page.locator('.status-badge').first().innerText(), 'Terminal ready');
+  assert.equal(await page.locator('.status-badge').first().innerText(), 'Not started');
+  assert.equal(await page.locator('.agent-launcher-title').innerText(), 'Pick an agent and start');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await page.getByRole('heading', { name: 'Workspace settings', exact: true }).waitFor();
   assert.equal(await page.getByRole('combobox', { name: 'Language', exact: true }).inputValue(), 'en');
   await page.screenshot({ path: path.join(output, 'settings-english.png') });
   await page.getByRole('button', { name: 'Done', exact: true }).click();
-  assert.equal((await page.evaluate(() => window.projectGrid.addRecentProject('C:\\missing-folder'))).error, 'This project is not in the recent list. Choose the folder again.', 'main-process errors arrive in English');
-  assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getTitle()), 'Project Grid');
+  assert.equal((await page.evaluate(() => window.agentrix.addRecentProject('C:\\missing-folder'))).error, 'This project is not in the recent list. Choose the folder again.', 'main-process errors arrive in English');
+  assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getTitle()), 'Agentrix');
   await page.screenshot({ path: path.join(output, 'grid-english.png') });
-  await page.evaluate(() => window.projectGrid.settings({ language: 'zh' }));
+  await page.evaluate(() => window.agentrix.settings({ language: 'zh' }));
   await page.getByRole('button', { name: '工作台设置', exact: true }).waitFor();
-  assert.equal(await page.locator('.status-badge').first().innerText(), '终端就绪');
+  assert.equal(await page.locator('.status-badge').first().innerText(), '尚未启动');
   console.log('PASS: English mode translates the window, settings, main-process errors and titles, and switches back');
   console.log(`Screenshots: ${output}`);
 } catch (error) {

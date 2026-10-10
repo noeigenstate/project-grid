@@ -25,7 +25,7 @@ export class MicrophoneCapture {
       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { ...(deviceId ? { deviceId: { exact: deviceId } } : {}), channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false });
       this.context = new AudioContext();
       await this.context.audioWorklet.addModule(new URL('./voice-capture.worklet.js?no-inline', import.meta.url).href);
-      this.node = new AudioWorkletNode(this.context, 'project-grid-voice');
+      this.node = new AudioWorkletNode(this.context, 'agentrix-voice');
       this.node.port.onmessage = event => {
         if (event.data.flushed) { this.recording = false; this.flushed?.(); this.flushed = null; return; }
         const { samples, level } = event.data as { samples: Float32Array; level: number };

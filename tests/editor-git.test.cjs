@@ -36,7 +36,7 @@ test('each choice keeps exactly what the user picked and nothing else changes', 
 });
 
 test('Git marks come from the diff hunks: added, modified and the edge where lines were removed', async t => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'project-grid-marks-'));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agentrix-marks-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   const git = (...args) => exec('git', ['-C', root, ...args], { env: gitEnvironment(), windowsHide: true, encoding: 'utf8', timeout: 10000 });
   await git('init', '-b', 'main'); await git('config', 'user.name', 'Test'); await git('config', 'user.email', 'test@example.invalid'); await git('config', 'core.autocrlf', 'false');

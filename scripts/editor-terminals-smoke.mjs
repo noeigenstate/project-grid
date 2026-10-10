@@ -25,15 +25,15 @@ await fs.writeFile(path.join(project.path, 'page.html'), '<h1>Original page</h1>
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects: [project], settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, restoreSessions: true, closeToTray: false } }));
 await exec(path.join(process.env.SystemRoot || 'C:\\Windows', 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'), ['/nologo', '/target:exe', '/reference:System.Web.Extensions.dll', `/out:${path.join(bin, 'codex.exe')}`, path.join(root, 'tests/fixtures/multi-codex.cs')], { windowsHide: true });
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_RESTORE: '1', PROJECT_GRID_TEST_SSH_CONFIG: ssh.configFile, CODEX_HOME: codexHome };
-delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, AGENTRIX_TEST_RESTORE: '1', AGENTRIX_TEST_SSH_CONFIG: ssh.configFile, CODEX_HOME: codexHome };
+delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path'); env[pathKey] = bin + path.delimiter + env[pathKey];
 const packaged = process.argv.includes('--packaged');
 let application, page, clipboardOwner = null;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0];
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0];
 const record = (type, turn) => JSON.stringify({ type: 'event_msg', timestamp: new Date().toISOString(), payload: { type, turn_id: turn } }) + '\n';
 async function launch() {
-  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await application.firstWindow();
   await application.evaluate(async ({ clipboard, ClipboardItem }) => { globalThis.clipboardBackup = await Promise.all((await clipboard.read()).filter(item => item.types.length).map(async item => new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)])))))); });
   await application.evaluate(({ dialog }) => { globalThis.editorResponses = []; dialog.showMessageBox = async (_window, options) => ({ response: options.title === '未保存的修改' ? globalThis.editorResponses.shift() ?? 2 : 1 }); });
@@ -48,7 +48,7 @@ async function restoreClipboard() {
 }
 try {
   await launch();
-  await page.getByRole('button', { name: '启动终端', exact: true }).click();
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).shellReady, 'first terminal');
   const primarySession = (await state()).sessionId;
   // Ctrl+Shift+T adds a split to the project being typed in and focuses it (the SSH project below uses the menu).
@@ -69,7 +69,7 @@ try {
   assert.ok(proofs.every(proof => Number.isInteger(proof.Process) && proof.Process > 0));
   assert.notEqual(proofs[0].Process, proofs[1].Process, 'each split must own a distinct native shell process');
   for (const [index, id] of ids.entries()) {
-    const snapshot = await page.evaluate(id => window.projectGrid.attachTerminal(id), id);
+    const snapshot = await page.evaluate(id => window.agentrix.attachTerminal(id), id);
     assert.equal(snapshot.value.sessionId, (await state()).terminals[index].sessionId);
     // Raw VT history may contain a prediction from shared PSReadLine history
     // that was erased before submission. Assert the final screen instead.
@@ -104,12 +104,12 @@ try {
   await page.keyboard.press('Control+s');
   await waitFor(async () => (await fs.readFile(path.join(project.path, 'src', 'main.txt'), 'utf8')) === 'saved\r\n保留中文', 'Ctrl+S saves with original CRLF');
   // Auto save (the default): a pause in typing writes the file, with no shortcut and without taking focus.
-  await page.evaluate(() => window.projectGrid.settings({ autoSave: true }));
+  await page.evaluate(() => window.agentrix.settings({ autoSave: true }));
   await editor.fill('auto\n自动保存');
   await waitFor(async () => (await fs.readFile(path.join(project.path, 'src', 'main.txt'), 'utf8')) === 'auto\r\n自动保存', 'a pause in typing saves the file');
   assert.equal(await editor.evaluate(node => document.activeElement === node), true, 'saving does not take focus from the editor');
   assert.equal(await page.locator('.preview-readonly').innerText(), '编辑模式 · 自动保存');
-  await page.evaluate(() => window.projectGrid.settings({ autoSave: false }));
+  await page.evaluate(() => window.agentrix.settings({ autoSave: false }));
   await editor.fill('saved\n保留中文'); await page.keyboard.press('Control+s');
   await waitFor(async () => (await fs.readFile(path.join(project.path, 'src', 'main.txt'), 'utf8')) === 'saved\r\n保留中文', 'manual saving again');
   await waitFor(async () => (await page.locator('.preview-readonly').innerText()) === '编辑模式', 'saved state shows plain edit mode');
@@ -148,12 +148,12 @@ try {
   await page.frameLocator('iframe.html-preview-frame').getByText('Edited HTML').waitFor();
   await page.getByRole('button', { name: '源码', exact: true }).click(); await editor.fill('<h1>Draft</h1>');
   await page.screenshot({ path: path.join(output, 'file-editor.png') });
-  await answer(2); const canceled = await page.evaluate(() => window.projectGrid.quit()); assert.equal(canceled.value, false);
+  await answer(2); const canceled = await page.evaluate(() => window.agentrix.quit()); assert.equal(canceled.value, false);
   await answer(1); await page.getByRole('button', { name: '返回终端', exact: true }).click();
   await waitFor(async () => (await state()).terminals.every(item => item.shellReady), 'shells still ready after editing');
   console.log('PASS: path copy, text/HTML edits, Ctrl+S, unsaved navigation/quit and save-conflict protection');
 
-  for (const id of ids) await page.evaluate(id => window.projectGrid.writeTerminal(id, 'codex\r'), id);
+  for (const id of ids) await page.evaluate(id => window.agentrix.writeTerminal(id, 'codex\r'), id);
   assert.equal(await page.getByRole('button', { name: '启动 Codex', exact: true }).count(), 0, 'no launch button: agents start from the prompt');
   await waitFor(async () => { const saved = await readSaved(); return !!saved.restore.threadId && !!saved.terminals[0].restore.threadId; }, 'distinct native terminal titles');
   const saved = await readSaved(), threads = [saved.restore.threadId, saved.terminals[0].restore.threadId];
@@ -174,8 +174,8 @@ try {
   assert.equal((await state()).terminals[0].sessionId, secondSession);
   assert.equal((await state()).terminals[0].codexActive, true);
   console.log('PASS: independent terminals, automatic splits, exact Codex recovery and closing one without restarting its neighbor');
-  const remoteId = (await page.evaluate(() => window.projectGrid.addSSHProject({ host: 'fixture', path: '/srv/fixture', name: 'SSH 分屏验证' }))).value;
-  const remoteState = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects.find(item => item.id === remoteId);
+  const remoteId = (await page.evaluate(() => window.agentrix.addSSHProject({ host: 'fixture', path: '/srv/fixture', name: 'SSH 分屏验证' }))).value;
+  const remoteState = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects.find(item => item.id === remoteId);
   await waitFor(async () => (await remoteState()).shellReady, 'SSH terminal ready');
   await page.getByRole('button', { name: 'SSH 分屏验证 的更多操作', exact: true }).click(); await page.getByRole('menuitem', { name: '新建终端并分屏', exact: true }).click();
   await waitFor(async () => (await remoteState()).terminals.length === 2 && (await remoteState()).terminals.every(item => item.shellReady), 'two independent SSH terminals');
@@ -191,7 +191,7 @@ try {
   await page.getByRole('button', { name: '关闭 SSH 分屏验证 终端 1', exact: true }).click();
   await waitFor(async () => (await remoteState()).terminals.length === 1, 'one SSH terminal closes');
   assert.equal((await remoteState()).terminals[0].sessionId, remoteSecond);
-  assert.equal((await page.evaluate(id => window.projectGrid.readFile(id, 'remote.txt'), remoteId)).value.content, 'saved over SSH\n远程编辑');
+  assert.equal((await page.evaluate(id => window.agentrix.readFile(id, 'remote.txt'), remoteId)).value.content, 'saved over SSH\n远程编辑');
   console.log('PASS: SSH split terminals, Linux absolute paths, editing and file access after closing the first connection');
   console.log(`Screenshots: ${output}`);
 } catch (error) {

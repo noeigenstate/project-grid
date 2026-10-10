@@ -15,7 +15,7 @@ test('notices become text the voice can read: colons and quotes turn into pauses
 test('the natural voice is pinned by revision, size and SHA-256, and reports ready only when every file is present', async t => {
   assert.ok(SPEECH_FILES.every(file => /^[a-f\d]{64}$/.test(file.sha256) && file.size > 0 && file.urls.every(url => url.includes('/resolve/a0d5c6a264c0ef92d70d8661d8cc502d79627cd6/'))));
   assert.ok(SPEECH_BYTES > 70e6 && SPEECH_BYTES < 80e6, 'about 74 MB');
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-speech-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-speech-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const missing = new SpeechManager({ directory });
   assert.equal((await missing.getState()).ready, false);
@@ -31,7 +31,7 @@ test('the natural voice is pinned by revision, size and SHA-256, and reports rea
 });
 
 test('the loaded voice is kept while a round is worked on, released when idle, and loads again on demand', async t => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-speech-'));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-speech-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   for (const file of SPEECH_FILES) {
     const target = path.join(directory, SPEECH_DIRECTORY, file.name);

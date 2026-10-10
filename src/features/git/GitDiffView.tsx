@@ -20,7 +20,7 @@ export function GitDiffView({ projectId, filePath, mode, onClose, onOpenFile, on
   const staged = mode === 'staged', untracked = mode === 'untracked';
   useEffect(() => {
     let active = true; setLoading(true);
-    window.projectGrid.gitDiff(projectId, filePath, { staged, untracked }).then(result => {
+    window.agentrix.gitDiff(projectId, filePath, { staged, untracked }).then(result => {
       if (!active) return;
       if (result.ok) { setDiff(result.value); setError(''); } else { setDiff(null); setError(result.error); }
     }).catch(err => { if (active) { setDiff(null); setError(String(err)); } }).finally(() => { if (active) setLoading(false); });
@@ -31,7 +31,7 @@ export function GitDiffView({ projectId, filePath, mode, onClose, onOpenFile, on
   const apply = useCallback(async (patch: string, options: { reverse?: boolean; cached?: boolean }) => {
     setBusy(true);
     try {
-      const result = await window.projectGrid.gitApply(projectId, patch, { path: filePath, ...options });
+      const result = await window.agentrix.gitApply(projectId, patch, { path: filePath, ...options });
       if (!result.ok) { onError(result.error); return; }
       if (result.value.applied) { onChanged(); setRevision(value => value + 1); }
     } catch (err) { onError(String(err)); }
@@ -39,7 +39,7 @@ export function GitDiffView({ projectId, filePath, mode, onClose, onOpenFile, on
   }, [projectId, filePath, onChanged, onError]);
   const keep = (patch: string) => apply(patch, staged ? { reverse: true, cached: true } : { cached: true });
   const revert = async (patch: string, count: number) => {
-    const confirmed = await window.projectGrid.confirmGitRevert(projectId, filePath, count);
+    const confirmed = await window.agentrix.confirmGitRevert(projectId, filePath, count);
     if (!confirmed.ok) { onError(confirmed.error); return; }
     if (confirmed.value) await apply(patch, { reverse: true });
   };

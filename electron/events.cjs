@@ -9,7 +9,7 @@ function socketAddress(name, folder = require('node:os').tmpdir()) {
 
 // A per-launch local pipe; the renderer never receives session credentials.
 async function createEventServer(onEvent) {
-  const name = process.platform === 'win32' ? `project-grid-${randomUUID()}` : `pg-${randomBytes(12).toString('hex')}`;
+  const name = process.platform === 'win32' ? `agentrix-${randomUUID()}` : `pg-${randomBytes(12).toString('hex')}`;
   const address = process.platform === 'win32' ? `\\\\.\\pipe\\${name}` : socketAddress(name);
   const connections = new Set();
   const server = net.createServer(socket => {

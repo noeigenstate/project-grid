@@ -28,15 +28,15 @@ await fs.writeFile(path.join(codexHome, 'sessions', `rollout-${sessionId}.jsonl`
 ].map(value => JSON.stringify(value)).join('\n') + '\n');
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects: [{ ...project, restore: { terminal: true, codex: true, cwd: project.path, threadId: sessionId } }], settings: { terminalRenderer: 'dom', shell: 'cmd', restoreSessions: true, notifications: false, sound: false, announce: false, closeToTray: false } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_RESTORE: '1', CODEX_HOME: codexHome };
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, AGENTRIX_TEST_RESTORE: '1', CODEX_HOME: codexHome };
 const pathKey = Object.keys(env).find(key => key.toLowerCase() === 'path'); env[pathKey] = bin + path.delimiter + env[pathKey];
-delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged');
 let application, page;
-const terminal = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].terminals[0];
+const terminal = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].terminals[0];
 const receipt = async () => { try { return JSON.parse(await fs.readFile(path.join(project.path, 'resume-receipt.json'), 'utf8')); } catch { return null; } };
 try {
-  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env, timeout: 30000 });
+  application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env, timeout: 30000 });
   page = await application.firstWindow();
   await page.waitForSelector('.project-panel');
   await waitFor(receipt, 'the interrupted session is resumed through Command Prompt', 60000);
@@ -45,14 +45,14 @@ try {
   await waitFor(async () => (await terminal()).codexActive, 'the wrapper reports Codex as started');
   await page.screenshot({ path: path.join(output, 'cmd-codex.png') });
   // Leaving Codex returns to the cmd prompt, which reports itself through its invisible marker.
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x03'), project.id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, '\x03'), project.id);
   await waitFor(async () => { const state = await terminal(); return !state.codexActive && state.shellReady; }, 'back at the cmd prompt after Codex exits');
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, 'cd sub\r'), project.id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, 'cd sub\r'), project.id);
   await waitFor(async () => { const saved = JSON.parse(await fs.readFile(path.join(dataDir, 'workspace.json'), 'utf8')); return saved.projects[0].restore.cwd === path.join(project.path, 'sub'); }, 'the prompt reports the new directory');
   const text = await page.locator('.xterm-rows').first().innerText();
   // The welcome has scrolled away under Codex's output; the new prompt is on screen.
   await waitFor(async () => (await page.locator('.xterm-rows').first().innerText()).includes(`${path.join(project.path, 'sub')}>`), 'the cmd prompt shows the new directory');
-  assert.ok(!text.includes('6973') && !text.includes('ProjectGrid;prompt'), 'the prompt marker stays invisible');
+  assert.ok(!text.includes('6973') && !text.includes('Agentrix;prompt'), 'the prompt marker stays invisible');
   await page.screenshot({ path: path.join(output, 'cmd-prompt.png') });
   console.log('PASS: Command Prompt terminals start from settings, report prompts and directories, run codex through the wrapper and resume interrupted sessions with 继续');
 } catch (error) {

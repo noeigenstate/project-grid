@@ -87,7 +87,7 @@ function TreeNode(props: NodeProps) {
         let offset: number | null = 0;
         let result: DirectoryListing | null = null;
         for (let page = 0; page < pages && offset !== null; page++) {
-          const response = await window.projectGrid.listDirectory(projectId, entry.path, offset);
+          const response = await window.agentrix.listDirectory(projectId, entry.path, offset);
           if (!active) return;
           if (!response.ok) throw new Error(response.error);
           result = response.value;
@@ -159,7 +159,7 @@ export function ProjectExplorer({ project, collapsed, expandedPaths, selectedFil
   }, [project.id, collapsed]);
   const toggle = (folder: string) => { const next = new Set(expanded); if (next.has(folder)) next.delete(folder); else next.add(folder); onExpandedChange([...next]); };
 
-  const openGit = (open: boolean) => { window.projectGrid.fileTreeFocus(project.id, false); setGitOpen(open); if (collapsed) onCollapse(); };
+  const openGit = (open: boolean) => { window.agentrix.fileTreeFocus(project.id, false); setGitOpen(open); if (collapsed) onCollapse(); };
   const changes = git.status?.total || 0;
   return <aside className={`focus-sidebar ${collapsed ? 'is-collapsed' : ''}`} aria-label={t('项目侧边栏')}>
     <div className="explorer-navigation">
@@ -180,7 +180,7 @@ export function ProjectExplorer({ project, collapsed, expandedPaths, selectedFil
         <button aria-label={t('资源管理器')} aria-pressed={!gitOpen} onClick={() => openGit(false)}>{t('文件')}</button>
         <button aria-label={t('Git 历史')} title={t('Git 历史与未提交更改')} aria-pressed={gitOpen} onClick={() => openGit(true)}>Git{!!changes && <span className="explorer-tab-count">{changes > 999 ? '999+' : changes}</span>}</button>
       </div>
-      {!gitOpen && <div className="explorer-tools" onPointerDown={() => window.projectGrid.fileTreeFocus(project.id, false)}>
+      {!gitOpen && <div className="explorer-tools" onPointerDown={() => window.agentrix.fileTreeFocus(project.id, false)}>
         <button className="icon-button" aria-label={t('新建文件')} title={t('新建文件')} onClick={() => files.openCreate('file')}><FilePlus size={15} /></button>
         <button className="icon-button" aria-label={t('新建文件夹')} title={t('新建文件夹')} onClick={() => files.openCreate('directory')}><FolderPlus size={15} /></button>
         <button className="icon-button" aria-label={t('粘贴文件')} title={t('粘贴到选中目录 · Ctrl+V')} onClick={files.pasteHere}><Clipboard size={15} /></button>
@@ -188,7 +188,7 @@ export function ProjectExplorer({ project, collapsed, expandedPaths, selectedFil
         <button className="icon-button" aria-label={t('折叠所有文件夹')} title={t('折叠所有文件夹')} onClick={() => onExpandedChange([''])}><ArrowsInLineVertical size={15} /></button>
       </div>}
       <div ref={files.tree} className="file-tree" hidden={gitOpen} role="tree" tabIndex={0} aria-multiselectable="true" aria-label={t('{name} 的文件目录', { name: project.name })} onKeyDownCapture={files.onKeyDown} onClick={files.onBackgroundClick} onContextMenu={files.onBackgroundContextMenu}
-        onFocusCapture={() => window.projectGrid.fileTreeFocus(project.id, true)} onBlurCapture={event => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) window.projectGrid.fileTreeFocus(project.id, false); }}>
+        onFocusCapture={() => window.agentrix.fileTreeFocus(project.id, true)} onBlurCapture={event => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) window.agentrix.fileTreeFocus(project.id, false); }}>
         <TreeNode projectId={project.id} entry={{ name: project.name, path: '', kind: 'directory' }} depth={-1} expanded={expanded} revision={revision} enabled={!collapsed && !gitOpen} selectedFile={selectedFile} onToggle={toggle} onSelect={onSelectFile} selected={files.selected} choose={files.choose} contextMenu={files.contextMenu} decorations={decorations} />
       </div>
       {gitOpen && !collapsed && <GitPanel projectId={project.id} status={git.status} error={git.error} loading={git.loading} revision={gitRevision} onRefresh={() => { git.refresh(); setGitRevision(value => value + 1); }} onOpen={(path, mode) => mode === 'file' ? onSelectFile(path) : onOpenChange(path, mode)} />}

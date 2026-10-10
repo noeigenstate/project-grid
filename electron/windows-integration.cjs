@@ -3,7 +3,7 @@ const path = require('node:path');
 const { createHash } = require('node:crypto');
 
 const APP_ID = 'local.projectgrid.desktop';
-const APP_NAME = 'Project Grid';
+const APP_NAME = 'Agentrix', LEGACY_NAME = 'Project Grid';
 
 function windowsAppId({ packaged, installed, profile }) {
   if (profile) return `${APP_ID}.test.${createHash('sha256').update(path.resolve(profile)).digest('hex').slice(0, 12)}`;
@@ -15,7 +15,7 @@ function materializeIcon(iconSource, userData) {
   const iconBytes = fs.readFileSync(iconSource);
   const iconFolder = path.join(userData, 'shell-icons');
   fs.mkdirSync(iconFolder, { recursive: true });
-  const icon = path.join(iconFolder, `project-grid-${createHash('sha256').update(iconBytes).digest('hex').slice(0, 12)}.ico`);
+  const icon = path.join(iconFolder, `agentrix-${createHash('sha256').update(iconBytes).digest('hex').slice(0, 12)}.ico`);
   if (!fs.existsSync(icon)) fs.writeFileSync(icon, iconBytes);
   return icon;
 }
@@ -82,7 +82,7 @@ function repairShortcuts({ shell, executable, iconSource, userData, programs, co
     const exists = fs.existsSync(filename), previous = exists ? read(filename) : null;
     if (!exists && !create) return;
     if (exists && (!previous || previous.appUserModelId !== APP_ID && !same(previous.target, executable))) return;
-    const wanted = { target: executable, cwd: path.dirname(executable), description: 'Project Grid 项目矩阵 · 多项目终端工作台', icon, iconIndex: 0, appUserModelId: APP_ID };
+    const wanted = { target: executable, cwd: path.dirname(executable), description: 'Agentrix · 面向未来的 AI 编辑器', icon, iconIndex: 0, appUserModelId: APP_ID };
     if (previous && Object.entries(wanted).every(([key, value]) => previous[key] === value)) return;
     try {
       fs.mkdirSync(path.dirname(filename), { recursive: true });
@@ -90,10 +90,19 @@ function repairShortcuts({ shell, executable, iconSource, userData, programs, co
       changes.push({ action: exists ? 'repair-shortcut' : 'create-shortcut', path: filename });
     } catch (error) { warnings.push(String(error.message)); }
   };
+  // The app used to be called Project Grid: its shortcuts there (ours by their app id, never another app's file of
+  // that name) give way to Agentrix ones in the same places.
+  const renamed = new Set();
+  for (const folder of [programs, commonPrograms, desktop, commonDesktop]) {
+    const legacy = folder && path.join(folder, `${LEGACY_NAME}.lnk`);
+    if (!legacy || !fs.existsSync(legacy) || read(legacy)?.appUserModelId !== APP_ID) continue;
+    try { fs.unlinkSync(legacy); renamed.add(folder); changes.push({ action: 'remove-renamed-shortcut', path: legacy }); }
+    catch (error) { warnings.push(String(error.message)); }
+  }
   ensure(path.join(programs, `${APP_NAME}.lnk`), true);
-  if (commonPrograms) ensure(path.join(commonPrograms, `${APP_NAME}.lnk`), false);
-  if (desktop) ensure(path.join(desktop, `${APP_NAME}.lnk`), createDesktop);
-  if (commonDesktop) ensure(path.join(commonDesktop, `${APP_NAME}.lnk`), false);
+  if (commonPrograms) ensure(path.join(commonPrograms, `${APP_NAME}.lnk`), renamed.has(commonPrograms));
+  if (desktop) ensure(path.join(desktop, `${APP_NAME}.lnk`), createDesktop || renamed.has(desktop));
+  if (commonDesktop) ensure(path.join(commonDesktop, `${APP_NAME}.lnk`), renamed.has(commonDesktop));
   return { icon, changes, warnings };
 }
 

@@ -9,7 +9,7 @@ const TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'im
 
 // Pictures pasted into the reading view arrive as data URLs; Codex reads an attached picture from a file. At most
 // four, none over about 10 MB, kept in the system's temporary folder.
-async function pictures(images, folder = path.join(os.tmpdir(), 'project-grid-images')) {
+async function pictures(images, folder = path.join(os.tmpdir(), 'agentrix-images')) {
   const files = [];
   for (const image of Array.isArray(images) ? images.slice(0, 4) : []) {
     const match = typeof image === 'string' && image.length < 14_000_000 ? /^data:(image\/[\w.+-]+);base64,([A-Za-z0-9+/=]+)$/.exec(image) : null;

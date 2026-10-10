@@ -16,9 +16,9 @@ const output = await testRun('gpu-terminal'), dataDir = path.join(output, 'profi
 const project = { id: randomUUID(), name: 'GPU terminal', path: path.join(output, 'project'), kind: 'local', restore: { terminal: false, codex: false } };
 await fs.mkdir(project.path, { recursive: true }); await fs.mkdir(dataDir, { recursive: true });
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects: [project], settings: { notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false, guideVersion: '9.9.9' } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged');
-const application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env, timeout: 30000 });
+const application = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env, timeout: 30000 });
 const errors = [];
 try {
   const page = await application.firstWindow();
@@ -27,11 +27,11 @@ try {
   // A machine without WebGL (some build servers) draws terminals with the DOM renderer by design.
   if (!await page.evaluate(() => !!document.createElement('canvas').getContext('webgl2'))) { console.log('SKIP: WebGL 2 is not available here; terminals use the compatible renderer.'); process.exitCode = 0; }
   else {
-  await page.getByRole('button', { name: '启动终端', exact: true }).click();
-  const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0];
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click();
+  const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0];
   await waitFor(async () => (await state()).shellReady, 'shell ready');
   const host = page.locator('.terminal-host').first();
-  const screen = () => page.evaluate(id => window.projectGrid.attachTerminal(id).then(result => result.value.data), project.id);
+  const screen = () => page.evaluate(id => window.agentrix.attachTerminal(id).then(result => result.value.data), project.id);
 
   // Drawn on the GPU: a WebGL canvas and no rows of HTML.
   await waitFor(async () => (await host.locator('.xterm-screen canvas').count()) > 0, 'terminal draws on a canvas');
@@ -75,14 +75,14 @@ try {
   await page.mouse.move(box.x + box.width - 30, box.y + box.height - 10, { steps: 8 }); await page.mouse.up();
   await waitFor(async () => (await host.getAttribute('data-has-selection')) === 'true', 'text selected');
   await page.keyboard.press('Control+c');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.readClipboard())).value.includes('GPU_TERMINAL_OK'), 'selection copied');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.readClipboard())).value.includes('GPU_TERMINAL_OK'), 'selection copied');
   assert.equal(await page.locator('.focus-mode').count(), 0, 'selecting and copying never expands the project');
 
   // Switching renderers keeps the session and its text.
-  await page.evaluate(() => window.projectGrid.settings({ terminalRenderer: 'dom' }));
+  await page.evaluate(() => window.agentrix.settings({ terminalRenderer: 'dom' }));
   await waitFor(async () => (await host.locator('.xterm-rows').innerText()).includes('GPU_TERMINAL_OK'), 'compatible renderer shows the same text');
   assert.equal(await host.locator('.xterm-screen canvas').count(), 0);
-  await page.evaluate(() => window.projectGrid.settings({ terminalRenderer: 'gpu' }));
+  await page.evaluate(() => window.agentrix.settings({ terminalRenderer: 'gpu' }));
   await waitFor(async () => (await host.locator('.xterm-screen canvas').count()) > 0 && (await host.locator('.xterm-rows > div').count()) === 0, 'back on the GPU');
   await page.keyboard.press('Escape');
   await host.click({ position: { x: 120, y: 60 } });

@@ -33,7 +33,7 @@ export function useMentions({ projectId, draft, input, disabled, edit, onError }
     let active = true;
     setResults({ key, files: [], loading: true });
     const timer = setTimeout(() => {
-      void window.projectGrid.findFiles(projectId, query).then(result => {
+      void window.agentrix.findFiles(projectId, query).then(result => {
         if (!active) return;
         setResults({ key, files: result.ok ? result.value : [], loading: false });
         if (!result.ok) reportError.current(result.error);

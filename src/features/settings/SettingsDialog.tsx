@@ -13,7 +13,7 @@ import { isMac, isLinux } from '../../shared/platform';
 import { recommendedAppearance } from '../../shared/theme-presets';
 import { TerminalFontSettings } from './TerminalFontSettings';
 
-const api = window.projectGrid;
+const api = window.agentrix;
 
 // Spoken completion notice: on/off, an optional own phrase, and a preview in the chosen voice.
 function AnnounceSettings({ settings, update }: { settings: Settings; update: (patch: Partial<Settings>) => void }) {

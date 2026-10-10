@@ -80,11 +80,11 @@ export function FilePreview({ projectId, filePath, autoSave, onClose, onError, r
     if (!quiet) setSaving(true);
     setSaveMessage('');
     const sent = draft;
-    const task = window.projectGrid.saveFile(projectId, filePath, textPage.index, preview.revision, sent).then(result => {
+    const task = window.agentrix.saveFile(projectId, filePath, textPage.index, preview.revision, sent).then(result => {
       if (!result.ok) { setSaveMessage(result.error); return false; }
       setLoaded({ key, result });
       if ('content' in result.value) { const saved = result.value.content.replace(/\r\n/g, '\n'); setDraft(current => current === sent ? saved : current); }
-      if (draftRef.current === sent) { dirtyRef.current = false; window.projectGrid.editorDirty(false); }
+      if (draftRef.current === sent) { dirtyRef.current = false; window.agentrix.editorDirty(false); }
       setSaveMessage(quiet ? t('已自动保存') : t('已保存')); return true;
     }).catch(error => { setSaveMessage(String(error.message || error)); return false; })
       .finally(() => { setSaving(false); savingTask.current = null; });
@@ -105,19 +105,19 @@ export function FilePreview({ projectId, filePath, autoSave, onClose, onError, r
     if (!dirtyRef.current) return true;
     // With auto save, leaving the file saves it; the question is asked only when that fails.
     if (autoSave && await saveRef.current(true) && !dirtyRef.current) return true;
-    const result = await window.projectGrid.confirmEditorClose(filePath);
+    const result = await window.agentrix.confirmEditorClose(filePath);
     if (!result.ok || result.value === 'cancel') return false;
     if (result.value === 'save') return save();
-    dirtyRef.current = false; window.projectGrid.editorDirty(false);
+    dirtyRef.current = false; window.agentrix.editorDirty(false);
     setDraft((text || '').replace(/\r\n/g, '\n')); return true;
   };
   useEffect(() => {
     registerGuard(() => guard.current());
     const beforeUnload = (event: BeforeUnloadEvent) => { if (dirtyRef.current) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', beforeUnload);
-    return () => { registerGuard(null); window.projectGrid.editorDirty(false); window.removeEventListener('beforeunload', beforeUnload); };
+    return () => { registerGuard(null); window.agentrix.editorDirty(false); window.removeEventListener('beforeunload', beforeUnload); };
   }, [registerGuard]);
-  useEffect(() => { window.projectGrid.editorDirty(dirty || saving, projectId, filePath); }, [dirty, saving, projectId, filePath]);
+  useEffect(() => { window.agentrix.editorDirty(dirty || saving, projectId, filePath); }, [dirty, saving, projectId, filePath]);
   const navigate = async (action: () => void) => { if (await guard.current()) { setEditing(false); setSaveMessage(''); action(); } };
   const beginEditing = () => { if (text === null) return; if (!editing) setDraft(text.replace(/\r\n/g, '\n')); setEditing(true); setMode('source'); setSaveMessage(''); requestAnimationFrame(() => editor.current?.focus()); };
 
@@ -129,21 +129,21 @@ export function FilePreview({ projectId, filePath, autoSave, onClose, onError, r
     // An untracked file is compared with nothing, so all of it is new; a file with unresolved conflicts shows
     // its conflict regions instead.
     (async () => {
-      const status = await window.projectGrid.gitStatus(projectId);
+      const status = await window.agentrix.gitStatus(projectId);
       if (!active || !status.ok || !status.value.repository) return;
       const file = status.value.files.find(item => item.path === filePath);
       if (file?.conflict) return;
-      const result = await window.projectGrid.gitDiff(projectId, filePath, { untracked: file?.untracked === true });
+      const result = await window.agentrix.gitDiff(projectId, filePath, { untracked: file?.untracked === true });
       if (active && result.ok && result.value.repository && !result.value.binary) setDiff(result.value);
     })().catch(() => {});
     return () => { active = false; };
   }, [projectId, filePath, editing, textPage?.count, preview?.revision]);
   useEffect(() => { if (textPage) setPageInput(String(textPage.index + 1)); }, [textPage?.index]);
-  useEffect(() => () => { if (previewId) window.projectGrid.closePreview(previewId).catch(() => {}); }, [previewId]);
+  useEffect(() => () => { if (previewId) window.agentrix.closePreview(previewId).catch(() => {}); }, [previewId]);
   useEffect(() => {
     let active = true;
     setLoading(true);
-    window.projectGrid.readFile(projectId, filePath, pageIndex).then(result => {
+    window.agentrix.readFile(projectId, filePath, pageIndex).then(result => {
       if (active) {
         setLoaded({ key, result }); setSaveMessage('');
         if (result.ok && 'content' in result.value) {
@@ -153,12 +153,12 @@ export function FilePreview({ projectId, filePath, autoSave, onClose, onError, r
           if (editable && result.value.kind !== 'markdown') setMode('source');
         } else setEditing(false);
       }
-      else if (result.ok && 'previewId' in result.value) window.projectGrid.closePreview(result.value.previewId).catch(() => {});
+      else if (result.ok && 'previewId' in result.value) window.agentrix.closePreview(result.value.previewId).catch(() => {});
     }).catch(err => { if (active) setLoaded({ key, result: { ok: false, error: String(err.message || err) } }); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [projectId, filePath, key, pageIndex, revision]);
-  const openVideo = async () => { const result = await window.projectGrid.openVideo(projectId, filePath); if (!result.ok) onError(result.error); };
+  const openVideo = async () => { const result = await window.agentrix.openVideo(projectId, filePath); if (!result.ok) onError(result.error); };
   const changeZoom = (step: number) => setZoom(value => Math.max(.1, Math.min(4, (value === 'fit' ? 1 : value) + step)));
   const Icon = preview?.kind === 'image' ? ImageIcon : preview?.kind === 'video' ? FilmStrip : preview?.kind === 'html' ? Globe : FileText;
 
@@ -170,7 +170,7 @@ export function FilePreview({ projectId, filePath, autoSave, onClose, onError, r
     if (!document.execCommand(replacement ? 'insertText' : 'delete', false, replacement)) setDraft(node.value.slice(0, from) + replacement + node.value.slice(to));
   };
   const editorField = <CodeEditor editor={editor} text={draft} diff={diff} onResolve={resolve}><textarea ref={editor} className="file-text-editor" aria-label={t('文件编辑器')} value={draft} spellCheck={false} wrap="off" disabled={saving}
-    onChange={event => { setDraft(event.target.value); setSaveMessage(''); }} onFocus={() => { window.projectGrid.terminalFocus(projectId, false); window.projectGrid.fileTreeFocus(projectId, false); }}
+    onChange={event => { setDraft(event.target.value); setSaveMessage(''); }} onFocus={() => { window.agentrix.terminalFocus(projectId, false); window.agentrix.fileTreeFocus(projectId, false); }}
     onKeyDown={event => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); event.stopPropagation(); void save(); }
       if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.metaKey) { event.preventDefault(); document.execCommand('insertText', false, '  '); }
@@ -210,7 +210,7 @@ export function FilePreview({ projectId, filePath, autoSave, onClose, onError, r
       {markdown && <div className="preview-mode"><button className="preview-option" aria-pressed={mode === 'source'} onClick={beginEditing}>{t('编辑')}</button><button className="preview-option" aria-pressed={mode === 'preview'} onClick={() => setMode('preview')}>{t('预览')}</button></div>}
       {text !== null && (!editing ? !markdown && preview?.kind !== 'html' && <button className="preview-option editor-action" disabled={loading} onClick={beginEditing}><PencilSimple size={15} />{textPage && textPage.count > 1 ? t('编辑当前段') : t('编辑')}</button> : null)}
       {!editing && <button className="icon-button" disabled={saving} title={t('刷新文件')} aria-label={t('刷新文件')} onClick={() => void navigate(() => setRevision(r => r + 1))}><ArrowClockwise size={16} /></button>}
-      {text !== null && !editing && <button className="icon-button" title={textPage && textPage.count > 1 ? t('复制当前页内容') : t('复制文件内容')} aria-label={textPage && textPage.count > 1 ? t('复制当前页内容') : t('复制文件内容')} onClick={async () => { const result = await window.projectGrid.copy(editing ? draft : text); if (!result.ok) onError(result.error); }}><Copy size={16} /></button>}
+      {text !== null && !editing && <button className="icon-button" title={textPage && textPage.count > 1 ? t('复制当前页内容') : t('复制文件内容')} aria-label={textPage && textPage.count > 1 ? t('复制当前页内容') : t('复制文件内容')} onClick={async () => { const result = await window.agentrix.copy(editing ? draft : text); if (!result.ok) onError(result.error); }}><Copy size={16} /></button>}
     </div></div>
     {body}
     {saveMessage && <div className={`editor-message ${saveMessage === t('已保存') || saveMessage === t('已自动保存') ? '' : 'editor-error'}`} role="status">{saveMessage}</div>}

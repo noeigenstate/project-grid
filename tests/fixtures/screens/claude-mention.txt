@@ -1,4 +1,4 @@
-  PROJECT GRID
+  AGENTRIX
   Type codex to start, or codex resume to continue a session.
 
 PS C:\work\demo-app> claude --permission-mode d

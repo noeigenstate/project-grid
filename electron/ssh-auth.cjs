@@ -12,7 +12,7 @@ class SSHAuthServer {
   register(id, host, cancel) {
     const token = randomBytes(32).toString('hex');
     this.connections.set(id, { host, token, cancel });
-    return { PROJECT_GRID_ASKPASS_URL: this.url, PROJECT_GRID_ASKPASS_TOKEN: token, PROJECT_GRID_ASKPASS_ID: id };
+    return { AGENTRIX_ASKPASS_URL: this.url, AGENTRIX_ASKPASS_TOKEN: token, AGENTRIX_ASKPASS_ID: id };
   }
   getPending() { return [...this.pending.values()].map(({ prompt }) => prompt); }
   hasPending(connectionId) { return [...this.pending.values()].some(item => item.connectionId === connectionId); }

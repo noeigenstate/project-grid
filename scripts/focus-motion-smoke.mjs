@@ -21,7 +21,7 @@ for (const name of ['界面开发', '服务接口', '数据处理', '工具项�
 }
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, closeToTray: false, restoreSessions: false } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged');
 const executableIndex = process.argv.indexOf('--executable');
 const actualExecutable = executableIndex >= 0 ? path.resolve(process.argv[executableIndex + 1]) : null;
@@ -43,7 +43,7 @@ async function landed(id) {
   assert.ok(gap < 2, `panel must land in its layout slot, gap=${gap}`);
 }
 try {
-  application = await electron.launch({ executablePath: actualExecutable || (packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron')), args: actualExecutable || packaged ? [] : [root], cwd: root, env, timeout: 30000 });
+  application = await electron.launch({ executablePath: actualExecutable || (packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron')), args: actualExecutable || packaged ? [] : [root], cwd: root, env, timeout: 30000 });
   page = await application.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   // Playwright defaults to no-preference even without an explicit override.
   // null restores the real Windows setting used by the installed application.
@@ -55,8 +55,8 @@ try {
   console.log('System reduced motion:', await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches));
   assert.equal(await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.getBackgroundThrottling()), false, 'the installed app itself keeps visible animations rendering');
   const id = projects.at(-1).id, panel = page.locator(`[data-project-id="${id}"]`);
-  await panel.getByRole('button', { name: '启动终端', exact: true }).click();
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects.find(project => project.id === id).shellReady, 'initial PowerShell prompt');
+  await panel.getByRole('button', { name: '只打开终端', exact: true }).click();
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects.find(project => project.id === id).shellReady, 'initial PowerShell prompt');
   await panel.locator('.panel-terminal-area').click({ position: { x: 36, y: 95 } });
   await page.keyboard.type("[IO.File]::WriteAllText('first-line.txt', 'FIRST')");
   await page.keyboard.press('Shift+Enter');
@@ -65,11 +65,11 @@ try {
   assert.equal(await page.locator('.focus-mode').count(), 0);
   await page.keyboard.press('Enter');
   await waitFor(async () => fs.access(path.join(projects.at(-1).path, 'second-line.txt')).then(() => true, () => false), 'both submitted PowerShell lines execute');
-  await waitFor(async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects.find(project => project.id === id).shellReady, 'PowerShell prompt after multiline input');
+  await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects.find(project => project.id === id).shellReady, 'PowerShell prompt after multiline input');
   assert.equal(await fs.readFile(path.join(projects.at(-1).path, 'first-line.txt'), 'utf8'), 'FIRST');
   assert.equal(await fs.readFile(path.join(projects.at(-1).path, 'second-line.txt'), 'utf8'), 'SECOND');
   console.log('PASS: real PowerShell edits two lines with Shift+Enter and executes both only after Enter');
-  const sessionId = (await page.evaluate(() => window.projectGrid.getState())).value.projects.find(project => project.id === id).sessionId;
+  const sessionId = (await page.evaluate(() => window.agentrix.getState())).value.projects.find(project => project.id === id).sessionId;
   await panel.locator('.panel-terminal-area').click({ position: { x: 36, y: 95 } });
   await page.keyboard.type("Write-Output 'PENDING_INPUT'");
   assert.equal(await page.locator('.focus-mode').count(), 0, 'clicking the terminal input and typing stays in the small card');
@@ -123,7 +123,7 @@ try {
   await panel.evaluate(panel => panel.getAnimations().forEach(animation => animation.play()));
   await settled(false); await landed(id);
   assert.ok(await panel.evaluate(panel => panel.querySelector('.terminal-host') === globalThis.motionTerminal));
-  assert.equal((await page.evaluate(() => window.projectGrid.getState())).value.projects.find(project => project.id === id).sessionId, sessionId);
+  assert.equal((await page.evaluate(() => window.agentrix.getState())).value.projects.find(project => project.id === id).sessionId, sessionId);
   // A narrow card wraps the line, so the rows are joined before looking for the draft.
   assert.ok((await panel.innerText()).replace(/\s+/g, '').includes("Write-Output'PENDING_INPUT'"), 'unsubmitted terminal input survives both transitions');
   console.log('PASS: last card expands and shrinks through intermediate bounds, with the same live terminal and pending input');

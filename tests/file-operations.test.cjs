@@ -6,7 +6,7 @@ const os = require('node:os');
 const { FileOperations, cleanName, selections } = require('../electron/file-operations.cjs');
 
 async function fixture(t) {
-  const prefix = path.join(os.tmpdir(), 'project-grid-file-ops-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-file-ops-');
   const directory = await fs.mkdtemp(prefix);
   const project = { id: 'test-project', kind: 'local', path: path.join(directory, 'project') };
   await fs.mkdir(project.path); await fs.mkdir(path.join(directory, 'trash')); await fs.mkdir(path.join(directory, 'outside'));

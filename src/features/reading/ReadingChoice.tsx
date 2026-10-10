@@ -15,7 +15,7 @@ export function ReadingChoice({ choice, terminalId, onError }: { choice: ScreenC
     if (sending.current || !latest.current.options[index]) return;
     sending.current = true; card.current?.focus(); setHighlight(index); setPending(index);
     try {
-      await writeChoiceKeys(selectedChoiceIndex(latest.current), index, key => window.projectGrid.writeTerminal(terminalId, key), () => active.current);
+      await writeChoiceKeys(selectedChoiceIndex(latest.current), index, key => window.agentrix.writeTerminal(terminalId, key), () => active.current);
     } catch (error) {
       if (active.current) { sending.current = false; setPending(null); onError(String(error)); }
     }
@@ -23,7 +23,7 @@ export function ReadingChoice({ choice, terminalId, onError }: { choice: ScreenC
   const cancel = () => {
     if (sending.current) return;
     sending.current = true; card.current?.focus(); setPending('cancel');
-    window.projectGrid.writeTerminal(terminalId, '\x1b');
+    window.agentrix.writeTerminal(terminalId, '\x1b');
   };
   const keys = (event: KeyboardEvent<HTMLDivElement>) => {
     event.stopPropagation();
@@ -40,7 +40,7 @@ export function ReadingChoice({ choice, terminalId, onError }: { choice: ScreenC
     }
   };
   return <div ref={card} className={`reading-choice is-${choice.kind}`} role="group" aria-label={choice.title} aria-busy={pending !== null} tabIndex={-1} onKeyDown={keys}
-    onFocus={() => window.projectGrid.terminalFocus(terminalId, false)}>
+    onFocus={() => window.agentrix.terminalFocus(terminalId, false)}>
     <div className="reading-choice-head"><strong>{choice.title}</strong><button type="button" className="text-button" disabled={pending !== null} onClick={cancel}>{pending === 'cancel' && <CircleNotch size={12} className="loading-spinner" />}{t('取消')}</button></div>
     {choice.context.length > 0 && <pre className="reading-choice-context">{choice.context.join('\n')}</pre>}
     <div className="reading-choice-options">{choice.options.map((option, index) => <button type="button" key={option.number}

@@ -175,15 +175,15 @@ test('SSH registrar starts absent or exited projects and preserves configuration
 test('SSH askpass helper stays lazy, uses short paths once and retains fallback cleanup', () => {
   const path = require('node:path'), calls = [];
   const runtime = require('../electron/features/ssh/runtime.cjs').createSshRuntime({ platform: 'win32', integrationDir: '/integration', tempDirectory: () => '/temp',
-    fs: { mkdtempSync: prefix => { calls.push(['temp', prefix]); return '/temp/project-grid-ssh-123'; },
+    fs: { mkdtempSync: prefix => { calls.push(['temp', prefix]); return '/temp/agentrix-ssh-123'; },
       copyFileSync: (...args) => calls.push(['copy', ...args]), rmSync: (...args) => calls.push(['remove', ...args]), rmdirSync: filename => calls.push(['rmdir', filename]) },
     execFileSync: (...args) => { calls.push(['exec', ...args]); throw new Error('short path unavailable'); },
   });
   assert.equal(calls.length, 0);
-  const helper = path.join('/temp/project-grid-ssh-123', 'ssh-askpass.exe');
+  const helper = path.join('/temp/agentrix-ssh-123', 'ssh-askpass.exe');
   assert.equal(runtime.prepareAskpass(), helper); assert.equal(runtime.prepareAskpass(), helper); assert.equal(calls.length, 3);
   assert.deepEqual(calls[2].slice(0, 3), ['exec', helper, ['--short-path', helper]]);
-  runtime.cleanupAskpass(); assert.deepEqual(calls.at(-1), ['rmdir', '/temp/project-grid-ssh-123']);
+  runtime.cleanupAskpass(); assert.deepEqual(calls.at(-1), ['rmdir', '/temp/agentrix-ssh-123']);
 });
 
 test('workspace settings keep live language, broadcast, menu, restore and voice ordering', () => {

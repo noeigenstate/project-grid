@@ -15,9 +15,9 @@ const projects = Array.from({ length: 16 }, (_, index) => ({ id: randomUUID(), n
 for (const project of projects) await fs.mkdir(project.path);
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { terminalRenderer: 'dom', restoreSessions: false, closeToTray: false, notifications: false, fontSize: 13 } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged'); let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
 const errors = [], performanceSamples = [], materials = [], typography = [], edges = [];
 const layoutGap = 6;
 // Every panel keeps the same gap to its neighbours, the title bar and the bottom of the window.
@@ -57,7 +57,7 @@ async function readCells(rows) {
   });
 }
 try {
-  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1600, 900));
@@ -66,15 +66,15 @@ try {
   const search = page.getByRole('textbox', { name: '搜索项目', exact: true }); await search.fill('运行样例');
   await checkEdges('overview');
   await checkGaps('overview');
-  const geometry = await page.locator('.project-grid').evaluate(grid => ({ gap: getComputedStyle(grid).gap, radius: getComputedStyle(grid.querySelector('.project-panel')).borderTopLeftRadius, header: getComputedStyle(grid.querySelector('.panel-header')).borderTopLeftRadius }));
+  const geometry = await page.locator('.agentrix').evaluate(grid => ({ gap: getComputedStyle(grid).gap, radius: getComputedStyle(grid.querySelector('.project-panel')).borderTopLeftRadius, header: getComputedStyle(grid.querySelector('.panel-header')).borderTopLeftRadius }));
   assert.deepEqual(geometry, { gap: `${layoutGap}px`, radius: '16px', header: '15px' });
-  for (const project of projects.slice(0, 6)) await page.evaluate(id => window.projectGrid.startTerminal(id), project.id);
+  for (const project of projects.slice(0, 6)) await page.evaluate(id => window.agentrix.startTerminal(id), project.id);
   await waitFor(async () => (await state()).projects.slice(0, 6).every(project => project.shellReady), 'six real shells ready');
   const lens = await page.locator('.app-shell').evaluate(node => node.style.getPropertyValue('--liquid-backdrop'));
   for (const count of [6, 16]) {
     await search.fill(count === 6 ? '运行样例' : '');
     await waitFor(async () => (await state()).projects.slice(0, 6).every(project => project.shellReady), 'shells ready for next output stream');
-    for (const project of projects.slice(0, 6)) await page.evaluate(id => window.projectGrid.writeTerminal(id, "for ($pgGlassFrame=0; $pgGlassFrame -lt 120; $pgGlassFrame++) { [Console]::WriteLine(('LIVE OUTPUT {0:D3}  中文与 ANSI 字体保持清晰' -f $pgGlassFrame)); Start-Sleep -Milliseconds 50 }\r"), project.id);
+    for (const project of projects.slice(0, 6)) await page.evaluate(id => window.agentrix.writeTerminal(id, "for ($pgGlassFrame=0; $pgGlassFrame -lt 120; $pgGlassFrame++) { [Console]::WriteLine(('LIVE OUTPUT {0:D3}  中文与 ANSI 字体保持清晰' -f $pgGlassFrame)); Start-Sleep -Milliseconds 50 }\r"), project.id);
     for (const [mode, filter] of [['withoutLens', 'blur(1.5px) saturate(135%)'], ['withLens', lens]]) {
       await page.locator('.app-shell').evaluate((node, filter) => node.style.setProperty('--liquid-backdrop', filter), filter);
       await app.evaluate(({ app }) => { app.getAppMetrics(); }); // Start this group's CPU sampling interval.
@@ -101,11 +101,11 @@ try {
   await waitFor(async () => (await state()).projects[0].terminals.length === 2 && (await state()).projects[0].terminals.every(terminal => terminal.shellReady), 'split terminals ready');
   const sample = 'PLAIN  中文字体更亮更清晰\r\n\x1b[1mBOLD   重点文字\x1b[0m\r\n\x1b[2mDIM_DEFAULT  Working / background task\x1b[0m\r\n\x1b[2;31mDIM_RED\x1b[0m\r\n\x1b[2;32mDIM_GREEN\x1b[0m\r\n\x1b[2;38;5;45mDIM_256\x1b[0m\r\n\x1b[2;38;2;130;180;220mDIM_RGB\x1b[0m\r\n\x1b[7mINVERSE\x1b[0m\r\n\x1b[2;7mDIM_INVERSE\x1b[0m\r\n';
   const encoded = Buffer.from(sample).toString('base64');
-  for (const terminal of (await state()).projects[0].terminals) await page.evaluate(({ id, encoded }) => window.projectGrid.writeTerminal(id, `Clear-Host; [Console]::Write([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')))\r`), { id: terminal.id, encoded });
+  for (const terminal of (await state()).projects[0].terminals) await page.evaluate(({ id, encoded }) => window.agentrix.writeTerminal(id, `Clear-Host; [Console]::Write([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')))\r`), { id: terminal.id, encoded });
   await waitFor(async () => first.locator('.xterm-rows').first().innerText().then(value => value.includes('DIM_INVERSE')), 'readability sample rendered');
   const sessions = (await state()).projects[0].terminals.map(terminal => terminal.sessionId);
   for (const theme of ['daylight', 'forest', 'mountain-blue', 'wild-red']) {
-    await page.evaluate(theme => window.projectGrid.settings({ theme }), theme);
+    await page.evaluate(theme => window.agentrix.settings({ theme }), theme);
     await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
     const cells = await readCells(first.locator('.xterm-rows').first());
     for (const cell of cells) {
@@ -153,7 +153,7 @@ try {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
   for (const theme of ['daylight', 'forest', 'mountain-blue', 'wild-red']) {
-    await page.evaluate(theme => window.projectGrid.settings({ theme }), theme);
+    await page.evaluate(theme => window.agentrix.settings({ theme }), theme);
     await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
     const surfaces = await page.locator('.titlebar, .focus-sidebar, .project-panel:visible').evaluateAll(nodes => nodes.map(node => {
       const style = getComputedStyle(node), values = style.backgroundColor.match(/[\d.]+/g).map(Number);

@@ -16,7 +16,7 @@ test('SSH inputs are data, not commands, and preserve Linux case and paths', () 
 });
 
 test('host discovery follows includes, skips wildcards and never executes Match commands', async t => {
-  const prefix = path.join(os.tmpdir(), 'project-grid-ssh-config-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-ssh-config-');
   const home = await fs.mkdtemp(prefix);
   t.after(async () => { assert.ok(path.resolve(home).startsWith(prefix)); await fs.rm(home, { recursive: true, force: true }); });
   await fs.mkdir(path.join(home, '.ssh', 'config.d'), { recursive: true });

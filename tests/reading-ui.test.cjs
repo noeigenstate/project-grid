@@ -134,7 +134,7 @@ function sessionsHarness(t, initialSessions = []) {
     useEffect() {},
   };
   const previous = globalThis.window;
-  globalThis.window = { projectGrid: {
+  globalThis.window = { agentrix: {
     writeTerminal: (id, text) => written.push({ id, text }),
     followAgentSession: async (id, sessionId) => { followed.push({ id, sessionId }); return { ok: true, value: true }; },
   } };
@@ -216,7 +216,7 @@ function choiceHarness(t, choice = fakeChoice()) {
     useEffect: () => {},
   };
   const written = [], previous = globalThis.window;
-  globalThis.window = { projectGrid: { writeTerminal: (id, key) => written.push({ id, key }) } };
+  globalThis.window = { agentrix: { writeTerminal: (id, key) => written.push({ id, key }) } };
   t.after(() => { if (previous === undefined) delete globalThis.window; else globalThis.window = previous; });
   const { ReadingChoice } = loadUI('features/reading/ReadingChoice.tsx', { react: hooks });
   const render = () => {
@@ -377,7 +377,7 @@ test('reading entry rendering parses only the last 40 blocks and leaves the welc
     './useMentions': { useMentions: () => ({ open: false }) }, './MentionPalette': { MentionPalette: () => null },
     './pending-prompts': require('../src/features/reading/pending-prompts.ts'),
     './usePendingPrompts': { usePendingPrompts: () => ({ pending: [], echo() {}, cancelEcho() {} }) },
-    './PendingPromptEntries': { PendingPromptEntries: () => null }, './ReadingDirectCard': { ReadingDirectCard: () => null },
+    './PendingPromptEntries': { PendingPromptEntries: () => null }, './ReadingDirectCard': { ReadingDirectCard: () => null }, './markdown-parse': { parseMarkdown: async () => null, parsedMarkdown: () => undefined },
     './ReadingSessions': { ReadingSessions: () => null }, './reading-sessions': require('../src/features/reading/reading-sessions.ts'),
     './reading-welcome': { useWelcomeStarting: () => false },
     './ReadingCliPanel': { ReadingCliPanel: () => null }, './ReadingCommandOutput': { ReadingCommandOutput: () => null },

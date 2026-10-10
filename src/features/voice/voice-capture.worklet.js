@@ -20,4 +20,4 @@ class VoiceCaptureProcessor extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor('project-grid-voice', VoiceCaptureProcessor);
+registerProcessor('agentrix-voice', VoiceCaptureProcessor);

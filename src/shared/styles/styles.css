@@ -52,7 +52,7 @@ h1 { margin: 0; font-size: 21px; font-weight: 600; letter-spacing: -.5px; }
 .search-input input:focus-visible { outline: none; }
 kbd { font: 600 11px 'Segoe UI', sans-serif; border: 1px solid #303743; border-radius: 1.5px; padding: 1px 4px; color: #738194; white-space: nowrap; }
 .grid-area { flex: 1; overflow: auto; min-height: 0; padding: 0 25px 20px; }
-.project-grid { display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(140px, 1fr)); gap: 12px; height: 100%; min-height: 0; }
+.agentrix { display: grid; grid-template-columns: repeat(var(--columns), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(140px, 1fr)); gap: 12px; height: 100%; min-height: 0; }
 .project-panel { position: relative; border: 1px solid #323944; border-radius: 3.5px; background: var(--panel); display: flex; flex-direction: column; min-width: 0; min-height: 0; container-type: inline-size; transition: border-color .15s, box-shadow .15s; }
 .project-panel:has(.panel-menu) { z-index: 20; }
 .panel-header { height: 44px; flex: 0 0 44px; border-bottom: 1px solid #252b34; display: flex; align-items: center; padding: 0 8px 0 12px; gap: 8px; background: #191e25; border-radius: 3px 3px 0 0; }
@@ -109,7 +109,7 @@ kbd { font: 600 11px 'Segoe UI', sans-serif; border: 1px solid #303743; border-r
 .empty-hints > span { display: flex; gap: 6px; align-items: center; }.empty-hints > span:first-child svg { color: #c97f8c; }.empty-hints > span:last-child svg { color: #6d987e; }
 .no-results { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #758397; }
 .no-results h2 { font-size: 17px; font-weight: 700; color: #b5c2d3; }.no-results p { font-size: 12px; margin: 0 0 20px; }
-.focus-mode .project-grid { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
+.focus-mode .agentrix { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
 .focus-mode .terminal-host { inset: 16px 12px 10px 18px; }
 .focus-mode .project-panel { border-color: #3c495a; }
 .focus-mode .panel-header { padding: 0 13px 0 17px; }

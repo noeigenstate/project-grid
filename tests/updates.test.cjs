@@ -13,9 +13,9 @@ function fakeUpdater() {
 }
 
 test('only an installed build with an uninstaller enables automatic updates', () => {
-  assert.equal(isInstalledBuild(false, 'C:\\app\\Project Grid.exe', () => true), false);
-  assert.equal(isInstalledBuild(true, 'C:\\app\\Project Grid.exe', () => false), false);
-  assert.equal(isInstalledBuild(true, 'C:\\app\\Project Grid.exe', candidate => candidate.endsWith('Uninstall Project Grid.exe')), true);
+  assert.equal(isInstalledBuild(false, 'C:\\app\\Agentrix.exe', () => true), false);
+  assert.equal(isInstalledBuild(true, 'C:\\app\\Agentrix.exe', () => false), false);
+  assert.equal(isInstalledBuild(true, 'C:\\app\\Agentrix.exe', candidate => candidate.endsWith('Uninstall Agentrix.exe')), true);
 });
 
 test('portable builds never check, download, or install updates', async () => {

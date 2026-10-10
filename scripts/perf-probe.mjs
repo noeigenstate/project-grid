@@ -24,7 +24,7 @@ const projects = ['商城前端', '支付服务', '数据看板', '文档站点'
 for (const project of projects) await fs.mkdir(project.path, { recursive: true });
 await fs.mkdir(dataDir, { recursive: true });
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: true, guideVersion: '9.9.9', surface } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 
 const application = await electron.launch({ executablePath: require('electron'), args: [root], cwd: root, env, timeout: 30000 });
 try {
@@ -32,15 +32,15 @@ try {
   await application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].maximize());
   await page.waitForSelector('.project-panel');
   const css = process.argv.find(arg => arg.startsWith('--css='))?.slice(6); if (css) await page.addStyleTag({ content: css });
-  const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects;
-  const start = page.getByRole('button', { name: '启动终端', exact: true });
+  const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects;
+  const start = page.getByRole('button', { name: '只打开终端', exact: true });
   while (await start.count()) { await start.first().click(); await page.waitForTimeout(300); }
   await waitFor(async () => (await state()).every(project => project.shellReady), 'all shells ready', 60000);
   // Three terminals print a line every 40 ms, like a build streaming its log; with --tui four of them redraw an
   // agent's interface instead (tests/fixtures/tui-redraw.cjs), which is what a working Codex or Claude Code does.
   const tui = process.argv.includes('--tui'), streaming = projects.slice(0, tui ? 4 : 3);
   const command = tui ? `node "${path.join(root, 'tests/fixtures/tui-redraw.cjs')}"\r` : '1..100000 | % { "step $_ — compiling module $_ of the project, writing output to the terminal"; Start-Sleep -Milliseconds 40 }\r';
-  for (const project of streaming) await page.evaluate(({ id, command }) => window.projectGrid.writeTerminal(id, command), { id: project.id, command });
+  for (const project of streaming) await page.evaluate(({ id, command }) => window.agentrix.writeTerminal(id, command), { id: project.id, command });
   await page.mouse.move(5, 300);
   await page.waitForTimeout(3000);
 
@@ -158,7 +158,7 @@ try {
   }
   await page.keyboard.press('Escape');
   await measure('quiet (output stopped)', async () => {
-    for (const project of streaming) await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x03'), project.id);
+    for (const project of streaming) await page.evaluate(id => window.agentrix.writeTerminal(id, '\x03'), project.id);
     await page.mouse.move(5, 300); await page.waitForTimeout(6000);
   });
   const memory = await application.evaluate(({ app }) => app.getAppMetrics().reduce((sum, item) => sum + item.memory.workingSetSize, 0));

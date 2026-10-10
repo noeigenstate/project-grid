@@ -6,7 +6,7 @@ const path = require('node:path');
 const { PreviewResources, resourceResponse } = require('../electron/preview-resources.cjs');
 
 async function setup(t) {
-  const prefix = path.join(os.tmpdir(), 'project-grid-preview-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-preview-');
   const directory = await fs.mkdtemp(prefix);
   const project = { id: 'project', path: path.join(directory, 'project') };
   await fs.mkdir(path.join(project.path, 'reports'), { recursive: true });

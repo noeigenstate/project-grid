@@ -1,6 +1,6 @@
 // electron-builder afterPack hook: leave out what the packed app never loads.
-// - Electron's demo app (default_app.asar); Project Grid starts from its own app.asar.
-// - Windows: Chromium's DirectX shader compiler (about 26 MB). Only WebGPU on D3D12 loads it; Project Grid draws with
+// - Electron's demo app (default_app.asar); Agentrix starts from its own app.asar.
+// - Windows: Chromium's DirectX shader compiler (about 26 MB). Only WebGPU on D3D12 loads it; Agentrix draws with
 //   ANGLE/D3D11, which uses d3dcompiler_47.dll. Verified with identical app.getGPUFeatureStatus() and passing packaged
 //   material and visual smoke tests.
 // - macOS and Linux: the PowerShell and Command Prompt integration and the Windows helpers.

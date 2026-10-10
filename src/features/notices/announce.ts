@@ -60,7 +60,7 @@ let queue = Promise.resolve();
 export function announce(name: string, task: string, settings: Pick<Settings, 'announcePhrase' | 'language'>, summary = '') {
   const text = announcementText(name, task, settings, summary);
   queue = queue.then(async () => {
-    const result = await window.projectGrid.speak(text).catch(() => null);
+    const result = await window.agentrix.speak(text).catch(() => null);
     let started = false;
     if (result?.ok) await play(result.value, () => { started = true; }).catch(() => { if (!started) return systemVoice(text, settings.language); });
     else await systemVoice(text, settings.language);

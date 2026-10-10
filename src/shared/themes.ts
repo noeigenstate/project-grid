@@ -12,10 +12,10 @@ export type ThemeId = typeof themes[number]['id'];
 export function applyTheme(value: string) {
   const theme = themes.some(item => item.id === value) ? value : 'daylight';
   document.documentElement.dataset.theme = theme;
-  try { localStorage.setItem('project-grid-theme', theme); } catch {}
+  try { localStorage.setItem('agentrix-theme', theme); } catch {}
 }
 
 export function restoreTheme() {
-  try { applyTheme(localStorage.getItem('project-grid-theme') || 'daylight'); }
+  try { applyTheme(localStorage.getItem('agentrix-theme') || 'daylight'); }
   catch { applyTheme('daylight'); }
 }

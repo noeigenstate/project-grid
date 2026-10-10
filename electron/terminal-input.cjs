@@ -77,9 +77,9 @@ function acceptShellEvent(session, event) {
 }
 
 // Command Prompt has no prompt hook, so its PROMPT prints an invisible OSC marker before each
-// prompt: ESC ] 6973;ProjectGrid;prompt;<current directory> ESC \  (see integration/bootstrap.cmd).
+// prompt: ESC ] 6973;Agentrix;prompt;<current directory> ESC \  (see integration/bootstrap.cmd).
 // Output arrives in arbitrary chunks, so a marker split across chunks is held until it completes.
-const PROMPT_MARKER = '\x1b]6973;ProjectGrid;prompt;';
+const PROMPT_MARKER = '\x1b]6973;Agentrix;prompt;';
 class PromptMarkers {
   constructor() { this.tail = ''; }
   write(data) {

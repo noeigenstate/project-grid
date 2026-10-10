@@ -36,7 +36,7 @@ test('a changed file cannot be overwritten by an old editor revision', async t =
   await fs.writeFile(filename, 'external newer content');
   await assert.rejects(saveProjectFile(project, 'source.ts', 0, preview.revision, 'my draft'), /其他程序修改|变化/);
   assert.equal(await fs.readFile(filename, 'utf8'), 'external newer content');
-  assert.deepEqual((await fs.readdir(directory)).filter(name => name.startsWith('.project-grid-edit-')), []);
+  assert.deepEqual((await fs.readdir(directory)).filter(name => name.startsWith('.agentrix-edit-')), []);
   await assert.rejects(saveProjectFile(project, '../outside.txt', 0, preview.revision, 'bad'), /路径/);
   await fs.writeFile(filename, '');
   const empty = await readProjectFile(project, 'source.ts');

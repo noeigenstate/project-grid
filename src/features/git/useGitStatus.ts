@@ -15,7 +15,7 @@ export function useGitStatus(projectId: string, enabled: boolean, revision: numb
       running = true; setLoading(true);
       const started = Date.now();
       try {
-        const result = await window.projectGrid.gitStatus(projectId);
+        const result = await window.agentrix.gitStatus(projectId);
         if (!active) return;
         if (!result.ok) throw new Error(result.error);
         // The explorer asks again every few seconds. Where reading the status is slow (a large repository,

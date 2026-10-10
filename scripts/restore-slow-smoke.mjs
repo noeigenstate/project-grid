@@ -37,8 +37,8 @@ async function reportMissing(page, projects, label) {
     let text = '';
     if (page) {
       text = await page.evaluate(async id => {
-        if (typeof window.projectGrid?.attachTerminal !== 'function') return '';
-        const result = await window.projectGrid.attachTerminal(id);
+        if (typeof window.agentrix?.attachTerminal !== 'function') return '';
+        const result = await window.agentrix.attachTerminal(id);
         return result.ok && typeof result.value?.data === 'string' ? result.value.data.slice(-400) : '';
       }, project.id).catch(() => '');
     }
@@ -75,16 +75,16 @@ async function runScenario(label, delay) {
     version: 2, projects,
     settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, closeToTray: false, restoreSessions: true },
   }));
-  const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_RESTORE: '1', CODEX_HOME: codexHome };
+  const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, AGENTRIX_TEST_RESTORE: '1', CODEX_HOME: codexHome };
   const originalPath = Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1] || '';
   for (const key of Object.keys(env)) if (key.toLowerCase() === 'path') delete env[key];
   env.Path = bin + path.delimiter + originalPath;
-  delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+  delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 
   let application; let page;
   try {
     application = await electron.launch({
-      executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'),
+      executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'),
       args: [...(packaged ? [] : [root]), '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'],
       cwd: root, env, timeout: 30000,
     });

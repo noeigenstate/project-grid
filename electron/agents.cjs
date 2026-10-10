@@ -20,7 +20,7 @@ class AgentsManager {
   }
   getState() {
     // Existing isolated desktop checks should not depend on tools installed on the test host.
-    const isolated = !!this.env.PROJECT_GRID_DATA_DIR && this.env.PROJECT_GRID_TEST_AGENTS !== '1';
+    const isolated = !!this.env.AGENTRIX_DATA_DIR && this.env.AGENTRIX_TEST_AGENTS !== '1';
     return { codex: { installed: isolated || this.detect('codex', this.env) }, claude: { installed: isolated || this.detect('claude', this.env) }, npm: this.detect('npm', this.env), installing: this.installing, message: this.message, error: this.error };
   }
   changed() { const state = this.getState(); this.onChange(state); return state; }

@@ -14,17 +14,17 @@ const project = { id: randomUUID(), name: '阅读命令', path: path.join(output
 for (const directory of [profile, home, path.join(project.path, '.claude/commands')]) await fs.mkdir(directory, { recursive: true });
 await fs.writeFile(path.join(project.path, '.claude/commands/fix-issue.md'), '---\ndescription: 修复问题\n---\nFix issue $ARGUMENTS.\n');
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [project], settings: { terminalRenderer: 'dom', restoreSessions: false, closeToTray: false, notifications: false, sound: false, announce: false, language: 'zh' } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged'), errors = [], checks = [];
 let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0].terminals[0];
-const write = data => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id: project.id, data });
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0].terminals[0];
+const write = data => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id: project.id, data });
 // xterm reports focus separately when the card switches views.
 const writes = () => app.evaluate(() => globalThis.voicePastes.filter(item => !['\x1b[I', '\x1b[O'].includes(item.data)));
 const resetWrites = () => app.evaluate(() => { globalThis.voicePastes = []; });
-const hook = (kind, payload) => `'${JSON.stringify(payload)}' | & $global:ProjectGridSession.powershellPath -NoProfile -ExecutionPolicy Bypass -File $global:ProjectGridSession.claudeHookPath -PipeName $global:ProjectGridSession.pipeName -ProjectId $global:ProjectGridSession.projectId -SessionKey $global:ProjectGridSession.sessionKey -Kind ${kind}\r`;
+const hook = (kind, payload) => `'${JSON.stringify(payload)}' | & $global:AgentrixSession.powershellPath -NoProfile -ExecutionPolicy Bypass -File $global:AgentrixSession.claudeHookPath -PipeName $global:AgentrixSession.pipeName -ProjectId $global:AgentrixSession.projectId -SessionKey $global:AgentrixSession.sessionKey -Kind ${kind}\r`;
 try {
-  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await app.evaluate(({ ipcMain, BrowserWindow }) => {
     globalThis.voicePastes = [];
@@ -39,10 +39,10 @@ try {
   const raw = () => composer.waitFor({ state: 'detached' });
   const showReading = async () => { await card.getByRole('button', { name: '阅读视图：按文档排版显示对话', exact: true }).click(); await reading(); };
   const showRaw = async () => { await card.locator('.panel-header').getByRole('button', { name: '切换到终端', exact: true }).click(); await raw(); };
-  await card.getByRole('button', { name: '启动终端', exact: true }).click();
+  await card.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).shellReady, 'isolated PowerShell ready');
   // A normal shell prompt reports the agent's exit. Keep this fixture active without launching a CLI.
-  await write("function global:prompt { 'reading-fixture> ' }; Send-ProjectGridEvent 'codex-started' -Agent 'claude'\r");
+  await write("function global:prompt { 'reading-fixture> ' }; Send-AgentrixEvent 'codex-started' -Agent 'claude'\r");
   await waitFor(async () => (await state()).codexActive && (await state()).agent === 'claude', 'authenticated Claude fixture');
   // Claude's idle input between its two rules, with its footer: a typed command shows its output inside the reading
   // view and is finished once the CLI is idle like this again. The fixture draws it after each command (the helper's
@@ -144,7 +144,7 @@ try {
   assert.deepEqual(await writes(), [], 'palette Escape does not interrupt');
   await composer.press('Escape'); await waitFor(async () => (await writes()).some(item => item.data === '\x1b'), 'Escape interrupts working CLI');
   checks.push('manual view choice and status, palette Escape before interrupt');
-  await write("Send-ProjectGridEvent 'codex-started' -Agent 'codex'\r");
+  await write("Send-AgentrixEvent 'codex-started' -Agent 'codex'\r");
   await waitFor(async () => (await state()).agent === 'codex', 'fixture agent changes');
   await composer.fill('/a'); await composer.fill('/');
   await palette.getByRole('option').filter({ has: page.getByText('/plan', { exact: true }) }).waitFor();

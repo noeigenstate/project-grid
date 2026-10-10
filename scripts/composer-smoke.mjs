@@ -19,11 +19,11 @@ await new Promise(resolve => provider.listen(0, '127.0.0.1', resolve));
 await fs.writeFile(path.join(home, 'config.toml'), `model="gpt-6-astra"\nmodel_provider="preview"\ncheck_for_update_on_startup=false\n[model_providers.preview]\nname="Isolated preview"\nbase_url="http://127.0.0.1:${provider.address().port}/v1"\nwire_api="responses"\nrequires_openai_auth=false\n[projects.'${projects[0].path}']\ntrust_level="trusted"\n`);
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { terminalRenderer: 'dom', restoreSessions: false, closeToTray: false, notifications: false, fontSize: 14 } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged'), doneFile = path.join(output, 'fixture.done');
 let app, page, controlId;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
-const write = (id, data) => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id, data });
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
+const write = (id, data) => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id, data });
 async function composerSample(terminal, label) {
   await waitFor(async () => terminal.locator('.xterm-rows span').evaluateAll(cells => cells.some(cell => /background-color:\s*(#1e1e1e|rgb\(30, 30, 30\))/.test(cell.getAttribute('style') || ''))), `${label}: Codex finished probing terminal colors`);
   const sample = await terminal.locator('.xterm-rows').evaluate(rows => {
@@ -39,7 +39,7 @@ async function composerSample(terminal, label) {
   return sample;
 }
 try {
-  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await app.evaluate(async ({ clipboard, ClipboardItem }) => {
     // Keep every original format in memory only, never in logs or artifacts.
@@ -50,7 +50,7 @@ try {
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1600, 900));
   await page.waitForSelector('.project-panel');
   const first = page.locator(`[data-project-id="${projects[0].id}"]`);
-  await first.getByRole('button', { name: '启动终端', exact: true }).click();
+  await first.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).projects[0].shellReady, 'shell ready');
   await first.getByRole('button', { name: `${projects[0].name} 的更多操作`, exact: true }).click(); await first.getByRole('menuitem', { name: '新建终端并分屏', exact: true }).click();
   await waitFor(async () => (await state()).projects[0].terminals.length === 2 && (await state()).projects[0].terminals.every(terminal => terminal.shellReady), 'independent split ready');
@@ -82,17 +82,17 @@ try {
   const sessions = (await state()).projects[0].terminals.map(terminal => terminal.sessionId);
   await terminal.locator('.terminal-host').evaluate(node => { globalThis.composerTerminal = node; });
   for (const theme of ['daylight', 'forest', 'mountain-blue', 'wild-red']) {
-    await page.evaluate(theme => window.projectGrid.settings({ theme }), theme);
+    await page.evaluate(theme => window.agentrix.settings({ theme }), theme);
     await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
     await composerSample(terminal, theme);
     await page.screenshot({ path: path.join(output, `${theme}-empty.png`) });
   }
   await terminal.locator('textarea.xterm-helper-textarea').focus();
-  await page.evaluate(() => window.projectGrid.copy('第一行：透明输入与清晰文字'));
+  await page.evaluate(() => window.agentrix.copy('第一行：透明输入与清晰文字'));
   await page.keyboard.press('Control+v');
   await waitFor(async () => terminal.locator('.xterm-rows').innerText().then(text => text.includes('第一行：透明输入与清晰文字')), 'first paste rendered before newline');
   await page.keyboard.press('Shift+Enter');
-  await page.evaluate(() => window.projectGrid.copy('第二行：保留中文草稿'));
+  await page.evaluate(() => window.agentrix.copy('第二行：保留中文草稿'));
   await page.keyboard.press('Control+v');
   await waitFor(async () => terminal.locator('.xterm-rows').innerText().then(text => text.includes('保留中文草稿')), 'Chinese multiline draft');
   const draftRows = await terminal.locator('.xterm-rows > div').allTextContents();
@@ -101,18 +101,18 @@ try {
   await composerSample(terminal, 'multiline');
   await page.screenshot({ path: path.join(output, 'multiline-small.png') });
   await page.keyboard.press('Control+Shift+a'); await page.keyboard.press('Control+c');
-  assert.ok((await page.evaluate(() => window.projectGrid.readClipboard())).value.includes('第一行：透明输入与清晰文字'));
+  assert.ok((await page.evaluate(() => window.agentrix.readClipboard())).value.includes('第一行：透明输入与清晰文字'));
   await waitFor(async () => await terminal.locator('.xterm-decoration-top').count() > 0, 'selected cells rendered');
   assert.ok(await terminal.locator('.xterm-decoration-top:not(.xterm-cursor-block)').evaluateAll(cells => cells.every(cell => getComputedStyle(cell).backgroundColor === 'rgb(64, 87, 112)')), 'selection keeps its opaque blue background');
   await page.screenshot({ path: path.join(output, 'selection.png') }); await page.keyboard.press('Escape');
   await first.getByRole('button', { name: `全屏查看 ${projects[0].name}`, exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
-  await page.evaluate(() => window.projectGrid.settings({ fontSize: 17 }));
+  await page.evaluate(() => window.agentrix.settings({ fontSize: 17 }));
   await composerSample(terminal, 'focused-17px');
   await page.screenshot({ path: path.join(output, 'focused-draft.png') });
   await page.getByRole('button', { name: '返回总览', exact: true }).click();
   await page.waitForFunction(() => !document.querySelector('.focus-mode') && !document.querySelector('[data-focus-motion]'));
-  await page.evaluate(() => window.projectGrid.settings({ fontSize: 14 }));
+  await page.evaluate(() => window.agentrix.settings({ fontSize: 14 }));
   await composerSample(terminal, 'returned');
   assert.deepEqual((await state()).projects[0].terminals.map(terminal => terminal.sessionId), sessions);
   assert.ok(await terminal.locator('.terminal-host').evaluate(node => node === globalThis.composerTerminal));
@@ -122,12 +122,12 @@ try {
   // An authenticated native fixture covers the same surface in output/history,
   // alongside backgrounds that must remain colored in an active Codex terminal.
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
-  await write(controlId, `Clear-Host; Send-ProjectGridEvent 'codex-started'; ${paint}; for ($pgComposer=0; $pgComposer -lt 1200 -and -not (Test-Path -LiteralPath ${quote(doneFile)}); $pgComposer++) { Start-Sleep -Milliseconds 100 }; Send-ProjectGridEvent 'codex-exited'\r`);
+  await write(controlId, `Clear-Host; Send-AgentrixEvent 'codex-started'; ${paint}; for ($pgComposer=0; $pgComposer -lt 1200 -and -not (Test-Path -LiteralPath ${quote(doneFile)}); $pgComposer++) { Start-Sleep -Milliseconds 100 }; Send-AgentrixEvent 'codex-exited'\r`);
   await waitFor(async () => (await state()).projects[0].terminals[1].codexActive, 'control becomes an authenticated Codex fixture');
   await showTerminal(control);
   await waitFor(async () => (await cellBackgrounds()).DARK_SURFACE === 'rgba(0, 0, 0, 0)', 'same dark history surface becomes transparent');
   // Back to the theme the ANSI backgrounds were first measured in (Daylight has its own palette).
-  await page.evaluate(() => window.projectGrid.settings({ theme: 'daylight' }));
+  await page.evaluate(() => window.agentrix.settings({ theme: 'daylight' }));
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'daylight');
   await waitFor(async () => JSON.stringify(await cellBackgrounds()) === JSON.stringify(original), 'Daylight ANSI backgrounds again').catch(() => {});
   const agentColors = await cellBackgrounds();

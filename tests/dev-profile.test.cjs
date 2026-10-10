@@ -8,7 +8,7 @@ const { seedDevProfile } = require('../electron/dev-profile.cjs');
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pg-dev-profile-'));
 
 test('a new dev profile copies projects and settings but restores no terminal or agent session', () => {
-  const installed = temp(), dev = path.join(temp(), 'Project Grid Dev');
+  const installed = temp(), dev = path.join(temp(), 'Agentrix Dev');
   const restore = { terminal: true, codex: true, cwd: 'E:\\p', threadId: 'thread', agent: 'claude', interrupted: false };
   fs.writeFileSync(path.join(installed, 'workspace.json'), JSON.stringify({
     version: 2, settings: { theme: 'daylight', restoreSessions: true }, history: ['a'],

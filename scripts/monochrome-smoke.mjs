@@ -9,7 +9,7 @@ import { _electron as electron } from 'playwright-core';
 import { waitFor } from './wait.mjs';
 import { testRun } from './test-output.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),require=createRequire(import.meta.url);
-const monoTheme=process.env.PROJECT_GRID_MONO_THEME === 'mono-amber-dark' ? 'mono-amber-dark' : 'mono-amber';
+const monoTheme=process.env.AGENTRIX_MONO_THEME === 'mono-amber-dark' ? 'mono-amber-dark' : 'mono-amber';
 const output=await testRun(monoTheme === 'mono-amber-dark' ? 'monochrome-dark' : 'monochrome'),profile=path.join(output,'profile'),home=path.join(output,'codex-home');
 const names=['界面开发','发布检查','文件与 Git'];
 const projects=names.map((name,index)=>({id:randomUUID(),name,path:path.join(output,name),kind:'local',unread:index===1?1:0,lastCompletedAt:index===1?Date.now()-60000:null,restore:{terminal:false,codex:false}}));
@@ -21,18 +21,18 @@ git('init','-b','main');git('config','user.name','Theme fixture');git('config','
 await fs.writeFile(path.join(projects[2].path,'settings.ts'),'export const theme = "forest";\nexport const attention = "pink";\n');git('add','.');git('commit','-m','Initial fixture');
 await fs.writeFile(path.join(projects[2].path,'settings.ts'),'export const theme = "mono-amber";\nexport const attention = "orange";\n');
 await fs.writeFile(path.join(profile,'workspace.json'),JSON.stringify({version:2,projects,settings:{theme:'forest',terminalRenderer:'dom',notifications:false,sound:false,announce:false,restoreSessions:false,closeToTray:false,fontSize:14}}));
-const env={...process.env,PROJECT_GRID_DATA_DIR:profile,PROJECT_GRID_TEST_TITLEBAR: '1',CODEX_HOME:home};delete env.ELECTRON_RUN_AS_NODE;delete env.PROJECT_GRID_DEV_URL;
+const env={...process.env,AGENTRIX_DATA_DIR:profile,AGENTRIX_TEST_TITLEBAR: '1',CODEX_HOME:home};delete env.ELECTRON_RUN_AS_NODE;delete env.AGENTRIX_DEV_URL;
 let app,page;const errors=[],results={checks:[],output,profile};
-const state=async()=>(await page.evaluate(()=>window.projectGrid.getState())).value;
+const state=async()=>(await page.evaluate(()=>window.agentrix.getState())).value;
 const panel=i=>page.locator(`[data-project-id="${projects[i].id}"]`);
-const write=(i,data)=>page.evaluate(({id,data})=>window.projectGrid.writeTerminal(id,data),{id:projects[i].id,data});
-async function choose(theme){await page.evaluate(theme=>window.projectGrid.settings({theme}),theme);await waitFor(()=>page.evaluate(theme=>document.documentElement.dataset.theme===theme,theme),'theme applies');}
+const write=(i,data)=>page.evaluate(({id,data})=>window.agentrix.writeTerminal(id,data),{id:projects[i].id,data});
+async function choose(theme){await page.evaluate(theme=>window.agentrix.settings({theme}),theme);await waitFor(()=>page.evaluate(theme=>document.documentElement.dataset.theme===theme,theme),'theme applies');}
 async function capture(name){await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setFullScreen(false);w.setContentSize(1500,920);});await page.waitForTimeout(250);await page.screenshot({path:path.join(output,name)});}
 async function launch(){app=await electron.launch({executablePath:require('electron'),args:[root],cwd:root,env});page=await app.firstWindow();page.on('pageerror',e=>errors.push(e.message));await app.evaluate(({dialog,BrowserWindow})=>{dialog.showMessageBox=async()=>({response:1});BrowserWindow.getAllWindows()[0].setContentSize(1500,920);});await page.waitForSelector('.project-panel');}
 try{
- await launch();await panel(0).getByRole('button',{name:'启动终端',exact:true}).click();await waitFor(async()=>(await state()).projects[0].shellReady,'PowerShell ready');
+ await launch();await panel(0).getByRole('button',{name:'只打开终端',exact:true}).click();await waitFor(async()=>(await state()).projects[0].shellReady,'PowerShell ready');
  const session=(await state()).projects[0].sessionId;
- await write(0,"Clear-Host; Write-Host 'MONOCHROME / PROJECT GRID'; Write-Host ''; Write-Host 'Default text / 默认正文'; Write-Host (([string][char]27)+'[31mRED '+([string][char]27)+'[32mGREEN '+([string][char]27)+'[34mBLUE'+([string][char]27)+'[0m'); Write-Host (([string][char]27)+'[38;5;196mEXT_RED '+([string][char]27)+'[38;5;46mEXT_GREEN '+([string][char]27)+'[38;5;21mEXT_BLUE'+([string][char]27)+'[0m'); Write-Host (([string][char]27)+'[48;2;30;30;30m'+([string][char]27)+'[38;2;255;255;255mNATIVE_DARK_SURFACE'+([string][char]27)+'[0m')\r");
+ await write(0,"$global:shownPrompt = $function:prompt; function global:prompt { $null = & $global:shownPrompt; 'PS> ' }; Clear-Host; Write-Host 'MONOCHROME / AGENTRIX'; Write-Host ''; Write-Host 'Default text / 默认正文'; Write-Host (([string][char]27)+'[31mRED '+([string][char]27)+'[32mGREEN '+([string][char]27)+'[34mBLUE'+([string][char]27)+'[0m'); Write-Host (([string][char]27)+'[38;5;196mEXT_RED '+([string][char]27)+'[38;5;46mEXT_GREEN '+([string][char]27)+'[38;5;21mEXT_BLUE'+([string][char]27)+'[0m'); Write-Host (([string][char]27)+'[48;2;30;30;30m'+([string][char]27)+'[38;2;255;255;255mNATIVE_DARK_SURFACE'+([string][char]27)+'[0m')\r");
  await waitFor(()=>panel(0).locator('.xterm-rows').innerText().then(t=>t.includes('NATIVE_DARK_SURFACE')),'ANSI output');
  const colors=()=>panel(0).locator('.xterm-rows > div').evaluateAll(rows=>{const row=rows.find(row=>row.textContent.trim()==='RED GREEN BLUE');return row?[...row.querySelectorAll('span')].map(span=>getComputedStyle(span).color):null;});
  await waitFor(async()=>!!(await colors()),'rendered ANSI sample');
@@ -46,8 +46,8 @@ try{
  await waitFor(async()=>JSON.stringify(await extendedColors())!==JSON.stringify(originalExtended),'extended palette updates');
  assert.ok((await extendedColors()).every(color=>{const [r,g,b]=color.match(/\d+/g).map(Number);return r===g&&g===b;}),'extended ANSI colours are neutral');
  await choose('forest');await waitFor(async()=>JSON.stringify(await colors())===JSON.stringify(original),'original palette restored');await waitFor(async()=>JSON.stringify(await extendedColors())===JSON.stringify(originalExtended),'original extended palette restored');await choose(monoTheme);
- assert.ok((await page.evaluate(id=>window.projectGrid.attachTerminal(id),projects[0].id)).value.data.includes('THEME_DRAFT_PRESERVED'));await write(0,'\x03');
- await page.evaluate(()=>window.projectGrid.settings({terminalRenderer:'gpu'}));await waitFor(()=>panel(0).locator('canvas').count().then(n=>n>0),'GPU terminal');assert.equal((await state()).projects[0].sessionId,session);await capture('gpu-terminal.png');await page.evaluate(()=>window.projectGrid.settings({terminalRenderer:'dom'}));await waitFor(()=>panel(0).locator('.xterm-rows').isVisible(),'DOM terminal');
+ assert.ok((await page.evaluate(id=>window.agentrix.attachTerminal(id),projects[0].id)).value.data.includes('THEME_DRAFT_PRESERVED'));await write(0,'\x03');
+ await page.evaluate(()=>window.agentrix.settings({terminalRenderer:'gpu'}));await waitFor(()=>panel(0).locator('canvas').count().then(n=>n>0),'GPU terminal');assert.equal((await state()).projects[0].sessionId,session);await capture('gpu-terminal.png');await page.evaluate(()=>window.agentrix.settings({terminalRenderer:'dom'}));await waitFor(()=>panel(0).locator('.xterm-rows').isVisible(),'DOM terminal');
  results.checks.push('GPU terminal renders without recreating its session');
  results.checks.push('theme switches preserve terminal identity, 16/256-colour ANSI text and unsent input; original colours restore');
  await page.getByRole('button',{name:'工作台设置',exact:true}).click();assert.ok(await page.getByRole('radio',{name:monoTheme === 'mono-amber-dark' ? '白黑橙' : '黑白橙',exact:true}).isChecked());await capture('settings.png');await page.getByRole('button',{name:'完成',exact:true}).click();
@@ -55,7 +55,7 @@ try{
  const signal=await panel(1).evaluate(node=>getComputedStyle(node).getPropertyValue('--signal-rgb').trim());assert.equal(signal,'255, 107, 0');
  const done=path.join(output,'task.done'),thread=randomUUID(),transcript=path.join(home,'sessions',`rollout-${thread}.jsonl`);
  const quote=value=>"'"+value.replaceAll("'","''")+"'";
- await write(0,`Send-ProjectGridEvent 'codex-started'; while(-not(Test-Path -LiteralPath ${quote(done)})){Start-Sleep -Milliseconds 100}; Send-ProjectGridEvent 'codex-exited'\r`);
+ await write(0,`Send-AgentrixEvent 'codex-started'; while(-not(Test-Path -LiteralPath ${quote(done)})){Start-Sleep -Milliseconds 100}; Send-AgentrixEvent 'codex-exited'\r`);
  await waitFor(async()=>(await state()).projects[0].codexActive,'offline task starts');
  await fs.writeFile(transcript,JSON.stringify({type:'session_meta',payload:{id:thread,cwd:projects[0].path,source:'cli'}})+'\n'+JSON.stringify({type:'event_msg',timestamp:new Date().toISOString(),payload:{type:'task_started',turn_id:'monochrome-turn'}})+'\n');
  await waitFor(()=>panel(0).getAttribute('data-status').then(v=>v==='working'),'working state');
@@ -81,7 +81,7 @@ try{
  await page.getByRole('button',{name:'Git 历史',exact:true}).click();await page.getByRole('button',{name:'已修改 settings.ts',exact:true}).click();
  await page.locator('.git-line-added').first().waitFor();await capture('git-diff.png');
  assert.ok(await page.locator('.git-line-added > span:nth-child(3)').first().innerText()==='+');assert.ok(await page.locator('.git-line-removed > span:nth-child(3)').first().innerText()==='-');
- await page.evaluate(()=>window.projectGrid.settings({surface:'solid'}));await waitFor(()=>page.evaluate(()=>document.documentElement.dataset.surface==='solid'),'solid mode');await capture('solid-git.png');
+ await page.evaluate(()=>window.agentrix.settings({surface:'solid'}));await waitFor(()=>page.evaluate(()=>document.documentElement.dataset.surface==='solid'),'solid mode');await capture('solid-git.png');
  results.checks.push('Git additions and removals retain explicit prefixes and distinct neutral surfaces; solid mode works');
  await app.close();app=null;await launch();assert.equal((await state()).settings.theme,monoTheme);await waitFor(()=>page.evaluate(theme=>document.documentElement.dataset.theme===theme,monoTheme),'theme persists after restart');
  results.checks.push('selected theme survives restart');assert.deepEqual(errors,[]);console.log('PASS:',results.checks.join('; '));

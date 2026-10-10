@@ -54,7 +54,7 @@ Windows 10 透明窗口使用有黑白实体描边的光标，切换底色后继
 
 - npm test：设置持久化与迁移、推荐配置范围、对比度、字体名称校验、原调色板一致性及现有单元测试。
 - npm run test:appearance：六主题 × 两种渲染 × 两种玻璃背景/实色，共 36 组；原生 RGB 表面、字体/会话/草稿、材料联动、推荐、文件预览、语言、重启与无字体下载。
-- npm run test:monochrome；PROJECT_GRID_MONO_THEME=mono-amber-dark 运行深色：ANSI、提醒、阅读视图与 Git 差异。
+- npm run test:monochrome；AGENTRIX_MONO_THEME=mono-amber-dark 运行深色：ANSI、提醒、阅读视图与 Git 差异。
 - npm run test:question-appearance：真实隔离 PTY 输出 Codex/Claude 的提问、多选、审阅与填写样本，检查两套简洁主题的文字与表面。
 - npm run test:readability：GPU/DOM 字重和字体实际识别、缺失字体回退、输入与节点保持、光标位图、普通窗口与原生窗口的光标范围。
 - npm run test:glass-transparency：六主题透明度两端、默认恢复、展开面板、实色及减少透明度回退。

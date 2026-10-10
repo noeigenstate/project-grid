@@ -50,7 +50,7 @@ export function ReadingQuestion({ choice, terminalId, onError }: { choice: Scree
     try {
       for (let index = 0; index < keys.length; index++) {
         if (!active.current) return;
-        window.projectGrid.writeTerminal(terminalId, keys[index]);
+        window.agentrix.writeTerminal(terminalId, keys[index]);
         if (index < keys.length - 1) await new Promise(resolve => setTimeout(resolve, 25));
       }
     } catch (error) {
@@ -91,7 +91,7 @@ export function ReadingQuestion({ choice, terminalId, onError }: { choice: Scree
   const hint = [t('↑↓ 移动'), question.multi ? t('空格勾选') : t('Enter 选择'), ...(switchable ? [t('←→ 切换问题')] : []), t('Esc 取消')].join(' · ');
 
   return <div ref={card} className={`reading-choice is-question${question.multi ? ' is-multi' : ''}`} role="group" aria-label={choice.title} aria-busy={busy} tabIndex={-1} onKeyDown={keys}
-    onFocus={() => window.projectGrid.terminalFocus(terminalId, false)}>
+    onFocus={() => window.agentrix.terminalFocus(terminalId, false)}>
     <div className="reading-question-head">
       {question.tabs.length > 1 && <span className="reading-question-tabs">{question.tabs.map(tab =>
         <span key={tab.label} className={`reading-question-tab${tab.answered ? ' is-answered' : ''}`}>{tab.answered && <Check size={11} weight="bold" />}{tab.label}</span>)}</span>}

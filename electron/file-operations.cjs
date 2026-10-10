@@ -165,7 +165,7 @@ class FileOperations {
           const info = await fs.lstat(source);
           if (info.isDirectory() && inside(await fs.realpath(source), parent)) throw new Error('不能把文件夹复制到它自身内部。');
           const targetName = await unusedName(parent, name);
-          const staging = path.join(parent, `.project-grid-copy-${randomUUID()}`);
+          const staging = path.join(parent, `.agentrix-copy-${randomUUID()}`);
           try {
             await fs.cp(source, staging, { recursive: true, force: false, errorOnExist: true, verbatimSymlinks: true, filter: () => { check(); return true; } });
             check();

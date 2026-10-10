@@ -5,7 +5,7 @@ const listen = (channel, callback) => {
   return () => ipcRenderer.removeListener(channel, listener);
 };
 
-contextBridge.exposeInMainWorld('projectGrid', {
+contextBridge.exposeInMainWorld('agentrix', {
   getState: () => ipcRenderer.invoke('workspace:state'),
   getAgents: () => ipcRenderer.invoke('agents:status'),
   installAgent: agent => ipcRenderer.invoke('agents:install', agent),
@@ -98,6 +98,9 @@ contextBridge.exposeInMainWorld('projectGrid', {
   terminalConversation: id => ipcRenderer.invoke('terminal:conversation', id),
   terminalCommands: id => ipcRenderer.invoke('terminal:commands', id),
   agentStart: id => ipcRenderer.invoke('agent:start', id),
+  agentHistory: id => ipcRenderer.invoke('agent:history', id),
+  agentOpenImage: file => ipcRenderer.invoke('agent:open-image', file),
+  agentLaunch: (id, agent, mode) => ipcRenderer.invoke('agent:launch', id, agent, mode),
   agentSend: (id, text, images) => ipcRenderer.invoke('agent:send', id, text, images),
   agentInterrupt: id => ipcRenderer.invoke('agent:interrupt', id),
   agentAnswer: (id, answer) => ipcRenderer.invoke('agent:answer', id, answer),

@@ -33,9 +33,9 @@ export function useExplorerFileActions(project: Project, changed: (directory?: s
   const [message, setMessage] = useState('');
   const [progress, setProgress] = useState<FileProgress>(null);
   useEffect(() => {
-    const off = window.projectGrid.onFileProgress(setProgress);
-    window.projectGrid.getFileProgress().then(result => { if (result.ok) setProgress(result.value); });
-    return () => { off(); window.projectGrid.fileTreeFocus(project.id, false); };
+    const off = window.agentrix.onFileProgress(setProgress);
+    window.agentrix.getFileProgress().then(result => { if (result.ok) setProgress(result.value); });
+    return () => { off(); window.agentrix.fileTreeFocus(project.id, false); };
   }, [project.id]);
   useEffect(() => {
     if (!menu) return;
@@ -62,18 +62,18 @@ export function useExplorerFileActions(project: Project, changed: (directory?: s
   };
   const folder = (entry: FileEntry) => entry.kind === 'directory' || !entry.path ? entry.path : parentOf(entry.path);
   const targets = (entry: FileEntry) => selected.includes(entry.path) ? selected : [entry.path];
-  const copy = (paths: string[]) => run(async () => { const result = await unwrap(window.projectGrid.copyEntries(project.id, paths)); if (!result.superseded) setMessage(t('已复制 {count} 项，可粘贴到其他位置', { count: result.count })); });
+  const copy = (paths: string[]) => run(async () => { const result = await unwrap(window.agentrix.copyEntries(project.id, paths)); if (!result.superseded) setMessage(t('已复制 {count} 项，可粘贴到其他位置', { count: result.count })); });
   const copyPaths = async (paths: string[], format: 'absolute' | 'relative') => {
     setMenu(null); setMessage('');
-    try { const result = await unwrap(window.projectGrid.copyPaths(project.id, paths, format)); if (!result.superseded) setMessage(format === 'absolute' ? t('已复制绝对路径') : t('已复制相对路径')); }
+    try { const result = await unwrap(window.agentrix.copyPaths(project.id, paths, format)); if (!result.superseded) setMessage(format === 'absolute' ? t('已复制绝对路径') : t('已复制相对路径')); }
     catch (error) { setMessage(String((error as Error).message || error)); }
   };
   const paste = (directory: string) => run(async () => {
-    const result = await unwrap(window.projectGrid.pasteEntries(project.id, directory));
+    const result = await unwrap(window.agentrix.pasteEntries(project.id, directory));
     setSelected(result.pasted); anchor.current = result.pasted[0] || directory;
     changed(directory); setMessage(t('已粘贴 {count} 项到{place}', { count: result.pasted.length, place: directory || t('项目根目录') }));
   });
-  const remove = (paths: string[]) => run(async () => { const result = await unwrap(window.projectGrid.deleteEntries(project.id, paths)); removed(result.deleted); setSelected([]); });
+  const remove = (paths: string[]) => run(async () => { const result = await unwrap(window.agentrix.deleteEntries(project.id, paths)); removed(result.deleted); setSelected([]); });
   const choose = (entry: FileEntry, event: MouseEvent) => {
     if (event.shiftKey) {
       const paths = rows().map(row => row.dataset.nodePath!); const from = paths.indexOf(anchor.current), to = paths.indexOf(entry.path);
@@ -85,7 +85,7 @@ export function useExplorerFileActions(project: Project, changed: (directory?: s
   const contextMenu = (entry: FileEntry, event: MouseEvent) => {
     event.preventDefault(); event.stopPropagation();
     const paths = targets(entry); if (!selected.includes(entry.path)) setSelected(paths);
-    window.projectGrid.fileTreeFocus(project.id, true);
+    window.agentrix.fileTreeFocus(project.id, true);
     setMenu({ x: Math.max(8, Math.min(event.clientX, window.innerWidth - 250)), y: Math.max(8, Math.min(event.clientY, window.innerHeight - 365)), entry, targets: paths });
   };
   const backgroundEntry = (event: MouseEvent) => entryFor((event.target as Element).closest<HTMLElement>('[data-directory-path]')?.dataset.directoryPath || '');
@@ -98,7 +98,7 @@ export function useExplorerFileActions(project: Project, changed: (directory?: s
   const onKeyDown = (event: KeyboardEvent) => {
     const entry = menu?.entry || focused(); const control = event.ctrlKey || event.metaKey;
     if (control && event.shiftKey && event.key.toLowerCase() === 'c') { event.preventDefault(); event.stopPropagation(); void copyPaths(targets(entry), 'absolute'); }
-    else if (control && (event.key.toLowerCase() === 'c' || event.key === 'Insert')) { event.preventDefault(); event.stopPropagation(); const text = window.getSelection()?.toString(); if (text) void window.projectGrid.copy(text); else void copy(targets(entry)); }
+    else if (control && (event.key.toLowerCase() === 'c' || event.key === 'Insert')) { event.preventDefault(); event.stopPropagation(); const text = window.getSelection()?.toString(); if (text) void window.agentrix.copy(text); else void copy(targets(entry)); }
     else if ((control && event.key.toLowerCase() === 'v') || (event.shiftKey && event.key === 'Insert')) { event.preventDefault(); event.stopPropagation(); void paste(folder(entry)); }
     else if (control && event.key.toLowerCase() === 'a') { event.preventDefault(); event.stopPropagation(); setSelected(rows().map(row => row.dataset.nodePath!).filter(Boolean)); }
     else if (event.key === 'Delete' && entry.path) { event.preventDefault(); event.stopPropagation(); void remove(targets(entry)); }
@@ -108,8 +108,8 @@ export function useExplorerFileActions(project: Project, changed: (directory?: s
   const openCreate = (kind: 'file' | 'directory', entry = focused()) => { setMenu(null); setEdit({ kind, directory: folder(entry) }); };
   const save = async (name: string) => {
     if (!edit) return;
-    if (edit.kind === 'rename') { const result = await unwrap(window.projectGrid.renameEntry(project.id, edit.entry!.path, name)); renamed(edit.entry!.path, result.path); setSelected([result.path]); anchor.current = result.path; }
-    else { const result = await unwrap(window.projectGrid.createEntry(project.id, edit.directory, name, edit.kind)); setSelected([result.path]); anchor.current = result.path; if (edit.kind === 'file') select(result.path); }
+    if (edit.kind === 'rename') { const result = await unwrap(window.agentrix.renameEntry(project.id, edit.entry!.path, name)); renamed(edit.entry!.path, result.path); setSelected([result.path]); anchor.current = result.path; }
+    else { const result = await unwrap(window.agentrix.createEntry(project.id, edit.directory, name, edit.kind)); setSelected([result.path]); anchor.current = result.path; if (edit.kind === 'file') select(result.path); }
     changed(edit.directory);
   };
   const overlays = <>{menu && createPortal(<div ref={menuElement} className="dropdown explorer-context-menu" role="menu" aria-label={t('文件操作')} style={{ left: menu.x, top: menu.y }}>
@@ -122,7 +122,7 @@ export function useExplorerFileActions(project: Project, changed: (directory?: s
     <button role="menuitem" disabled={!menu.entry.path || menu.targets.length !== 1} onClick={() => { setEdit({ kind: 'rename', directory: parentOf(menu.entry.path), entry: menu.entry }); setMenu(null); }}><PencilSimple size={16} />{t('重命名')}<span>F2</span></button><div className="menu-divider" />
     <button role="menuitem" className="danger-text" disabled={menu.targets.includes('')} onClick={() => void remove(menu.targets)}><Trash size={16} />{t('删除')}<span>Delete</span></button>
   </div>, document.body)}{edit && <EditDialog edit={edit} save={save} close={() => setEdit(null)} />}</>;
-  const status = progress?.projectId === project.id ? <div className="explorer-file-status" role="status"><SpinnerGap className="loading-spinner" size={14} /><span>{t(progress.text)}</span><button className="icon-button" aria-label={t('取消文件操作')} onClick={() => void window.projectGrid.cancelFileOperation()}><X size={13} /></button></div>
+  const status = progress?.projectId === project.id ? <div className="explorer-file-status" role="status"><SpinnerGap className="loading-spinner" size={14} /><span>{t(progress.text)}</span><button className="icon-button" aria-label={t('取消文件操作')} onClick={() => void window.agentrix.cancelFileOperation()}><X size={13} /></button></div>
     : message ? <div className="explorer-file-status" role="status">{message}</div> : null;
   return { tree, selected: new Set(selected), choose, contextMenu, onKeyDown, openCreate, onBackgroundClick, onBackgroundContextMenu, pasteHere: () => void paste(folder(focused())), overlays, status };
 }

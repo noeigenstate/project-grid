@@ -10,10 +10,18 @@ const TEXT_LIMIT = 20000;
 // Wrappers the agents put around a prompt that are not what the user typed.
 const WRAPPERS = /<(system-reminder|environment_context|user_instructions|command-name|command-message|command-args|local-command-stdout|local-command-stderr|local-command-caveat|task-notification|user-prompt-submit-hook)\b[^>]*>[\s\S]*?<\/\1>/g;
 // Claude marks where a pasted image went ("[Image #2]"); the image itself is shown, so the mark goes.
-const clean = text => String(text || '').replace(WRAPPERS, '').replace(/\[Image #\d+\]\s?/g, '').trim();
-// Images the user attached to a message, as data URLs the reading view shows: at most four, none over about 2 MB.
+// Only the start of a huge record is cleaned: the wrapper pattern scans to the end for each unclosed tag, and what is
+// shown is cut to TEXT_LIMIT anyway.
+const CLEAN_LIMIT = 60000;
+const clean = text => String(text || '').slice(0, CLEAN_LIMIT).replace(WRAPPERS, '').replace(/\[Image #\d+\]\s?/g, '').trim();
+// Images the user attached to a message, as data URLs the reading view shows: at most four, none over about 2 MB,
+// each made small by the main process (setThumbnailer) so a conversation full of screenshots stays light to send.
 const IMAGE_LIMIT = 2_800_000;
+let shrink = url => url;
 function images(parts) {
+  return pictures(parts).map(url => { try { return shrink(url) || url; } catch { return url; } });
+}
+function pictures(parts) {
   const found = [];
   for (const part of Array.isArray(parts) ? parts : []) {
     if (found.length >= 4) break;
@@ -26,6 +34,23 @@ function images(parts) {
   return found;
 }
 const withImages = (entry, parts) => { const attached = images(parts); return attached.length ? { ...entry, images: attached } : entry; };
+// A picture Codex generated (its image_gen tool) and saved under generated_images. The reading view shows a small copy
+// made from the saved file (the main process sets how, see setThumbnailer), never the full image inline, and opens
+// the file itself on a click.
+const GENERATED = /[\\/]generated_images[\\/][^\\/]+[\\/][^\\/]+\.(?:png|jpe?g|webp)$/i;
+const isGeneratedImage = file => typeof file === 'string' && require('node:path').isAbsolute(file) && GENERATED.test(file);
+let thumbnail = () => null;
+// fromFile(path) and fromDataUrl(url) return a small data URL, or null to keep what there is.
+function setThumbnailer(fromFile, fromDataUrl = url => url) { thumbnail = fromFile; shrink = fromDataUrl; }
+function generatedImage(item, at) {
+  const kind = item?.type === 'Extension' ? item.kind : item?.type;
+  if (!['image_gen.generation', 'imageGeneration'].includes(kind) || item.status !== 'completed' || !isGeneratedImage(item.savedPath)) return null;
+  let src = null;
+  try { src = thumbnail(item.savedPath); } catch { }
+  if (!src && typeof item.result === 'string' && item.result.length <= IMAGE_LIMIT) src = `data:image/png;base64,${item.result}`;
+  if (!src) return null;
+  return { id: `g:${item.id}`, at, role: 'assistant', text: '', images: [src], generated: { path: item.savedPath, prompt: bounded(String(item.revisedPrompt || '')) } };
+}
 const bounded = text => text.length > TEXT_LIMIT ? `${text.slice(0, TEXT_LIMIT)}\n\n…` : text;
 const brief = action => ({ kind: action.kind, tool: action.tool, target: action.target, detail: action.detail, done: action.done, failed: action.failed, phrase: action.phrase, object: action.object });
 
@@ -101,7 +126,9 @@ function codexConversation(log, record, cwd) {
   const payload = record.payload, at = Date.parse(record.timestamp) || Date.now();
   if (record.type === 'session_meta') { log.reset(); return; }
   if (record.type === 'event_msg') {
-    if (payload.type === 'item_completed' && ['UserMessage', 'AgentMessage'].includes(payload.item?.type)) {
+    const picture = payload.type === 'item_completed' ? generatedImage(payload.item, at) : null;
+    if (picture) log.put(picture);
+    else if (payload.type === 'item_completed' && ['UserMessage', 'AgentMessage'].includes(payload.item?.type)) {
       const text = codexMessage(payload.item), user = payload.item.type === 'UserMessage';
       const entry = { id: `${user ? 'u' : 'a'}:${payload.item.id || at}`, at, role: user ? 'user' : 'assistant', text: bounded(text) };
       const shown = user ? withImages(entry, payload.item.content) : entry;
@@ -116,4 +143,4 @@ function codexConversation(log, record, cwd) {
   for (const action of codexActions(payload, at, cwd)) log.put({ id: action.id, at, role: 'tool', tool: brief(action) });
 }
 
-module.exports = { ConversationLog, claudeConversation, codexConversation, clean };
+module.exports = { ConversationLog, claudeConversation, codexConversation, clean, generatedImage, isGeneratedImage, setThumbnailer };

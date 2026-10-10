@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 function isInstalledBuild(isPackaged, executablePath, exists = fs.existsSync) {
-  return !!isPackaged && exists(path.join(path.dirname(executablePath), 'Uninstall Project Grid.exe'));
+  return !!isPackaged && exists(path.join(path.dirname(executablePath), 'Uninstall Agentrix.exe'));
 }
 
 class UpdateManager {

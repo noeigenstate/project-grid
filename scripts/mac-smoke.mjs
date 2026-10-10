@@ -29,10 +29,10 @@ print -r -- "STAND_IN_CODEX_DONE"
 `, { mode: 0o755 });
 await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ version: 1, projects: [project], settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, sound: false, announce: false, closeToTray: false, restoreSessions: false } }));
 
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: dataDir, HOME: home, SHELL: '/bin/zsh' };
-for (const name of ['ELECTRON_RUN_AS_NODE', 'PROJECT_GRID_DEV_URL', 'ZDOTDIR', 'CODEX_HOME']) delete env[name];
+const env = { ...process.env, AGENTRIX_DATA_DIR: dataDir, HOME: home, SHELL: '/bin/zsh' };
+for (const name of ['ELECTRON_RUN_AS_NODE', 'AGENTRIX_DEV_URL', 'ZDOTDIR', 'CODEX_HOME']) delete env[name];
 const packaged = process.argv.includes('--packaged');
-const executablePath = packaged ? path.join(root, 'release/mac-arm64/Project Grid.app/Contents/MacOS/Project Grid') : require('electron');
+const executablePath = packaged ? path.join(root, 'release/mac-arm64/Agentrix.app/Contents/MacOS/Agentrix') : require('electron');
 const errors = [];
 let application, savedClipboard = null;
 try {
@@ -41,7 +41,7 @@ try {
   const page = await application.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
   await page.waitForSelector('.project-panel', { timeout: 20000 });
-  const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0];
+  const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0];
 
   // macOS draws the window buttons; the page leaves room for them and has none of its own.
   assert.equal(await page.evaluate(() => document.documentElement.dataset.platform), 'darwin');
@@ -49,7 +49,7 @@ try {
   assert.equal(await page.locator('.titlebar-brand').evaluate(element => getComputedStyle(element).paddingLeft), '86px', 'room for the traffic lights');
   await page.locator('.titlebar').screenshot({ path: path.join(output, 'titlebar.png') });
 
-  await page.getByRole('button', { name: '启动终端', exact: true }).click();
+  await page.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => { const value = await state(); return value.terminals[0].status === 'shell' && value.terminals[0].shellReady && value.codexAvailable === true; }, 'zsh reports its prompt with codex available');
   assert.equal((await state()).terminals[0].shell, 'zsh');
   const terminal = page.locator('.project-panel .xterm');

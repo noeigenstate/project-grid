@@ -1,4 +1,4 @@
-# Project Grid shell integration for zsh, the local terminal on macOS.
+# Agentrix shell integration for zsh, the local terminal on macOS.
 # zsh starts with ZDOTDIR pointing at a folder of stub start-up files (written by electron/zsh-terminal.cjs);
 # each stub sources this file with its phase. The user's own .zshenv, .zprofile and .zshrc run first, unchanged,
 # and their .zlogin after us. Then this adds what bootstrap.ps1 adds to PowerShell: a report at every prompt and
@@ -6,8 +6,8 @@
 # Phases: zshenv, zprofile (source the user's file and hand back to the next stub), zshrc (source the user's
 # file, then set up this terminal).
 
-# The user's own start-up folder: what their .zshenv chose, else what Project Grid was started with, else HOME.
-__pg_user_zdotdir=${__pg_user_zdotdir:-${PROJECT_GRID_USER_ZDOTDIR:-$HOME}}
+# The user's own start-up folder: what their .zshenv chose, else what Agentrix was started with, else HOME.
+__pg_user_zdotdir=${__pg_user_zdotdir:-${AGENTRIX_USER_ZDOTDIR:-$HOME}}
 __pg_zdotdir=${__pg_zdotdir:-$ZDOTDIR}
 
 if [[ $1 == zshenv || $1 == zprofile ]]; then
@@ -19,17 +19,17 @@ if [[ $1 == zshenv || $1 == zprofile ]]; then
 fi
 
 ZDOTDIR=$__pg_user_zdotdir
-# /etc/zshrc chose the history file while ZDOTDIR still named Project Grid's folder.
+# /etc/zshrc chose the history file while ZDOTDIR still named Agentrix's folder.
 [[ $HISTFILE == $__pg_zdotdir/* ]] && HISTFILE=$ZDOTDIR/.zsh_history
 [[ -r $ZDOTDIR/.zshrc ]] && builtin source "$ZDOTDIR/.zshrc"
 # zsh reads .zlogin from ZDOTDIR next: the user's own. A shell started from this one starts like any other.
-if [[ $__pg_user_zdotdir == $HOME && -z $PROJECT_GRID_USER_ZDOTDIR ]]; then unset ZDOTDIR; else export ZDOTDIR=$__pg_user_zdotdir; fi
+if [[ $__pg_user_zdotdir == $HOME && -z $AGENTRIX_USER_ZDOTDIR ]]; then unset ZDOTDIR; else export ZDOTDIR=$__pg_user_zdotdir; fi
 
-# What Project Grid passed in, kept in this shell only; programs started here do not inherit it.
-typeset -g __pg_socket=$PROJECT_GRID_SOCKET __pg_project=$PROJECT_GRID_PROJECT_ID __pg_key=$PROJECT_GRID_SESSION_KEY
-typeset -g __pg_node=$PROJECT_GRID_NODE __pg_helper=$PROJECT_GRID_EVENT_HELPER __pg_start=$PROJECT_GRID_START_DIR
+# What Agentrix passed in, kept in this shell only; programs started here do not inherit it.
+typeset -g __pg_socket=$AGENTRIX_SOCKET __pg_project=$AGENTRIX_PROJECT_ID __pg_key=$AGENTRIX_SESSION_KEY
+typeset -g __pg_node=$AGENTRIX_NODE __pg_helper=$AGENTRIX_EVENT_HELPER __pg_start=$AGENTRIX_START_DIR
 typeset -gi __pg_sequence=0
-unset PROJECT_GRID_SOCKET PROJECT_GRID_PROJECT_ID PROJECT_GRID_SESSION_KEY PROJECT_GRID_NODE PROJECT_GRID_EVENT_HELPER PROJECT_GRID_START_DIR PROJECT_GRID_USER_ZDOTDIR
+unset AGENTRIX_SOCKET AGENTRIX_PROJECT_ID AGENTRIX_SESSION_KEY AGENTRIX_NODE AGENTRIX_EVENT_HELPER AGENTRIX_START_DIR AGENTRIX_USER_ZDOTDIR
 unset __pg_zdotdir __pg_user_zdotdir
 zmodload zsh/net/socket 2>/dev/null
 autoload -Uz add-zsh-hook
@@ -68,8 +68,8 @@ __pg_program() {
   else reply[1]=$(whence -p -- $reply[1]) || return 1; [[ -n $reply[1] ]]; fi
 }
 
-# type [exit code] [agent]: one line of JSON to Project Grid's socket, the event bootstrap.ps1 sends.
-# A subshell writes it, so a closed Project Grid can never stop this shell.
+# type [exit code] [agent]: one line of JSON to Agentrix's socket, the event bootstrap.ps1 sends.
+# A subshell writes it, so a closed Agentrix can never stop this shell.
 __pg_send() {
   emulate -L zsh
   (( ++__pg_sequence ))
@@ -93,7 +93,7 @@ codex() {
     return 127
   fi
   program=("${reply[@]}")
-  # Codex runs this after every turn with one JSON argument: Project Grid's own executable, run as Node.
+  # Codex runs this after every turn with one JSON argument: Agentrix's own executable, run as Node.
   local notify= word
   for word in /usr/bin/env ELECTRON_RUN_AS_NODE=1 "$__pg_node" "$__pg_helper" codex-notify "$__pg_socket" "$__pg_project" "$__pg_key"; do
     __pg_json "$word"; notify+=${notify:+,}$REPLY
@@ -132,9 +132,9 @@ claude() {
 __pg_precmd() { __pg_send shell-prompt }
 add-zsh-hook precmd __pg_precmd
 
-# The user's start-up files may have changed directory; the terminal opens where Project Grid asked.
+# The user's start-up files may have changed directory; the terminal opens where Agentrix asked.
 [[ -n $__pg_start && -d $__pg_start ]] && builtin cd -q -- $__pg_start
-print -P '%F{8}  PROJECT GRID%f'
+print -P '%F{8}  AGENTRIX%f'
 print -P '%F{8}  Type codex or claude to start, or codex resume to continue a session.%f'
 print
 __pg_send shell-ready

@@ -1,13 +1,13 @@
-# Project Grid shell integration for Bash, a local terminal on Linux.
+# Agentrix shell integration for Bash, a local terminal on Linux.
 # Bash starts with --rcfile naming this file, after the system's /etc/bash.bashrc where it has one. This sources
 # the user's own ~/.bashrc, unchanged, then adds what zsh-integration.zsh adds to zsh: a report at every prompt
 # and the codex and claude wrappers. No user file is modified.
 
-# What Project Grid passed in, kept in this shell only; programs started here do not inherit it.
-__pg_socket=$PROJECT_GRID_SOCKET __pg_project=$PROJECT_GRID_PROJECT_ID __pg_key=$PROJECT_GRID_SESSION_KEY
-__pg_node=$PROJECT_GRID_NODE __pg_helper=$PROJECT_GRID_EVENT_HELPER __pg_start=$PROJECT_GRID_START_DIR
+# What Agentrix passed in, kept in this shell only; programs started here do not inherit it.
+__pg_socket=$AGENTRIX_SOCKET __pg_project=$AGENTRIX_PROJECT_ID __pg_key=$AGENTRIX_SESSION_KEY
+__pg_node=$AGENTRIX_NODE __pg_helper=$AGENTRIX_EVENT_HELPER __pg_start=$AGENTRIX_START_DIR
 __pg_sequence=0
-unset PROJECT_GRID_SOCKET PROJECT_GRID_PROJECT_ID PROJECT_GRID_SESSION_KEY PROJECT_GRID_NODE PROJECT_GRID_EVENT_HELPER PROJECT_GRID_START_DIR PROJECT_GRID_BOOTSTRAP
+unset AGENTRIX_SOCKET AGENTRIX_PROJECT_ID AGENTRIX_SESSION_KEY AGENTRIX_NODE AGENTRIX_EVENT_HELPER AGENTRIX_START_DIR AGENTRIX_BOOTSTRAP
 
 [[ -r ~/.bashrc ]] && builtin source ~/.bashrc
 
@@ -48,8 +48,8 @@ __pg_program() {
   else __pg_words[0]=$(builtin type -P -- "${__pg_words[0]}") && [[ -n ${__pg_words[0]} ]]; fi
 }
 
-# type [exit code] [agent]: one report to Project Grid's socket, the event zsh-integration.zsh sends. Bash has
-# no Unix sockets, so Project Grid's own executable sends it as Node; a closed Project Grid never stops this shell.
+# type [exit code] [agent]: one report to Agentrix's socket, the event zsh-integration.zsh sends. Bash has
+# no Unix sockets, so Agentrix's own executable sends it as Node; a closed Agentrix never stops this shell.
 __pg_send() {
   (( ++__pg_sequence ))
   local codex=false claude=false __pg_words
@@ -67,7 +67,7 @@ codex() {
     return 127
   fi
   local -a program=("${__pg_words[@]}")
-  # Codex runs this after every turn with one JSON argument: Project Grid's own executable, run as Node.
+  # Codex runs this after every turn with one JSON argument: Agentrix's own executable, run as Node.
   local notify= word REPLY
   for word in /usr/bin/env ELECTRON_RUN_AS_NODE=1 "$__pg_node" "$__pg_helper" codex-notify "$__pg_socket" "$__pg_project" "$__pg_key"; do
     __pg_json "$word"; notify+=${notify:+,}$REPLY
@@ -109,7 +109,7 @@ __pg_precmd() { local code=$?; __pg_send shell-prompt; return $code; }
 if [[ $(declare -p PROMPT_COMMAND 2>/dev/null) == 'declare -a'* ]]; then PROMPT_COMMAND=(__pg_precmd "${PROMPT_COMMAND[@]}")
 else PROMPT_COMMAND="__pg_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}"; fi
 
-# The user's start-up files may have changed directory; the terminal opens where Project Grid asked.
+# The user's start-up files may have changed directory; the terminal opens where Agentrix asked.
 [[ -n $__pg_start && -d $__pg_start ]] && builtin cd -- "$__pg_start"
-printf '\e[90m%s\e[0m\n' '  PROJECT GRID' '  Type codex or claude to start, or codex resume to continue a session.' ''
+printf '\e[90m%s\e[0m\n' '  AGENTRIX' '  Type codex or claude to start, or codex resume to continue a session.' ''
 __pg_send shell-ready

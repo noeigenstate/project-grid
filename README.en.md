@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/icon.png" alt="Project Grid" width="88" />
+  <img src="assets/icon.png" alt="Agentrix" width="88" />
 </p>
 
-<h1 align="center">Project Grid</h1>
+<h1 align="center">Agentrix</h1>
 
 <p align="center"><strong>An AI editor built for what comes next: you stop writing every line and start directing a whole grid of AI.</strong></p>
 <p align="center">Codex and Claude Code work on many projects side by side. They build, report and wait for your call.<br />Windows · macOS · Linux</p>
@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/promo.webp" alt="Project Grid film: six panes run side by side on a neon grid, one lights up and bursts, terminal glyphs regroup into a document, a voice turns into light, red and green shards are kept or dropped, and everything resolves into the Project Grid mark" width="960" />
+  <img src="docs/images/promo.webp" alt="Agentrix film: six panes run side by side on a neon grid, one lights up and bursts, terminal glyphs regroup into a document, a voice turns into light, red and green shards are kept or dropped, and everything resolves into the Agentrix mark" width="960" />
 </p>
 <p align="center"><sub>30-second film · <a href="docs/images/promo.mp4">full quality</a></sub></p>
 
@@ -32,7 +32,7 @@
 
 For forty years editors were built around **a file and a cursor**. Now that AI writes the code, what you really manage are **tasks and agents**: which one is thinking, which one is done, which one is stuck waiting for you, and what exactly it changed.
 
-Project Grid redesigns the editor from there:
+Agentrix redesigns the editor from there:
 
 - **Parallel, not queued.** Every project is a card with a real terminal; Codex and Claude Code work at the same time.
 - **Aware, not watched.** It reads the agents' own session records, knows what each round is doing, when it ends and when it needs you, and calls you back with light, a notification and a voice.
@@ -58,6 +58,8 @@ State comes from the rounds Codex and Claude Code record themselves, not from gu
 <img src="docs/images/reading-view.jpg" alt="Reading view: the Codex answer laid out as a document with headings, lists, a code block and folded tool calls; the activity pane on the right lists every step" width="100%" />
 
 Switch any Claude Code or Codex conversation to the **reading view**: headings, lists, tables, code blocks with a Copy button, tool calls folded into one line. The box at the bottom writes straight into the real terminal underneath, and the terminal is one click away.
+
+> The reading view currently supports **Claude Code** and **Codex**. OpenCode, Gemini CLI and other command-line agents run as usual in the card's terminal, and the reading view will cover more CLIs over time.
 
 - **CLI output is rendered again, too.** What slash commands such as `/usage`, `/status` and `/context` print is no longer box art: frames go, figures line up in tables, usage becomes progress bars, groups get headings, all set into the conversation and kept there after the dialog closes. Type `/` for every command, `@` to mention a project file.
 - **Questions and confirmations become cards.** Permission prompts, pickers like `/model`, and questions from Claude Code (AskUserQuestion) and Codex (Plan mode) are cards you click; what the agent is doing is written at the end of the conversation, as in its CLI, with a timer and Esc to interrupt.
@@ -90,13 +92,13 @@ Press **Ctrl+T** and talk to the current terminal; Enter sends. Recognition runs
 
 1. **Install** the build for your system from [Releases](https://github.com/noeigenstate/Agentrix/releases/latest) (below).
 2. **Add projects** with `Ctrl+Shift+N`: pick one or more folders, or an SSH project.
-3. **Give instructions**: run `codex` or `claude` in a card's terminal, say what to do, and get on with something else. Come back when it turns pink.
+3. **Give instructions**: pick Claude Code or Codex on the card — continue this folder's last conversation or start fresh — say what to do, and get on with something else. Come back when it turns pink. Other command-line agents run from "Just a terminal".
 
 | System | Download | Notes |
 | --- | --- | --- |
-| **Windows** | `Project-Grid-Setup-<version>-x64.exe` | Updates itself |
+| **Windows** | `Agentrix-Setup-<version>-x64.exe` | Updates itself |
 | **macOS** | Run the command below in Terminal | The same command installs and updates; the app is signed ad hoc, not notarized |
-| **Linux** | `Project-Grid-<version>-linux-<arch>.AppImage` | `chmod +x` and run; a `.tar.gz` is also available |
+| **Linux** | `Agentrix-<version>-linux-<arch>.AppImage` | `chmod +x` and run; a `.tar.gz` is also available |
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/noeigenstate/Agentrix/main/scripts/install-macos.sh | bash
@@ -127,14 +129,14 @@ A specific version, manual installs, and terminal and shortcut details for macOS
 <details>
 <summary><strong>Is my code or data uploaded?</strong></summary>
 
-Project Grid itself **collects nothing and sends no analytics**. It only contacts GitHub (update checks) and Hugging Face or its mirror (the first download of the offline voice model). Only if you choose a cloud model for spoken summaries is a round's final reply sent to the provider you picked. Codex and Claude Code talk to their own services exactly as they do in any terminal.
+Agentrix itself **collects nothing and sends no analytics**. It only contacts GitHub (update checks) and Hugging Face or its mirror (the first download of the offline voice model). Only if you choose a cloud model for spoken summaries is a round's final reply sent to the provider you picked. Codex and Claude Code talk to their own services exactly as they do in any terminal.
 
 </details>
 
 <details>
 <summary><strong>How is this different from a few terminals in an IDE?</strong></summary>
 
-The terminals are the same; the difference is that Project Grid **knows what state each agent is in**. It reads the session records of Codex and Claude Code to tell working, done and interrupted apart, and lays answers, command results and changes out for you to read. It is designed for directing several AI tasks at once, not for one person editing one file.
+The terminals are the same; the difference is that Agentrix **knows what state each agent is in**. It reads the session records of Codex and Claude Code to tell working, done and interrupted apart, and lays answers, command results and changes out for you to read. It is designed for directing several AI tasks at once, not for one person editing one file.
 
 </details>
 
@@ -148,7 +150,7 @@ No. The settings for completion alerts are passed in at launch and never written
 ## Roadmap
 
 - [ ] Project groups and quick switching
-- [ ] More command-line coding agents
+- [ ] The reading view for more CLIs (OpenCode, Gemini CLI and others)
 - [ ] A record of each round's results and artifacts
 - [ ] WSL workspaces
 
@@ -158,7 +160,7 @@ Ideas are welcome as [issues](https://github.com/noeigenstate/Agentrix/issues). 
 
 ```bash
 git clone https://github.com/noeigenstate/Agentrix.git
-cd project-grid
+cd agentrix
 npm ci
 npm start              # run in development
 npm test               # unit tests

@@ -31,7 +31,7 @@ function CommitDetails({ projectId, commit }: { projectId: string; commit: GitCo
   const [limit, setLimit] = useState(100);
   useEffect(() => {
     let active = true;
-    window.projectGrid.gitFiles(projectId, commit.hash).then(result => {
+    window.agentrix.gitFiles(projectId, commit.hash).then(result => {
       if (!active) return;
       if (result.ok) setData(result.value); else setError(result.error);
     }).catch(error => { if (active) setError(String(error)); });
@@ -52,7 +52,7 @@ function History({ projectId, status, revision }: { projectId: string; status: G
   const [selected, setSelected] = useState<string | null>(null), [loading, setLoading] = useState(false);
   useEffect(() => {
     let active = true; setLoading(true); setError(''); setSelected(null);
-    window.projectGrid.gitHistory(projectId, offset).then(result => {
+    window.agentrix.gitHistory(projectId, offset).then(result => {
       if (!active) return;
       if (result.ok) setData(result.value); else { setData(null); setError(result.error); }
     }).catch(error => { if (active) { setData(null); setError(String(error)); } }).finally(() => { if (active) setLoading(false); });

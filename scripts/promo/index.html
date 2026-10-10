@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
 <meta charset="utf-8">
-<title>Project Grid · Promo</title>
+<title>Agentrix · Promo</title>
 <style>
   html, body { margin: 0; background: #000; overflow: hidden; }
   canvas { display: block; width: 100vw; height: auto; }
@@ -198,7 +198,7 @@ function sceneBoot(t) {
   const title = window_(t, 1.6, 3.15, .2, .35);
   if (title > 0) {
     const tear = (1 - seg(t, 1.6, 2.1)) * 40 + seg(t, 2.8, 3.15) * 60;
-    neonText('PROJECT GRID', W / 2, H * .42, { size: 190, color: C.pink, alpha: title, split: tear + 3, tracking: 22, glow: 50 });
+    neonText('AGENTRIX', W / 2, H * .42, { size: 190, color: C.pink, alpha: title, split: tear + 3, tracking: 22, glow: 50 });
     neonText('SYSTEM  //  ONLINE', W / 2, H * .42 + 130, { size: 34, color: C.cyan, alpha: title * .9, tracking: 18, glow: 18 });
   }
 }
@@ -412,10 +412,9 @@ function sceneLogo(t) {
     g.beginPath(); g.roundRect(x - s / 2, y - s / 2, s, s, 10); g.fill(); g.restore();
   });
   const word = seg(t, 28.7, 29.2);
-  neonText('PROJECT GRID', cx, H * .64, { size: 120, color: C.pink, core: '#fff2f6', alpha: word, split: (1 - word) * 20 + 2, tracking: 26, glow: 40 });
-  neonText('项 目 矩 阵', cx, H * .64 + 92, { size: 44, font: CJK, weight: '700', color: C.cyan, alpha: seg(t, 28.9, 29.3), glow: 18 });
-  neonText('面向未来的 AI 编辑器', cx, H * .64 + 166, { size: 30, font: CJK, weight: '700', color: C.ink, alpha: seg(t, 29.1, 29.5), tracking: 6, glow: 12 });
-  neonText('BEYOND  THE  EDITOR.', cx, H * .64 + 218, { size: 24, color: C.violet, alpha: seg(t, 29.2, 29.6) * .95, tracking: 12, glow: 12 });
+  neonText('AGENTRIX', cx, H * .64, { size: 120, color: C.pink, core: '#fff2f6', alpha: word, split: (1 - word) * 20 + 2, tracking: 26, glow: 40 });
+  neonText('面向未来的 AI 编辑器', cx, H * .64 + 96, { size: 38, font: CJK, weight: '700', color: C.cyan, alpha: seg(t, 28.9, 29.3), tracking: 8, glow: 18 });
+  neonText('BEYOND  THE  EDITOR.', cx, H * .64 + 158, { size: 24, color: C.violet, alpha: seg(t, 29.1, 29.5) * .95, tracking: 12, glow: 12 });
 }
 
 // ---------- frame ----------

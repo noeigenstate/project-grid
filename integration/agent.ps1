@@ -7,10 +7,10 @@ $agent = [string]$args[0]
 if ($agent -notin @('codex', 'claude')) { Write-Error 'agent.ps1 runs codex or claude.'; exit 2 }
 $forward = @($args | Select-Object -Skip 1)
 $here = (Get-Location).Path
-$env:PROJECT_GRID_AGENT_ONLY = '1'
+$env:AGENTRIX_AGENT_ONLY = '1'
 . (Join-Path $PSScriptRoot 'bootstrap.ps1')
 Set-Location -LiteralPath $here
 # Events from this short-lived process must sort after the prompt events of the terminal.
-$global:ProjectGridEventSequence = [long][DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+$global:AgentrixEventSequence = [long][DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 & $agent @forward
 exit $global:LASTEXITCODE

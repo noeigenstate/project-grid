@@ -17,10 +17,10 @@ await fs.mkdir(profile, { recursive: true });
 const projects = ['清晰文字', '等待查看'].map((name, index) => ({ id: randomUUID(), name, path: path.join(output, 'project-' + index), kind: 'local', unread: index, lastCompletedAt: index ? Date.now() : null, restore: { terminal: false, codex: false } }));
 for (const project of projects) { await fs.mkdir(project.path); await fs.writeFile(path.join(project.path, 'README.md'), '# Native glass\n\nThe operating system blurs the real background.\n'); }
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { theme: 'mono-amber', surface: 'glass', glassBackground: 'desktop', glassTransparency: 37, terminalRenderer: 'dom', columns: 2, notifications: false, sound: false, announce: false, restoreSessions: false, closeToTray: false, fontSize: 15 } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 let app, page; const errors = [], results = { backend, checks: [] };
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
-const write = data => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id: projects[0].id, data });
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
+const write = data => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id: projects[0].id, data });
 async function launch() {
   app = await electron.launch({ executablePath: require('electron'), args: [root], cwd: root, env }); page = await app.firstWindow();
   page.on('pageerror', error => errors.push(error.message));
@@ -51,9 +51,9 @@ try {
     back.setAlwaysOnTop(true); back.show(); globalThis.desktopGlassMain.setAlwaysOnTop(true); globalThis.desktopGlassMain.show(); globalThis.desktopGlassMain.focus();
   });
   await fs.writeFile(path.join(output, 'capture.ps1'), 'param([string]$Output,[int]$X,[int]$Y,[int]$Width,[int]$Height)\nAdd-Type -AssemblyName System.Drawing\n$bitmap=New-Object System.Drawing.Bitmap $Width,$Height\n$graphics=[System.Drawing.Graphics]::FromImage($bitmap)\ntry { $graphics.CopyFromScreen($X,$Y,0,0,$bitmap.Size); $bitmap.Save($Output,[System.Drawing.Imaging.ImageFormat]::Png) } finally { $graphics.Dispose(); $bitmap.Dispose() }\n');
-  await page.locator('[data-project-id="' + projects[0].id + '"]').getByRole('button', { name: '启动终端', exact: true }).click();
+  await page.locator('[data-project-id="' + projects[0].id + '"]').getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).projects[0].shellReady, 'shell ready'); const session = (await state()).projects[0].sessionId;
-  await write("Clear-Host; Write-Host 'PROJECT GRID / DESKTOP GLASS'; Write-Host ''; Write-Host '真正背景 → 系统模糊 → 透明面板 → 清晰文字'; Write-Host ''; Write-Host 'Orange means attention. Normal work stays neutral.'\r");
+  await write("Clear-Host; Write-Host 'AGENTRIX / DESKTOP GLASS'; Write-Host ''; Write-Host '真正背景 → 系统模糊 → 透明面板 → 清晰文字'; Write-Host ''; Write-Host 'Orange means attention. Normal work stays neutral.'\r");
   await waitFor(() => page.locator('.xterm-rows').innerText().then(text => text.includes('Orange means attention.')), 'terminal text');
   await capture('native-glass.png');
   if (backend === 'windows-compat') {
@@ -72,16 +72,16 @@ try {
   }
   await write("Write-Output 'DESKTOP_GLASS_DRAFT'");
   for (const surface of ['glass', 'solid', 'desktop-glass']) {
-    await page.evaluate(surface => window.projectGrid.settings({ surface: surface === 'desktop-glass' ? 'glass' : surface, glassBackground: surface === 'desktop-glass' ? 'desktop' : 'theme' }), surface);
+    await page.evaluate(surface => window.agentrix.settings({ surface: surface === 'desktop-glass' ? 'glass' : surface, glassBackground: surface === 'desktop-glass' ? 'desktop' : 'theme' }), surface);
     await page.waitForFunction(surface => document.documentElement.dataset.surface === surface, surface);
     assert.equal((await state()).projects[0].sessionId, session);
   }
-  assert.ok((await page.evaluate(id => window.projectGrid.attachTerminal(id), projects[0].id)).value.data.includes('DESKTOP_GLASS_DRAFT')); await write('\x03');
-  await page.evaluate(() => window.projectGrid.settings({ glassTransparency: 75 }));
+  assert.ok((await page.evaluate(id => window.agentrix.attachTerminal(id), projects[0].id)).value.data.includes('DESKTOP_GLASS_DRAFT')); await write('\x03');
+  await page.evaluate(() => window.agentrix.settings({ glassTransparency: 75 }));
   await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--glass-alpha') === '0.25');
   const pane = await page.locator('.project-panel').first().evaluate(node => ({ opacity: getComputedStyle(node).opacity, backdrop: getComputedStyle(node).backdropFilter, fill: getComputedStyle(node).backgroundColor }));
   assert.equal(pane.opacity, '1'); assert.equal(pane.backdrop, 'none'); assert.ok(pane.fill.includes('0.25')); await capture('native-more-transparent.png');
-  await page.evaluate(() => window.projectGrid.settings({ terminalRenderer: 'gpu' })); await waitFor(() => page.locator('canvas').count().then(count => count > 0), 'GPU terminal'); assert.equal((await state()).projects[0].sessionId, session);
+  await page.evaluate(() => window.agentrix.settings({ terminalRenderer: 'gpu' })); await waitFor(() => page.locator('canvas').count().then(count => count > 0), 'GPU terminal'); assert.equal((await state()).projects[0].sessionId, session);
   await page.getByRole('button', { name: '工作台设置', exact: true }).click(); assert.equal(await page.getByRole('combobox', { name: '界面材质', exact: true }).inputValue(), 'glass'); assert.equal(await page.getByRole('combobox', { name: '玻璃背景', exact: true }).inputValue(), 'desktop'); await capture('settings.png'); await page.getByRole('button', { name: '完成', exact: true }).click();
   const before = await app.evaluate(() => globalThis.desktopGlassMain.getBounds());
   await app.evaluate(() => globalThis.desktopGlassMain.setSize(1300, 820)); await page.waitForTimeout(100); assert.equal(await app.evaluate(() => globalThis.desktopGlassMain.getBounds().width), 1300); await app.evaluate((_electron, bounds) => globalThis.desktopGlassMain.setBounds(bounds), before);
@@ -95,9 +95,9 @@ try {
   assert.deepEqual(errors, []);
   await app.close(); app = null; await launch(); assert.ok((await state()).desktopGlass.active); assert.equal((await state()).settings.glassTransparency, 75);
   results.checks.push('desktop glass and panel transparency survive restart');
-  await page.evaluate(() => window.projectGrid.settings({ surface: 'glass', glassBackground: 'theme' }));
+  await page.evaluate(() => window.agentrix.settings({ surface: 'glass', glassBackground: 'theme' }));
   await app.close(); app = null; await launch(); assert.equal((await state()).desktopGlass.active, false);
-  await page.evaluate(() => window.projectGrid.settings({ surface: 'glass', glassBackground: 'desktop' }));
+  await page.evaluate(() => window.agentrix.settings({ surface: 'glass', glassBackground: 'desktop' }));
   await waitFor(async () => (await state()).desktopGlass.restart, 'restart requirement');
   assert.equal(await page.evaluate(() => document.documentElement.dataset.surface), 'glass');
   await page.getByRole('button', { name: '工作台设置', exact: true }).click();

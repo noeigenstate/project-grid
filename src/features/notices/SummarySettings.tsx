@@ -3,7 +3,7 @@ import presets from '../../../electron/summary-presets.json';
 import type { Settings, SummaryEndpoint } from '../../shared/types';
 import { t } from '../../shared/i18n';
 
-const api = window.projectGrid;
+const api = window.agentrix;
 type Mode = Settings['summary']['mode'];
 const MODES: { id: Mode; label: string; hint: string }[] = [
   { id: 'fast', label: '快速播报', hint: '一轮结束立即播报「项目名 + 这一轮指令的第一句」，不调用任何模型。' },

@@ -7,7 +7,7 @@ const { randomUUID } = require('node:crypto');
 const { recentSession, resumeCommand, claudeResumeCommand } = require('../electron/session-restore.cjs');
 
 async function setup(t) {
-  const prefix = path.join(os.tmpdir(), 'project-grid-resume-');
+  const prefix = path.join(os.tmpdir(), 'agentrix-resume-');
   const folder = await fs.mkdtemp(prefix);
   await fs.mkdir(path.join(folder, 'sessions'), { recursive: true });
   await fs.mkdir(path.join(folder, 'project'));

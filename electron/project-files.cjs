@@ -188,7 +188,7 @@ async function saveProjectFile(project, relativePath, pageIndex, revision, conte
   if (!['text', 'html', 'markdown'].includes(preview.kind)) throw new Error('此文件不支持文本编辑。');
   if (preview.revision !== revision) throw new Error('文件已被其他程序修改，请刷新后重新编辑，避免覆盖新内容。');
   const resolved = await resolveProjectPath(project, relativePath);
-  const temporary = path.join(path.dirname(resolved), `.project-grid-edit-${randomUUID()}.tmp`);
+  const temporary = path.join(path.dirname(resolved), `.agentrix-edit-${randomUUID()}.tmp`);
   let source = await fs.open(resolved, 'r+');
   let destination;
   try {

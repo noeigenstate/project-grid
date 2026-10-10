@@ -79,7 +79,7 @@ test('Claude model fixture panel cuts everything through echoed /model', () => {
   const panel = extractCliPanelRows('claude', rows, inspect('claude', rows), '/model');
   assert.ok(panel.some(row => row.includes('Select model')));
   assert.ok(panel.at(-1).includes('Esc to cancel'));
-  assert.ok(!panel.some(row => row.includes('PROJECT GRID') || row.includes('❯ /model')));
+  assert.ok(!panel.some(row => row.includes('AGENTRIX') || row.includes('❯ /model')));
 });
 test('live slash overlays retain CLI suggestions instead of stripping them as footer rows', () => {
   for (const agent of ['claude', 'codex']) {
@@ -278,7 +278,7 @@ test('Claude is not idle while its spinner runs, even with an empty input; a fin
 });
 
 test('a command sent while the agent is not drawing yet (updating itself in the shell) shows nothing of the shell', () => {
-  const shell = ['  PROJECT GRID', '  Type codex to start, or codex resume to continue a session.', '', 'PS C:\work> codex resume 01a1', 'Updating Codex via `powershell ...`', '==> Downloading Codex CLI'];
+  const shell = ['  AGENTRIX', '  Type codex to start, or codex resume to continue a session.', '', 'PS C:\work> codex resume 01a1', 'Updating Codex via `powershell ...`', '==> Downloading Codex CLI'];
   assert.deepEqual(extractCliPanelRows('codex', shell, inspect('codex', shell), '/model'), []);
 });
 
@@ -352,4 +352,16 @@ test('the command line newer Codex prints above its output is not repeated in th
   const before = cliHistory('codex', sent, inspect('codex', sent));
   const printed = ['• MAIN-1', '', '/status', '', '  Model:   gpt-6.1-sol', '', ...input('codex')];
   assert.deepEqual(extractCliOutputRows('codex', printed, inspect('codex', printed), '/status', before), ['  Model:   gpt-6.1-sol']);
+});
+
+test('a Claude dialog opened while Claude works is still a dialog: the next command closes it first', () => {
+  // Claude 2.1.296 with a round under way: its working line stays above the /status dialog.
+  const working = ['· Razzmatazzing… (11s · thinking with high effort)', '▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔', '   Settings  Status   Config   Usage   Stats', '',
+    '   Version:           2.1.296', '   Session kind:      interactive', '   Model:             opus (claude-opus-5-5)', '', '   Esc to cancel'];
+  assert.equal(cliCloseKey('claude', working, inspect('claude', working), '/status'), '\x1b');
+  // Working with no dialog: nothing to close (Escape there would interrupt the round).
+  const busy = ['● Writing the poem', '', '✶ Razzmatazzing… (11s · esc to interrupt)', '', ...input('claude')];
+  assert.equal(cliCloseKey('claude', busy, inspect('claude', busy), '/status'), null);
+  const answering = ['✶ Razzmatazzing… (3s · esc to interrupt)', '', '● Line one of the poem'];
+  assert.equal(cliCloseKey('claude', answering, inspect('claude', answering), '/status'), null);
 });

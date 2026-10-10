@@ -38,12 +38,12 @@ npm run test:desktop-glass
 npm run test:readability
 npm run test:question-appearance
 npm run test:monochrome
-$env:PROJECT_GRID_MONO_THEME = 'mono-amber-dark'
+$env:AGENTRIX_MONO_THEME = 'mono-amber-dark'
 npm run test:monochrome
-Remove-Item Env:PROJECT_GRID_MONO_THEME
+Remove-Item Env:AGENTRIX_MONO_THEME
 ```
 
-GUI 检查应顺序运行。脚本创建独立 PROJECT_GRID_DATA_DIR、演示项目和助手资料；只关闭自身启动的测试窗口，不操作用户工作区。桌面模糊对照在 Windows 使用测试专属背景窗口和标记区域，需可见的桌面会话；无对应后端时不能据此宣称实际背景模糊通过。运行结束后可按日志打印的目录查看截图和 results.json。
+GUI 检查应顺序运行。脚本创建独立 AGENTRIX_DATA_DIR、演示项目和助手资料；只关闭自身启动的测试窗口，不操作用户工作区。桌面模糊对照在 Windows 使用测试专属背景窗口和标记区域，需可见的桌面会话；无对应后端时不能据此宣称实际背景模糊通过。运行结束后可按日志打印的目录查看截图和 results.json。
 
 ## 字体与打包
 
@@ -67,9 +67,9 @@ fs.writeFileSync('.test-output/pr-preview-build.json', JSON.stringify(build, nul
 '@ | Set-Content -LiteralPath .test-output/pr-build-config.cjs -Encoding UTF8
 node .test-output/pr-build-config.cjs
 node node_modules/electron-builder/out/cli/cli.js --win --dir --x64 --publish never --config .test-output/pr-preview-build.json
-$env:PROJECT_GRID_APPEARANCE_EXE = (Resolve-Path '.test-output/pr-appearance-package/win-unpacked/Project Grid.exe').Path
+$env:AGENTRIX_APPEARANCE_EXE = (Resolve-Path '.test-output/pr-appearance-package/win-unpacked/Agentrix.exe').Path
 npm run test:appearance
-Remove-Item Env:PROJECT_GRID_APPEARANCE_EXE
+Remove-Item Env:AGENTRIX_APPEARANCE_EXE
 ```
 
 ## 验证边界与维护注意

@@ -25,7 +25,7 @@ await fs.writeFile(path.join(dataDir, 'workspace.json'), JSON.stringify({ versio
   projects: [{ id: randomUUID(), name: '中文 项目', path: project, unread: 0, seenEvents: [], lastCompletedAt: null }],
   settings: { shell: 'bash', restoreSessions: true, terminalRenderer: 'dom', notifications: false, sound: false, announce: false, closeToTray: false } }));
 
-const env = { ...process.env, HOME: home, PROJECT_GRID_DATA_DIR: dataDir, PROJECT_GRID_TEST_RESTORE: '1' };
+const env = { ...process.env, HOME: home, AGENTRIX_DATA_DIR: dataDir, AGENTRIX_TEST_RESTORE: '1' };
 for (const name of ['ELECTRON_RUN_AS_NODE', 'APPDIR', 'APPIMAGE', 'LD_LIBRARY_PATH']) delete env[name];
 // Reproduce a desktop launch, where proxy variables from the invoking terminal are absent.
 if (expectedProxy) {
@@ -47,9 +47,9 @@ try {
   await waitFor(async () => { try { text = await fs.readFile(file, 'utf8'); return /^PATH=/m.test(text); } catch { return false; } },
     'the restored terminal writes its environment', 90000);
   const vars = Object.fromEntries(text.split('\n').filter(line => /^[A-Za-z_][A-Za-z0-9_]*=/.test(line)).map(line => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
-  for (const name of ['APPDIR', 'APPIMAGE', 'ARGV0', 'OWD', 'PROJECT_GRID_DATA_DIR', 'PROJECT_GRID_SOCKET', 'PROJECT_GRID_SESSION_KEY', 'ELECTRON_RUN_AS_NODE']) assert.equal(vars[name], undefined, `${name} stays out of the terminal`);
+  for (const name of ['APPDIR', 'APPIMAGE', 'ARGV0', 'OWD', 'AGENTRIX_DATA_DIR', 'AGENTRIX_SOCKET', 'AGENTRIX_SESSION_KEY', 'ELECTRON_RUN_AS_NODE']) assert.equal(vars[name], undefined, `${name} stays out of the terminal`);
   assert.doesNotMatch(text, /\/tmp\/\.mount_/, 'no folder of the mounted AppImage reaches the terminal');
-  assert.equal(vars.TERM_PROGRAM, 'project-grid');
+  assert.equal(vars.TERM_PROGRAM, 'agentrix');
   assert.ok(vars.PATH && vars.PATH.split(':').includes('/usr/bin'), 'the system PATH remains');
   if (expectedProxy) {
     const names = expectedProxy.startsWith('socks') ? ['ALL_PROXY', 'all_proxy'] : ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'];

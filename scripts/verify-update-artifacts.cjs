@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const yaml = require('js-yaml');
 const root = path.join(__dirname, '..');
 const version = require('../package.json').version;
-const installer = `Project-Grid-Setup-${version}-x64.exe`;
+const installer = `Agentrix-Setup-${version}-x64.exe`;
 const release = path.join(root, 'release');
 const feed = yaml.load(fs.readFileSync(path.join(release, 'latest.yml'), 'utf8'));
 assert.equal(feed.version, version, 'update feed version must match the app');
@@ -21,9 +21,9 @@ assert.ok(fs.statSync(path.join(release, installer + '.blockmap')).size > 0);
 const config = yaml.load(fs.readFileSync(path.join(release, 'win-unpacked', 'resources', 'app-update.yml'), 'utf8'));
 assert.equal(config.provider, 'github');
 assert.equal(config.owner, 'noeigenstate');
-assert.equal(config.repo, 'project-grid');
+assert.equal(config.repo, 'agentrix');
 const resources = require('resedit');
-const exe = resources.NtExecutable.from(fs.readFileSync(path.join(release, 'win-unpacked', 'Project Grid.exe')));
+const exe = resources.NtExecutable.from(fs.readFileSync(path.join(release, 'win-unpacked', 'Agentrix.exe')));
 const entries = resources.NtExecutableResource.from(exe).entries;
 const groups = resources.Resource.IconGroupEntry.fromEntries(entries);
 assert.equal(groups.length, 1, 'the executable must not retain an Electron icon group');
@@ -32,10 +32,10 @@ const sourceIcon = resources.Data.IconFile.from(fs.readFileSync(path.join(root, 
 for (const [index, icon] of groups[0].icons.entries()) {
   const entry = entries.find(entry => entry.type === 3 && entry.id === icon.iconID && entry.lang === groups[0].lang);
   assert.ok(entry, 'each icon must have an embedded resource');
-  assert.deepEqual(Buffer.from(entry.bin), Buffer.from(sourceIcon.icons[index].data.bin), 'the embedded icon must match the Project Grid source');
+  assert.deepEqual(Buffer.from(entry.bin), Buffer.from(sourceIcon.icons[index].data.bin), 'the embedded icon must match the Agentrix source');
 }
 console.log(`PASS: ${installer}, latest.yml, blockmap, SHA-512 and embedded GitHub update configuration`);
-console.log('PASS: seven embedded Project Grid icon sizes; no default Electron icon');
+console.log('PASS: seven embedded Agentrix icon sizes; no default Electron icon');
 const asar = require('@electron/asar');
 const archive = path.join(release, 'win-unpacked/resources/app.asar');
 const packedFiles = asar.listPackage(archive).map(file => file.replaceAll('\\', '/').replace(/^\//, ''));

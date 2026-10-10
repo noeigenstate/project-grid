@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const change = role => ({ entry: { role } });
+let sequence = 0;
+const change = (role, id = `e${++sequence}`, text = '') => ({ entry: { id, role, text } });
 
 function publisher() {
   const source = fs.readFileSync(path.join(__dirname, '../electron/main.cjs'), 'utf8');
@@ -105,4 +106,15 @@ test('submission poll timers can all be cancelled when disposing the terminal', 
   pollAfterSubmission(session, () => true);
   for (const timer of session.submissionPolls) clearTimeout(timer);
   t.mock.timers.tick(1000); assert.equal(polls, 0);
+});
+
+test('an answer streamed many times in one batch is sent once, as its latest version, in its place', t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const { packets, publish } = publisher();
+  publish(change('user', 'u1', 'hi'));
+  for (let index = 1; index <= 60; index++) publish(change('assistant', 'a1', 'word '.repeat(index)));
+  publish(change('tool', 't1'));
+  t.mock.timers.tick(120);
+  assert.equal(packets.length, 1);
+  assert.deepEqual(Array.from(packets[0].packet.changes, entry => [entry.id, entry.text.length]), [['u1', 2], ['a1', 300], ['t1', 0]], 'deltas of one answer do not force a full snapshot');
 });

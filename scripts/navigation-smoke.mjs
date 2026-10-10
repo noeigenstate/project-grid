@@ -26,13 +26,13 @@ await fs.writeFile(path.join(ssh.project, 'README.md'), '# 远程文件\n\n[查�
 // A regular shell at the end proves startup restoration actually ran after any legacy entries.
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [legacy, closed, remote, local], settings: { terminalRenderer: 'dom', autoSave: false, notifications: false, restoreSessions: true, closeToTray: false } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, PROJECT_GRID_TEST_SSH_CONFIG: ssh.configFile, PROJECT_GRID_TEST_RESTORE: '1', CODEX_HOME: path.join(output, 'codex-home') }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, AGENTRIX_TEST_SSH_CONFIG: ssh.configFile, AGENTRIX_TEST_RESTORE: '1', CODEX_HOME: path.join(output, 'codex-home') }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged'); let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
 const settled = focused => page.waitForFunction(focused => !!document.querySelector('.focus-mode') === focused && !document.querySelector('[data-focus-motion]'), focused);
 const errors = [];
 try {
-  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await app.evaluate(({ shell, dialog }) => {
     globalThis.navigationOpened = []; globalThis.editorCloseReply = 2;
@@ -49,14 +49,14 @@ try {
   const legacyPanel = page.locator(`[data-project-id="${legacy.id}"]`);
   await legacyPanel.getByRole('button', { name: `全屏查看 ${legacy.name}`, exact: true }).click(); await settled(true);
   await page.screenshot({ path: path.join(output, 'legacy-stopped-splits.png') });
-  await legacyPanel.locator(`[data-terminal-id="${legacy.id}"]`).getByRole('button', { name: '启动终端', exact: true }).click();
+  await legacyPanel.locator(`[data-terminal-id="${legacy.id}"]`).getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).projects.find(project => project.id === legacy.id).terminals[0].shellReady, 'migrated primary can start manually');
   const started = (await state()).projects.find(project => project.id === legacy.id);
   assert.equal(started.terminals.length, 2); assert.equal(started.terminals[0].codexActive, false); assert.equal(started.terminals[1].sessionId, null);
-  assert.deepEqual(await page.evaluate(id => window.projectGrid.closeTerminal(id), legacy.id), { ok: true, value: true });
+  assert.deepEqual(await page.evaluate(id => window.agentrix.closeTerminal(id), legacy.id), { ok: true, value: true });
   await waitFor(async () => (await state()).projects.find(project => project.id === legacy.id).terminals.length === 1, 'explicitly closing a primary still removes its pane');
   await page.getByRole('button', { name: '返回总览', exact: true }).click(); await settled(false);
-  assert.deepEqual(await page.evaluate(() => ['openInCode', 'markDone'].filter(key => key in window.projectGrid)), []);
+  assert.deepEqual(await page.evaluate(() => ['openInCode', 'markDone'].filter(key => key in window.agentrix)), []);
   const first = page.locator(`[data-project-id="${local.id}"]`), second = page.locator(`[data-project-id="${remote.id}"]`);
   await first.getByRole('button', { name: `${local.name} 的更多操作`, exact: true }).click();
   assert.equal(await page.getByRole('menuitem', { name: /VS Code|标记开发完成|继续开发/ }).count(), 0);
@@ -83,10 +83,10 @@ try {
   const sessionId = (await state()).projects.find(project => project.id === remote.id).sessionId;
   // Cycle all four cards, including a live reading view whose hidden xterm cannot take focus.
   for (const project of [legacy, closed]) {
-    await page.locator(`[data-project-id="${project.id}"]`).getByRole('button', { name: '启动终端', exact: true }).click();
+    await page.locator(`[data-project-id="${project.id}"]`).getByRole('button', { name: '只打开终端', exact: true }).click();
     await waitFor(async () => (await state()).projects.find(item => item.id === project.id).shellReady, 'navigation shell ready');
   }
-  await page.evaluate(id => window.projectGrid.writeTerminal(id, "Send-ProjectGridEvent 'codex-started'; Start-Sleep 3600\r"), local.id);
+  await page.evaluate(id => window.agentrix.writeTerminal(id, "Send-AgentrixEvent 'codex-started'; Start-Sleep 3600\r"), local.id);
   await waitFor(async () => (await state()).projects.find(project => project.id === local.id).codexActive, 'navigation fake agent session');
   await first.locator('.reading-composer textarea').waitFor();
   const order = [legacy, closed, remote, local], hud = page.locator('.project-switch-hud');
@@ -123,7 +123,7 @@ try {
   await page.keyboard.press('Control+Shift+Tab'); await assertSwitch(remote);
   // Stopped cards fall back to the card itself. Even a failed card focus must advance the cursor.
   const closedTerminal = (await state()).projects.find(project => project.id === closed.id).terminals[0].id;
-  assert.deepEqual(await page.evaluate(id => window.projectGrid.closeTerminal(id), closedTerminal), { ok: true, value: true });
+  assert.deepEqual(await page.evaluate(id => window.agentrix.closeTerminal(id), closedTerminal), { ok: true, value: true });
   await page.locator(`[data-project-id="${closed.id}"] .xterm-helper-textarea`).waitFor({ state: 'detached' });
   await page.keyboard.press('Control+Shift+Tab'); await assertSwitch(closed, true, null);
   await second.locator('.xterm-helper-textarea').focus();
@@ -156,7 +156,7 @@ try {
   await page.getByRole('button', { name: '返回总览', exact: true }).click(); await settled(false);
   for (const target of ['/srv/fixture/docs/nested', '/srv/fixture/docs-alias']) {
     // The SSH fixture echoes through the real transport, including this OSC-8 link.
-    await page.evaluate(({ id, target }) => window.projectGrid.writeTerminal(id, `\x1b[2J\x1b[H\x1b]8;;${target}\x07REMOTE_DOCS_LINK\x1b]8;;\x07\r\n`), { id: remote.id, target });
+    await page.evaluate(({ id, target }) => window.agentrix.writeTerminal(id, `\x1b[2J\x1b[H\x1b]8;;${target}\x07REMOTE_DOCS_LINK\x1b]8;;\x07\r\n`), { id: remote.id, target });
     const link = second.locator('.xterm-rows').getByText('REMOTE_DOCS_LINK', { exact: true });
     await link.waitFor();
     await terminalsSettled(page);
@@ -185,8 +185,8 @@ try {
   await page.getByRole('treeitem', { name: 'note.txt', exact: true }).waitFor();
   assert.equal((await state()).projects.find(project => project.id === remote.id).sessionId, sessionId);
   assert.deepEqual(await app.evaluate(() => globalThis.navigationOpened), [local.path], 'remote navigation never opens an external app');
-  const rejected = await page.evaluate(id => window.projectGrid.openLink(id, 'vscode://file/example'), remote.id); assert.equal(rejected.ok, false);
-  await page.evaluate(id => window.projectGrid.openLink(id, 'https://example.com/docs'), local.id);
+  const rejected = await page.evaluate(id => window.agentrix.openLink(id, 'vscode://file/example'), remote.id); assert.equal(rejected.ok, false);
+  await page.evaluate(id => window.agentrix.openLink(id, 'https://example.com/docs'), local.id);
   assert.deepEqual(await app.evaluate(() => globalThis.navigationOpened), [local.path, 'https://example.com/docs']);
   // F11 puts the whole window in full screen and back, whatever view is open.
   const fullScreen = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFullScreen()), before = await fullScreen();

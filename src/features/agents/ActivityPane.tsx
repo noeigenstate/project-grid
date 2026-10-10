@@ -70,12 +70,12 @@ export function ActivityPane({ project, terminal }: { project: Project; terminal
       const next = queued.reduce(apply, initial.slice(-200));
       queued = []; waiting = false; setActions(next);
     };
-    const off = window.projectGrid.onTerminalAction(packet => {
+    const off = window.agentrix.onTerminalAction(packet => {
       if (packet.id !== terminal.id) return;
       if (waiting) queued.push(packet);
       else setActions(current => apply(current, packet));
     });
-    void window.projectGrid.terminalActions(terminal.id).then(
+    void window.agentrix.terminalActions(terminal.id).then(
       result => snapshot(result.ok ? result.value : []), () => snapshot([]),
     );
     return () => { active = false; off(); };

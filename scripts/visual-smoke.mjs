@@ -19,15 +19,15 @@ for (const directory of [profile, path.join(home, 'sessions'), ...projects.map(p
 await fs.writeFile(path.join(projects[0].path, 'README.md'), '# 清晰的工作区\n\n保留文字、代码和状态的层次。\n');
 // These checks read the terminal's rows as HTML, so the compatible (DOM) renderer draws them; gpu-terminal-smoke covers the GPU one.
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects, settings: { terminalRenderer: 'dom', notifications: false, sound: false, closeToTray: false, restoreSessions: false, fontSize: 14 } }));
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, CODEX_HOME: home }; delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 const packaged = process.argv.includes('--packaged');
 // --daylight-only: run the Daylight checks (material, working glow, body contrast) and stop before the other themes.
 const daylightOnly = process.argv.includes('--daylight-only');
 class DaylightDone extends Error {}
 let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value;
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value;
 const panel = index => page.locator(`[data-project-id="${projects[index].id}"]`);
-const write = (index, data) => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id: projects[index].id, data });
+const write = (index, data) => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id: projects[index].id, data });
 const breathing = index => panel(index).evaluate(node => node.getAnimations({ subtree: true }).filter(animation => animation.animationName === 'signal-breathe').length);
 async function checkDaylightContrast() {
   // Hide only body content in this isolated profile so the screenshot measures the actual
@@ -72,7 +72,7 @@ async function checkDaylightContrast() {
 const pauseBreath = (time, play = false) => panel(0).evaluate((node, { time, play }) => { for (const animation of node.getAnimations({ subtree: true })) if (animation.animationName === 'signal-breathe') { animation.pause(); animation.currentTime = time; if (play) animation.play(); } }, { time, play });
 const errors = [];
 try {
-  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron'), args: packaged ? [] : [root], cwd: root, env });
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1600, 900));
@@ -80,15 +80,15 @@ try {
   assert.equal((await state()).settings.theme, 'daylight');
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'daylight');
   for (let index = 0; index < 4; index++) {
-    await panel(index).getByRole('button', { name: '启动终端', exact: true }).click();
+    await panel(index).getByRole('button', { name: '只打开终端', exact: true }).click();
     await waitFor(async () => (await state()).projects[index].shellReady, 'native terminal ready');
-    await write(index, `Clear-Host; Write-Host 'Project Grid / ${names[index]}'; Write-Host ''; Write-Host '  项目、终端和输入草稿各自独立。'; Write-Host '  Ctrl + 鼠标左键打开文件与链接'; Write-Host ''; Write-Host '  PASS  ANSI colors and readable text' -ForegroundColor Green; Write-Host '  INFO  状态变更后继续工作' -ForegroundColor Cyan\r`);
+    await write(index, `Clear-Host; Write-Host 'Agentrix / ${names[index]}'; Write-Host ''; Write-Host '  项目、终端和输入草稿各自独立。'; Write-Host '  Ctrl + 鼠标左键打开文件与链接'; Write-Host ''; Write-Host '  PASS  ANSI colors and readable text' -ForegroundColor Green; Write-Host '  INFO  状态变更后继续工作' -ForegroundColor Cyan\r`);
     await waitFor(async () => panel(index).locator('.xterm-rows').innerText().then(text => text.includes('ANSI colors and readable text')), 'readable terminal output');
   }
   const thread = randomUUID(), transcript = path.join(home, 'sessions', `rollout-${thread}.jsonl`);
   const record = (type, turn) => JSON.stringify({ type: 'event_msg', timestamp: new Date().toISOString(), payload: { type, turn_id: turn } }) + '\n';
   const quote = value => "'" + value.replaceAll("'", "''") + "'";
-  await write(0, `Clear-Host; Write-Host 'Project Grid / 界面开发'; Write-Host ''; Write-Host '  正在处理：验证独立项目的任务状态' -ForegroundColor Cyan; Write-Host '  背景任务运行中，可操作其他窗口。'; Write-Host ''; Send-ProjectGridEvent 'codex-started'; for ($pgVisual=0; $pgVisual -lt 2400 -and -not (Test-Path -LiteralPath ${quote(doneFile)}); $pgVisual++) { Start-Sleep -Milliseconds 100 }; Send-ProjectGridEvent 'codex-exited'\r`);
+  await write(0, `Clear-Host; Write-Host 'Agentrix / 界面开发'; Write-Host ''; Write-Host '  正在处理：验证独立项目的任务状态' -ForegroundColor Cyan; Write-Host '  背景任务运行中，可操作其他窗口。'; Write-Host ''; Send-AgentrixEvent 'codex-started'; for ($pgVisual=0; $pgVisual -lt 2400 -and -not (Test-Path -LiteralPath ${quote(doneFile)}); $pgVisual++) { Start-Sleep -Milliseconds 100 }; Send-AgentrixEvent 'codex-exited'\r`);
   await waitFor(async () => (await state()).projects[0].codexActive, 'offline task active');
   // The running agent's conversation shows as a document by default; these checks are about the terminal surface.
   await panel(0).locator('button[title="切换到终端"]').click();
@@ -136,7 +136,7 @@ try {
   for (const part of inner) assert.deepEqual([part.backdrop, part.fill, part.image, part.shadow, part.margin], ['none', 'rgba(0, 0, 0, 0)', 'none', 'none', '0px'], `nothing inside a card is glass on glass: ${JSON.stringify(inner)}`);
   if (daylightOnly) { await checkDaylightContrast(); await page.screenshot({ path: path.join(output, 'daylight.png') }); throw new DaylightDone(); }
   for (const [theme, name] of [['daylight', '晴空'], ['forest', '林间光影'], ['mountain-blue', '山青蓝'], ['wild-red', '西野红']]) {
-    await page.evaluate(theme => window.projectGrid.settings({ theme }), theme);
+    await page.evaluate(theme => window.agentrix.settings({ theme }), theme);
     await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
     await page.screenshot({ path: path.join(output, `${theme}.png`) });
     assert.equal(await panel(0).locator('.status-badge').innerText(), '正在处理');
@@ -147,7 +147,7 @@ try {
     assert.equal(await breathing(2), 0, `${name}: ready shell stays quiet`);
     if (theme === 'daylight') await checkDaylightContrast();
   }
-  await page.evaluate(() => window.projectGrid.settings({ theme: 'forest' }));
+  await page.evaluate(() => window.agentrix.settings({ theme: 'forest' }));
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'forest');
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 2, mobile: false });
@@ -216,9 +216,9 @@ try {
   assert.equal(await panel(0).locator('.panel-glow').evaluate(node => Number(getComputedStyle(node).opacity)), .3, 'an unviewed result keeps a quiet steady glow');
   // Rerender via theme changes and repeated lifecycle callbacks must not restart an old alert.
   await fs.appendFile(transcript, record('task_complete', 'visual-turn'));
-  await page.evaluate(() => window.projectGrid.settings({ theme: 'wild-red' }));
+  await page.evaluate(() => window.agentrix.settings({ theme: 'wild-red' }));
   assert.equal(await breathing(0), 0); assert.equal((await state()).projects[0].lastCompletedAt, completed);
-  await page.evaluate(id => window.projectGrid.acknowledge(id), projects[0].id);
+  await page.evaluate(id => window.agentrix.acknowledge(id), projects[0].id);
   await waitFor(async () => panel(0).evaluate(node => node.classList.contains('round-complete')), 'viewed automatic round becomes steady green');
   assert.equal(await breathing(0), 0);
   assert.equal(await panel(0).locator('.panel-glow').evaluate(node => Number(getComputedStyle(node).opacity)), 0, 'a viewed result has no glow');
@@ -232,7 +232,7 @@ try {
   assert.equal(await breathing(0), 0, 'working again stays steady');
   await fs.appendFile(transcript, record('task_complete', 'next-turn'));
   await waitFor(async () => (await breathing(0)) === 3, 'the next finished turn breathes again');
-  const setMotion = async mode => { await page.evaluate(mode => window.projectGrid.settings({ focusAnimation: mode }), mode); await page.waitForFunction(mode => document.documentElement.dataset.motion === mode, mode); };
+  const setMotion = async mode => { await page.evaluate(mode => window.agentrix.settings({ focusAnimation: mode }), mode); await page.waitForFunction(mode => document.documentElement.dataset.motion === mode, mode); };
   // Windows reports reduced motion whenever its "Animation effects" switch is off. The default
   // setting keeps the lights breathing; only "follow system" or "off" stops them.
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -272,7 +272,7 @@ try {
           const project = (await state()).projects.find(project => project.id === projects[0].id);
           return project.shellReady || project.status === 'exited';
         }, 'visual task returned to its shell');
-        for (const project of active) await page.evaluate(id => window.projectGrid.writeTerminal(id, '\x03exit\r'), project.id);
+        for (const project of active) await page.evaluate(id => window.agentrix.writeTerminal(id, '\x03exit\r'), project.id);
         await waitFor(async () => (await state()).projects.every(project => !project.sessionId || project.status === 'exited'), 'visual fixture shells exited');
         console.log('PASS: isolated visual task and terminal processes exited before closing the app');
       }

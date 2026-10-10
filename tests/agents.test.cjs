@@ -9,7 +9,7 @@ const { AGENT_PACKAGES, AgentsManager, onPath } = require('../electron/agents.cj
 // A PATH in the platform's own form: "folder";... with .cmd shims on Windows, folder:... with executables elsewhere.
 const windows = process.platform === 'win32';
 function fixture(t, extra = {}) {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-agents-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-agents-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   const env = windows ? { Path: `;"${folder}";`, ...extra } : { PATH: `:${folder}:`, ...extra };
   return { folder, env, add: name => fs.writeFileSync(path.join(folder, windows ? `${name}.cmd` : name), '', { mode: 0o755 }) };
@@ -39,7 +39,7 @@ test('status checks a fake PATH without spawning tools and ignores directories',
 });
 
 test('outside Windows a command is an executable file on a colon-separated PATH', { skip: windows }, t => {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'project-grid-agents-'));
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'agentrix-agents-'));
   t.after(() => fs.rmSync(folder, { recursive: true, force: true }));
   const env = { PATH: `/nonexistent:${folder}` };
   fs.writeFileSync(path.join(folder, 'codex'), '', { mode: 0o644 });
@@ -51,10 +51,10 @@ test('outside Windows a command is an executable file on a colon-separated PATH'
 });
 
 test('isolated profiles report installed agents unless the agent test opt-in is set', t => {
-  const { env } = fixture(t, { PROJECT_GRID_DATA_DIR: 'isolated-profile' });
+  const { env } = fixture(t, { AGENTRIX_DATA_DIR: 'isolated-profile' });
   const manager = new AgentsManager({ env });
   assert.equal(manager.getState().codex.installed, true); assert.equal(manager.getState().claude.installed, true);
-  env.PROJECT_GRID_TEST_AGENTS = '1';
+  env.AGENTRIX_TEST_AGENTS = '1';
   assert.equal(manager.getState().codex.installed, false); assert.equal(manager.getState().claude.installed, false);
 });
 

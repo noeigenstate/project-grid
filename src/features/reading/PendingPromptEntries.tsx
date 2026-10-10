@@ -4,7 +4,7 @@ import './pending-prompts.css';
 
 // The pictures a message carried, small, under its text.
 export function UserImages({ images }: { images: readonly string[] }) {
-  return <div className="reading-user-images">{images.map((src, index) => <img key={index} src={src} alt={t('附加的图片 {n}', { n: index + 1 })} />)}</div>;
+  return <div className="reading-user-images">{images.map((src, index) => <img key={index} src={src} alt={t('附加的图片 {n}', { n: index + 1 })} loading="lazy" decoding="async" />)}</div>;
 }
 
 // Messages sent from here that no record has shown yet. One the agent never took, even after it was sent again,

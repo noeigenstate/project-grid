@@ -8,7 +8,7 @@ param(
 # Claude Code hook: UserPromptSubmit reports a working turn, Stop reports a finished one, SessionStart the
 # conversation Claude writes now (after /clear, /resume or a new start it is another file).
 # Claude adds anything printed here to the conversation, so this script writes nothing,
-# and a closed Project Grid must never delay or fail a turn.
+# and a closed Agentrix must never delay or fail a turn.
 $ErrorActionPreference = 'Stop'
 try {
     [Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
@@ -25,7 +25,7 @@ try {
         state = $(if ($Kind -eq 'notify') { 'attention' } elseif ($Kind -eq 'stop') { 'complete' } elseif ($Kind -eq 'session') { 'session' } else { 'working' })
         message = $(if ($Kind -eq 'notify') { ([string]$hook.message).Substring(0, [Math]::Min(300, ([string]$hook.message).Length)) } else { $null })
         sessionId = $sessionId
-        # Where Claude writes this conversation; Project Grid reads the steps of the round from it.
+        # Where Claude writes this conversation; Agentrix reads the steps of the round from it.
         transcriptPath = [string]$hook.transcript_path
         eventId = $sessionId + ':' + [DateTime]::UtcNow.Ticks
         # The submitted prompt names the work; the spoken completion notice says what finished.

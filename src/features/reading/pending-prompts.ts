@@ -1,5 +1,7 @@
 // Renderer echoes are replaced only by newly observed user records, one record per send.
 export const PENDING_PROMPT_TIMEOUT = 20_000;
+// The reading view keeps 400 entries; the user records seen are bounded well above that.
+const SEEN_LIMIT = 1000;
 type UserRecord = { id: string; role: string; text?: string };
 export type PendingPrompt = { id: string; role: 'user'; text: string; at: number; sending: boolean; images?: string[] };
 export type PendingPrompts = { sessionId: string | null; prompts: readonly PendingPrompt[]; seen: readonly string[] };
@@ -41,7 +43,7 @@ export function reconcilePendingPrompts(state: PendingPrompts, sessionId: string
       prompts[index] = { ...prompt, sending: false }; changed = true;
     }
   }
-  return changed ? { ...state, prompts, seen: [...seen] } : state;
+  return changed ? { ...state, prompts, seen: [...seen].slice(-SEEN_LIMIT) } : state;
 }
 
 export function addPendingPrompt(state: PendingPrompts, id: string, text: string, now: number, images: string[] = []): PendingPrompts {

@@ -8,8 +8,8 @@ const exec = promisify(require('node:child_process').execFile);
 const { readGitRaw, parseStatus, parseHistory, parseFiles, parseDiff, ProjectGit, gitEnvironment } = require('../electron/project-git.cjs');
 
 async function fixture(t) {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'project-grid-git-'));
-  t.after(async () => { assert.equal(path.dirname(path.resolve(root)).toLowerCase(), path.resolve(os.tmpdir()).toLowerCase()); assert.ok(path.basename(root).startsWith('project-grid-git-')); await fs.rm(root, { recursive: true, force: true }); });
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agentrix-git-'));
+  t.after(async () => { assert.equal(path.dirname(path.resolve(root)).toLowerCase(), path.resolve(os.tmpdir()).toLowerCase()); assert.ok(path.basename(root).startsWith('agentrix-git-')); await fs.rm(root, { recursive: true, force: true }); });
   const dir = path.join(root, '项目 repo'); await fs.mkdir(dir);
   const git = async (...args) => (await exec('git', ['-C', dir, ...args], { env: gitEnvironment(), windowsHide: true, encoding: 'utf8', timeout: 10000 })).stdout.trim();
   await git('init', '-b', 'main'); await git('config', 'user.name', 'Test 用户'); await git('config', 'user.email', 'test@example.invalid');

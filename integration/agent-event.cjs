@@ -1,11 +1,11 @@
 // Codex notify and Claude Code hooks for macOS and Linux terminals (zsh-integration.zsh, bash-integration.bash),
-// run by Project Grid's own executable as Node (ELECTRON_RUN_AS_NODE=1). It sends the same events as notify.ps1
+// run by Agentrix's own executable as Node (ELECTRON_RUN_AS_NODE=1). It sends the same events as notify.ps1
 // and claude-hook.ps1. Bash cannot open a Unix socket, so it sends its own reports through this too.
 // Usage: agent-event.cjs codex-notify <socket> <projectId> <sessionKey> <payload>
 //        agent-event.cjs claude-hook <socket> <projectId> <sessionKey> start|stop|notify|session   (the hook's JSON on stdin)
 //        agent-event.cjs shell-event <socket> <projectId> <sessionKey> <type> <sequence> <exitCode> <agent>
 //                        <codexAvailable> <claudeAvailable> <codexHome> <cwd>
-// Claude adds anything a hook prints to the conversation, so this writes nothing, and a closed Project Grid
+// Claude adds anything a hook prints to the conversation, so this writes nothing, and a closed Agentrix
 // never delays or fails a turn.
 const net = require('node:net');
 const { createHash } = require('node:crypto');
@@ -55,7 +55,7 @@ function claudeEvent(input, projectId, sessionKey, kind) {
   return {
     projectId, sessionKey, type: 'agent-activity', agent: 'claude', state: CLAUDE_STATES[kind], sessionId,
     message: kind === 'notify' ? String(hook.message ?? '').slice(0, 300) : null,
-    // Where Claude writes this conversation; Project Grid reads the steps of the round from it.
+    // Where Claude writes this conversation; Agentrix reads the steps of the round from it.
     transcriptPath: String(hook.transcript_path ?? ''),
     eventId: `${sessionId}:${Date.now()}${String(process.hrtime.bigint() % 10000n).padStart(4, '0')}`,
     // The submitted prompt names the work; the spoken completion notice says what finished.

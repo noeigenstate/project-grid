@@ -30,7 +30,7 @@ export function GuideTour({ projects, focusedId, withAdd, onClose }: { projects:
     }] : []),
     {
       id: 'start', title: t('启动编码助手'), interactive: true,
-      body: [project?.terminals[0]?.sessionId ? t('在这个终端里输入 codex 或 claude，按回车启动。') : t('先点击「启动终端」，再在终端里输入 codex 或 claude，按回车启动。'), t('还没有安装？稍后可在设置的「编码助手」里一键安装。')],
+      body: [project?.terminals[0]?.sessionId ? t('在这个终端里输入 codex 或 claude，按回车启动。') : t('在方框里选择 Claude Code 或 Codex：有开发记录时可以接着上次继续，也可以开始新开发。'), t('还没有安装？稍后可在设置的「编码助手」里一键安装。')],
       target: () => visible('.project-panel .panel-terminal-area'), done: () => !!project?.codexActive,
     },
     {

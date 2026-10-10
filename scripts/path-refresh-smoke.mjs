@@ -14,16 +14,16 @@ const require = createRequire(import.meta.url), exec = promisify(execFile), root
 const output = await testRun('path-refresh'), profile = path.join(output, 'profile'), bin = path.join(output, 'inherited-bin'), home = path.join(output, 'codex-home');
 const project = { id: randomUUID(), name: '环境刷新', path: path.join(output, 'project'), restore: { terminal: false, codex: false } };
 for (const folder of [profile, bin, home, project.path]) await fs.mkdir(folder, { recursive: true });
-await fs.writeFile(path.join(bin, 'project-grid-extra.cmd'), '@echo off\r\necho EXTRA_PATH_OK\r\n');
+await fs.writeFile(path.join(bin, 'agentrix-extra.cmd'), '@echo off\r\necho EXTRA_PATH_OK\r\n');
 await fs.writeFile(path.join(profile, 'workspace.json'), JSON.stringify({ version: 2, projects: [project], settings: { restoreSessions: false, closeToTray: false, notifications: false } }));
 const system32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32'), powershell = path.join(system32, 'WindowsPowerShell/v1.0/powershell.exe');
-const env = { ...process.env, PROJECT_GRID_DATA_DIR: profile, CODEX_HOME: home, PG_PATH_SENTINEL: 'keep-me' };
+const env = { ...process.env, AGENTRIX_DATA_DIR: profile, CODEX_HOME: home, PG_PATH_SENTINEL: 'keep-me' };
 const inherited = Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1] || '';
 const normalize = value => value.trim().replace(/^"|"$/g, '').replaceAll('/', '\\').replace(/\\+$/, '').toLowerCase();
 for (const key of Object.keys(env)) if (key.toLowerCase() === 'path') delete env[key];
 const omitted = [system32, path.join(process.env.SystemRoot || 'C:\\Windows', 'SysWOW64')].map(normalize);
 env.Path = bin + ';' + inherited.split(';').filter(value => !omitted.includes(normalize(value))).join(';');
-delete env.ELECTRON_RUN_AS_NODE; delete env.PROJECT_GRID_DEV_URL;
+delete env.ELECTRON_RUN_AS_NODE; delete env.AGENTRIX_DEV_URL;
 // Model an app started before the installer added a directory. Reading actual
 // stored Windows PATH needs no registry edits and works on CI without MiMo.
 const before = await exec(powershell, ['-NoLogo', '-NoProfile', '-Command', '[bool](Get-Command where.exe -CommandType Application -ErrorAction SilentlyContinue)'], { env, windowsHide: true, timeout: 10000 });
@@ -32,29 +32,29 @@ const packaged = process.argv.includes('--packaged'), errors = [], proofs = [];
 const executableIndex = process.argv.indexOf('--executable');
 const executable = executableIndex >= 0 ? path.resolve(process.argv[executableIndex + 1]) : null;
 let app, page;
-const state = async () => (await page.evaluate(() => window.projectGrid.getState())).value.projects[0];
-const write = (id, data) => page.evaluate(({ id, data }) => window.projectGrid.writeTerminal(id, data), { id, data });
+const state = async () => (await page.evaluate(() => window.agentrix.getState())).value.projects[0];
+const write = (id, data) => page.evaluate(({ id, data }) => window.agentrix.writeTerminal(id, data), { id, data });
 async function prove(id, label) {
   const name = `${label}.json`;
-  await write(id, `[IO.File]::WriteAllText((Join-Path (Get-Location).Path '${name}'), (@{pid=$PID;command=(Get-Command where.exe -CommandType Application | Select-Object -First 1).Source;run=(@(& where.exe where.exe));extra=(Get-Command project-grid-extra.cmd).Source;kept=$env:PG_PATH_SENTINEL;mimo=(Get-Command mimo.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source} | ConvertTo-Json -Compress))\r`);
+  await write(id, `[IO.File]::WriteAllText((Join-Path (Get-Location).Path '${name}'), (@{pid=$PID;command=(Get-Command where.exe -CommandType Application | Select-Object -First 1).Source;run=(@(& where.exe where.exe));extra=(Get-Command agentrix-extra.cmd).Source;kept=$env:PG_PATH_SENTINEL;mimo=(Get-Command mimo.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source} | ConvertTo-Json -Compress))\r`);
   const file = path.join(project.path, name);
   await waitFor(async () => fs.readFile(file, 'utf8').then(text => { try { return !!JSON.parse(text).command; } catch { return false; } }, () => false), label);
   await waitFor(async () => (await state()).terminals.find(terminal => terminal.id === id).shellReady, 'probe returns to prompt');
   const value = JSON.parse(await fs.readFile(file, 'utf8'));
   assert.equal(normalize(value.command), normalize(path.join(system32, 'where.exe')));
   assert.ok(value.run.some(location => normalize(location) === normalize(value.command)), 'the newly resolved native command executes');
-  assert.equal(normalize(value.extra), normalize(path.join(bin, 'project-grid-extra.cmd')));
+  assert.equal(normalize(value.extra), normalize(path.join(bin, 'agentrix-extra.cmd')));
   assert.equal(value.kept, 'keep-me');
   proofs.push({ label, ...value }); return value;
 }
 try {
-  app = await electron.launch({ executablePath: executable || (packaged ? path.join(root, 'release/win-unpacked/Project Grid.exe') : require('electron')), args: executable || packaged ? [] : [root], cwd: root, env });
+  app = await electron.launch({ executablePath: executable || (packaged ? path.join(root, 'release/win-unpacked/Agentrix.exe') : require('electron')), args: executable || packaged ? [] : [root], cwd: root, env });
   const appPid = app.process().pid;
   page = await app.firstWindow(); page.on('pageerror', error => errors.push(error.message));
   await app.evaluate(({ dialog }) => { dialog.showMessageBox = async () => ({ response: 1 }); });
   await page.waitForSelector('.project-panel');
   const panel = page.locator(`[data-project-id="${project.id}"]`);
-  await panel.getByRole('button', { name: '启动终端', exact: true }).click();
+  await panel.getByRole('button', { name: '只打开终端', exact: true }).click();
   await waitFor(async () => (await state()).shellReady, 'initial terminal');
   const first = await prove(project.id, 'initial');
   await panel.getByRole('button', { name: `${project.name} 的更多操作`, exact: true }).click(); await panel.getByRole('menuitem', { name: '新建终端并分屏', exact: true }).click();
@@ -78,8 +78,8 @@ try {
   await waitFor(async () => (await state()).terminals[0].shellReady, 'reopened terminal');
   await prove(project.id, 'reopened');
   assert.equal((await state()).terminals[1].sessionId, neighbor.sessionId, 'neighbor session survives');
-  assert.ok((await page.evaluate(id => window.projectGrid.attachTerminal(id), neighbor.id)).value.data.includes('NEIGHBOR_DRAFT_STAYS'));
-  assert.equal(app.process().pid, appPid, 'Project Grid has not restarted');
+  assert.ok((await page.evaluate(id => window.agentrix.attachTerminal(id), neighbor.id)).value.data.includes('NEIGHBOR_DRAFT_STAYS'));
+  assert.equal(app.process().pid, appPid, 'Agentrix has not restarted');
   const parentUnchanged = await app.evaluate((_electron, original) => process.env.Path === original, env.Path);
   assert.ok(parentUnchanged, 'parent PATH stays unchanged');
   assert.deepEqual(errors, []);

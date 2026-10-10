@@ -16,11 +16,11 @@ class RemoteConnection {
     this.ready.catch(() => {});
     this.onEvent = onEvent; this.onReady = onReady;
     const authEnv = auth.register(project.id, project.ssh.host, () => this.fail(new Error('已取消 SSH 连接。')));
-    const env = { ...process.env, ...extraEnv, ...authEnv, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || 'project-grid:0' };
+    const env = { ...process.env, ...extraEnv, ...authEnv, SSH_ASKPASS_REQUIRE: 'force', DISPLAY: process.env.DISPLAY || 'agentrix:0' };
     const askpass = askpassPath || path.join(integrationDir, process.platform === 'win32' ? 'ssh-askpass.exe' : 'ssh-askpass.sh');
     env.SSH_ASKPASS = process.platform === 'win32' ? '"' + askpass.replace(/\\/g, '/') + '"' : askpass;
-    env.PROJECT_GRID_ASKPASS_NODE = process.execPath;
-    env.PROJECT_GRID_ASKPASS_SCRIPT = path.join(integrationDir, 'ssh-askpass.cjs');
+    env.AGENTRIX_ASKPASS_NODE = process.execPath;
+    env.AGENTRIX_ASKPASS_SCRIPT = path.join(integrationDir, 'ssh-askpass.cjs');
     // Never inherit a different application's askpass implementation.
     delete env.ELECTRON_RUN_AS_NODE;
     const executable = sshPath || readSSHSettings().sshPath;
