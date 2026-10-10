@@ -5,9 +5,9 @@
 
 # What Agentrix passed in, kept in this shell only; programs started here do not inherit it.
 __pg_socket=$AGENTRIX_SOCKET __pg_project=$AGENTRIX_PROJECT_ID __pg_key=$AGENTRIX_SESSION_KEY
-__pg_node=$AGENTRIX_NODE __pg_helper=$AGENTRIX_EVENT_HELPER __pg_start=$AGENTRIX_START_DIR
+__pg_node=$AGENTRIX_NODE __pg_helper=$AGENTRIX_EVENT_HELPER __pg_start=$AGENTRIX_START_DIR __pg_note=$AGENTRIX_READING_NOTE
 __pg_sequence=0
-unset AGENTRIX_SOCKET AGENTRIX_PROJECT_ID AGENTRIX_SESSION_KEY AGENTRIX_NODE AGENTRIX_EVENT_HELPER AGENTRIX_START_DIR AGENTRIX_BOOTSTRAP
+unset AGENTRIX_SOCKET AGENTRIX_PROJECT_ID AGENTRIX_SESSION_KEY AGENTRIX_NODE AGENTRIX_EVENT_HELPER AGENTRIX_START_DIR AGENTRIX_BOOTSTRAP AGENTRIX_READING_NOTE
 
 [[ -r ~/.bashrc ]] && builtin source ~/.bashrc
 
@@ -73,7 +73,10 @@ codex() {
     __pg_json "$word"; notify+=${notify:+,}$REPLY
   done
   __pg_send codex-started
-  "${program[@]}" -c "notify=[$notify]" -c 'tui.terminal_title=["session-id"]' "$@"
+  # What the reading view can show (electron/features/agents/reading-note.cjs); the user's own -c comes later and wins.
+  local -a note=()
+  [[ -n $__pg_note ]] && note=(-c "developer_instructions=\"$__pg_note\"")
+  "${program[@]}" -c "notify=[$notify]" -c 'tui.terminal_title=["session-id"]' "${note[@]}" "$@"
   local code=$?
   __pg_send codex-exited $code
   return $code
@@ -98,7 +101,10 @@ claude() {
   __pg_json "$hook session"; session=$REPLY
   local settings="{\"hooks\":{\"UserPromptSubmit\":[{\"hooks\":[{\"type\":\"command\",\"command\":$start,\"timeout\":10}]}],\"Stop\":[{\"hooks\":[{\"type\":\"command\",\"command\":$stop,\"timeout\":10}]}],\"Notification\":[{\"hooks\":[{\"type\":\"command\",\"command\":$notify,\"timeout\":10}]}],\"SessionStart\":[{\"hooks\":[{\"type\":\"command\",\"command\":$session,\"timeout\":10}]}]}}"
   __pg_send codex-started 0 claude
-  "${program[@]}" --settings "$settings" "$@"
+  # What the reading view can show; a later --append-system-prompt of the user's wins.
+  local -a note=()
+  [[ -n $__pg_note ]] && note=(--append-system-prompt "$__pg_note")
+  "${program[@]}" --settings "$settings" "${note[@]}" "$@"
   local code=$?
   __pg_send codex-exited $code claude
   return $code

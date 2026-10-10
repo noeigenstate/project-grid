@@ -38,6 +38,7 @@ function loadUI(name, overrides = {}) {
     if (key === './i18n') return { currentLanguage: () => 'en', t: (text, values = {}) => (en[text] ?? text).replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match) };
     if (key === './choice-keys') return require('../src/features/reading/choice-keys.ts');
     if (key === './reading-sessions') return require('../src/features/reading/reading-sessions.ts');
+    if (key === './reply-images') return require('../src/features/reading/reply-images.ts');
     return originalRequire(name);
   };
   mod._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {

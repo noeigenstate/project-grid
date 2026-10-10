@@ -74,15 +74,20 @@ async function receipt(project) { try { return JSON.parse(await fs.readFile(path
 async function verifyResume() {
   await waitFor(async () => (await receipt(projects[0])) && (await receipt(projects[1])), 'restored Codex processes');
   assert.deepEqual((await receipt(projects[0])).args.slice(2, 4), ['-c', 'tui.terminal_title=["session-id"]']);
-  assert.deepEqual((await receipt(projects[0])).args.slice(4), ['resume', projects[0].sessionId, '继续']);
-  assert.deepEqual((await receipt(projects[1])).args.slice(4), ['resume', projects[1].sessionId]);
+  // Then what the reading view can show (electron/features/agents/reading-note.cjs), before the user's own arguments.
+  assert.equal((await receipt(projects[0])).args[4], '-c');
+  assert.match((await receipt(projects[0])).args[5], /^developer_instructions="You run inside Agentrix[^"]*"$/);
+  assert.deepEqual((await receipt(projects[0])).args.slice(6), ['resume', projects[0].sessionId, '继续']);
+  assert.deepEqual((await receipt(projects[1])).args.slice(6), ['resume', projects[1].sessionId]);
   assert.equal(await receipt(projects[2]), null);
   assert.equal(await receipt(projects[3]), null);
   // Claude Code resumes its own session through the wrapper (hooks passed with --settings first).
   await waitFor(async () => (await receipt(claudeProjects[0])) && (await receipt(claudeProjects[1])), 'restored Claude Code processes');
   assert.equal((await receipt(claudeProjects[0])).args[0], '--settings');
-  assert.deepEqual((await receipt(claudeProjects[0])).args.slice(2), ['--resume', claudeProjects[0].sessionId, '继续']);
-  assert.deepEqual((await receipt(claudeProjects[1])).args.slice(2), ['--resume', claudeProjects[1].sessionId]);
+  assert.equal((await receipt(claudeProjects[0])).args[2], '--append-system-prompt');
+  assert.match((await receipt(claudeProjects[0])).args[3], /^You run inside Agentrix/);
+  assert.deepEqual((await receipt(claudeProjects[0])).args.slice(4), ['--resume', claudeProjects[0].sessionId, '继续']);
+  assert.deepEqual((await receipt(claudeProjects[1])).args.slice(4), ['--resume', claudeProjects[1].sessionId]);
   await waitFor(async () => (await page.evaluate(() => window.agentrix.getState())).value.projects.filter(p => p.codexActive).length === 4, 'four active restored conversations');
   assert.deepEqual((await page.evaluate(() => window.agentrix.getState())).value.projects.filter(p => p.agent === 'claude').map(p => p.id).sort(), claudeProjects.map(p => p.id).sort());
   const stored = JSON.parse(await fs.readFile(path.join(dataDir, 'workspace.json'), 'utf8'));

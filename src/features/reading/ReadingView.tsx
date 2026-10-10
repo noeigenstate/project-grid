@@ -31,6 +31,7 @@ import { usePendingPrompts } from './usePendingPrompts';
 import { PendingPromptEntries, UserImages, UserText } from './PendingPromptEntries';
 import { ReadingDirectCard } from './ReadingDirectCard';
 import { FileCards, previewable } from './FileCards';
+import { replyImages } from './reply-images';
 
 const purifier = createDOMPurify(window);
 // Switching to the CLI unmounts the composer; sent messages still belong to that terminal.
@@ -121,6 +122,15 @@ function GeneratedImage({ src, path, prompt, onError }: { src: string; path: str
   </figure>;
 }
 
+// A reply, with the local pictures it names shown under it as pictures (the agents are told they can show an image
+// this way: electron/features/agents/reading-note.cjs).
+function AssistantReply({ entry, projectId, onOpen, onError }: { entry: ConversationEntry; projectId: string; onOpen: (file: string) => void; onError: (message: string) => void }) {
+  const pictures = useMemo(() => entry.text ? replyImages(entry.text) : [], [entry.text]);
+  return <div className="reading-assistant">{entry.text ? <Markdown text={entry.text} /> : null}
+    {pictures.length > 0 && <FileCards projectId={projectId} files={pictures} renderMarkdown={text => <Markdown text={text} />} onOpen={onOpen} onError={onError} quiet />}
+    {entry.generated && entry.images?.[0] && <GeneratedImage src={entry.images[0]} {...entry.generated} onError={onError} />}</div>;
+}
+
 // Where a generated picture will appear: a bar that keeps moving and the seconds so far, so a picture that takes
 // half a minute does not look stuck.
 // When each picture began to be drawn, by its step: the card is drawn again as the conversation grows.
@@ -196,6 +206,8 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
   const [commands, setCommands] = useState<AgentCommand[]>([]), [requested, setRequested] = useState(false);
   const [dismissed, setDismissed] = useState(false), [selection, setSelection] = useState(0);
   const historyAt = useRef<number | null>(null), unsent = useRef(''), caret = useRef<number | null>(null), sending = useRef(false);
+  // A command whose dialog did not close when its popup was put away; the next message closes it first.
+  const leftOpen = useRef<string | null>(null);
   // Images pasted for the next message. The agent holds them itself; this only counts them.
   const [images, setImages] = useState<string[]>([]), originals = useRef(new Map<string, string>());
   const scroller = useRef<HTMLDivElement>(null), content = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null);
@@ -307,16 +319,17 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     if (!result.ok) { cancelEcho(pendingId); if (mounted.current) { edit(text); setImages(shown); } onError(result.error); return; }
     if (text) history.set(terminal.id, [...(history.get(terminal.id) || []), text].slice(-50));
   };
-  // Escape with a command's popup open puts it away at once and closes what the command opened (a dialog, a pager, a
-  // side conversation) rather than interrupting the round, pressing again while the dialog only left an inner mode
-  // (Claude's /config search). A dialog that stays open is reported.
+  // Escape (or a click beside it) with a command's popup open puts it away at once and closes what the command opened
+  // (a dialog, a pager, a side conversation) rather than interrupting the round, pressing again while the dialog only
+  // left an inner mode (Claude's /config search). Putting it away never asks anything of the reader: a dialog still
+  // open (one that ignores Escape while it loads) is remembered and closed before the next message is typed.
   const closeCommand = async () => {
     const agentKind = terminal.agent === 'claude' ? 'claude' : 'codex', command = cli.panel?.command ?? '', current = readScreen(terminal.id);
     const key = cli.busy && current ? cliCloseKey(agentKind, current.rows, parseAgentScreen(agentKind, current.rows), command, cli.panel?.rows) : null;
     cli.close();
     if (!key) return;
     if (key === '\x03') { window.agentrix.writeTerminal(terminal.id, key); return; }
-    if (!await closeDialog(agentKind, command, false) && mounted.current) onError(t('命令的对话框没有关闭，请在终端中关闭。'));
+    leftOpen.current = await closeDialog(agentKind, command, false) ? null : command;
   };
   const interrupt = () => { if (direct) void window.agentrix.agentInterrupt(terminal.id).then(result => { if (!result.ok) onError(result.error); }); else window.agentrix.writeTerminal(terminal.id, '\x1b'); };
   // The CLI recognises slash commands and shell mode from typed keys, not bracketed paste.
@@ -332,9 +345,9 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     // reach the main conversation's records, so they get no echo there either.
     const side = !!cli.panel && isSideConversation(agentKind, cli.panel.command, [...cli.panel.rows, ...readScreen(terminal.id)?.rows ?? []]);
     if (cli.panel && !cli.busy) cli.close();
-    if (cli.busy && !side) {
-      const command = cli.panel?.command;
-      cli.close();
+    if ((cli.busy || leftOpen.current !== null) && !side) {
+      const command = cli.panel?.command ?? leftOpen.current ?? undefined;
+      cli.close(); leftOpen.current = null;
       if (!await closeDialog(agentKind, command)) { if (mounted.current) onError(t('命令的对话框没有关闭，请在终端中关闭后再发送。')); return; }
     }
     if (!mounted.current || choiceVisible.current || sendSession.current !== sessionId) return;
@@ -485,8 +498,7 @@ export function ReadingView({ projectId, terminal, autoFocus, onShowTerminal, on
     ? <ToolGroup key={block.id} entries={block.entries} live={index === tail.visible.length - 1} projectId={projectId} onOpen={onOpenLink} onError={onError} />
     : block.entry.role === 'user'
       ? <div key={block.entry.id} className="reading-user"><span>{t('你')}</span><UserText text={block.entry.text || ''} />{block.entry.images && <UserImages images={block.entry.images} />}</div>
-      : <div key={block.entry.id} className="reading-assistant">{block.entry.text ? <Markdown text={block.entry.text} /> : null}
-        {block.entry.generated && block.entry.images?.[0] && <GeneratedImage src={block.entry.images[0]} {...block.entry.generated} onError={onError} />}</div>)}
+      : <AssistantReply key={block.entry.id} entry={block.entry} projectId={projectId} onOpen={onOpenLink} onError={onError} />)}
   </>;
   return <div className="reading-view" onClick={event => {
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-copy-code]');

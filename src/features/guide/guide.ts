@@ -1,8 +1,8 @@
 // What the usage guide's last page lists for this release. Update it with every version: the guide opens on
 // first use and after each update, on this page for people who are updating.
 export const WHATS_NEW: string[] = [
-  'Project Grid 正式更名为 Agentrix。更新后项目列表、设置和语音模型自动搬过来，开始菜单和桌面的快捷方式换成新名字。',
-  '新建项目直接选 Claude Code 或 Codex：可以接着这个文件夹上次的对话，也可以开始新开发；其他命令行助手点「只打开终端」。',
-  'Codex 生成的图片直接显示在阅读视图里，点开查看原图；很长的对话、大段回答和大量截图也不会再让窗口卡住。',
-  'Claude 正在工作时连续使用 /status 和 /usage，各自显示正确的页面。',
+  '回复里写到本机图片的路径，阅读视图直接显示这张图，点开查看原图；Claude Code 和 Codex 也知道可以这样把图片给你看。',
+  '第一次在项目里启动 Claude Code 或 Codex 时，信任文件夹、选主题、登录方式和更新提示都在阅读视图里弹窗选择。',
+  'Ctrl+Shift+W 移除当前项目（文件保留）；粘贴的图片可以移除；命令弹窗按 Esc 或点空白处就关闭。',
+  '助手写出的 HTML 页面、Markdown 文档和视频直接在阅读视图里预览；壁纸按原画亮度显示。',
 ];

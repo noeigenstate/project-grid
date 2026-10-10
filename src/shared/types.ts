@@ -15,7 +15,7 @@ export type Project = {
   terminals: ProjectTerminal[];
 };
 // A document, page or video an agent wrote, as its card in the reading view shows it.
-export type FileCard = { kind: 'markdown'; path: string; excerpt: string } | { kind: 'html'; path: string; picture: string | null } | { kind: 'video'; path: string; url: string };
+export type FileCard = { kind: 'markdown'; path: string; excerpt: string } | { kind: 'html'; path: string; picture: string | null } | { kind: 'video'; path: string; url: string } | { kind: 'image'; path: string; picture: string };
 // A question or approval Codex, connected directly, waits on: the reading view shows it as a card.
 export type DirectCard = { kind: 'approval'; subject: 'command' | 'files'; title: string; detail: string; options: ('accept' | 'acceptForSession' | 'decline')[] }
   | { kind: 'question'; questions: { id: string; header: string; question: string; other: boolean; secret: boolean; options: { label: string; description: string }[] }[] };

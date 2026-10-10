@@ -216,6 +216,12 @@ test('a numbered list in a reply is never taken for a choice', () => {
   assert.equal(parseAgentScreen('claude', reply).choice, null);
   const noCursor = ['  Plan', '  1. Build', '  2. Test'];
   assert.equal(parseAgentScreen('codex', noCursor).choice, null);
+  // Claude's /help over a conversation (2.1.296, as captured): sent prompts and their output are no options.
+  const help = [' ▐▛███▛█   Claude Code v2.1.296', '▝▜██████▀  Opus 5.5 with high effort · Claude Pro', '', '❯ /model', '  ⎿  Kept model as Opus 5.5', '', '❯ /agents',
+    '  ⎿  The /agents wizard has been removed.', '', '▔▔▔▔▔▔▔▔▔▔', '   Help  General   Commands   Custom commands', '', '   For more help: https://code.claude.com/docs/en/overview', '', '   Esc to cancel'];
+  assert.equal(parseAgentScreen('claude', help).choice, null);
+  const numbered = ['❯ 1. Build it', '  ⎿  Interrupted', '', '▔▔▔▔▔▔▔▔▔▔', '   Usage', '   Esc to cancel'];
+  assert.equal(parseAgentScreen('claude', numbered).choice, null);
 });
 
 test('first-run screens captured from the real CLIs open as choices', () => {

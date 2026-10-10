@@ -95,7 +95,9 @@ function global:codex {
         if ([IO.Path]::GetExtension($global:AgentrixCodexExecutable) -ne '.exe') {
             throw 'Use a native Codex executable or the standard npm installation of Codex.'
         }
-        $nativeArgs = @($global:AgentrixCodexPrefix) + @('-c', ('notify=' + $notifyCommand), '-c', 'tui.terminal_title=["session-id"]') + $forwardArgs
+        # What the reading view can show (electron/features/agents/reading-note.cjs); the user's own -c comes later and wins.
+        $readingNote = if ($env:AGENTRIX_READING_NOTE) { @('-c', ('developer_instructions="' + $env:AGENTRIX_READING_NOTE + '"')) } else { @() }
+        $nativeArgs = @($global:AgentrixCodexPrefix) + @('-c', ('notify=' + $notifyCommand), '-c', 'tui.terminal_title=["session-id"]') + $readingNote + $forwardArgs
         $startInfo = [Diagnostics.ProcessStartInfo]::new()
         $startInfo.FileName = $global:AgentrixCodexExecutable
         $startInfo.Arguments = (($nativeArgs | ForEach-Object { ConvertTo-AgentrixArgument ([string]$_) }) -join ' ')
@@ -139,7 +141,9 @@ function global:claude {
     try {
         $startInfo = [Diagnostics.ProcessStartInfo]::new()
         $startInfo.FileName = $global:AgentrixClaudeExecutable
-        $startInfo.Arguments = ((@('--settings', $settings) + @($args)) | ForEach-Object { ConvertTo-AgentrixArgument ([string]$_) }) -join ' '
+        # What the reading view can show (electron/features/agents/reading-note.cjs); a later --append-system-prompt of the user's wins.
+        $readingNote = if ($env:AGENTRIX_READING_NOTE) { @('--append-system-prompt', $env:AGENTRIX_READING_NOTE) } else { @() }
+        $startInfo.Arguments = ((@('--settings', $settings) + $readingNote + @($args)) | ForEach-Object { ConvertTo-AgentrixArgument ([string]$_) }) -join ' '
         $startInfo.UseShellExecute = $false
         $startInfo.WorkingDirectory = (Get-Location).Path
         $claudeProcess = [Diagnostics.Process]::Start($startInfo)

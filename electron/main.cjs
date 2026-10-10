@@ -13,6 +13,7 @@ const { registerAgentsIpc } = require('./features/agents/ipc.cjs');
 const { registerDirectIpc } = require('./features/agents/direct-ipc.cjs');
 const { CodexDirect } = require('./features/agents/codex-direct.cjs');
 const { folderHistory, launchCommand } = require('./features/agents/launch.cjs');
+const { READING_NOTE } = require('./features/agents/reading-note.cjs');
 const { setThumbnailer, isGeneratedImage } = require('./conversation.cjs');
 const { registerNoticesIpc } = require('./features/notices/ipc.cjs');
 const { registerVoiceIpc } = require('./features/voice/ipc.cjs');
@@ -25,8 +26,8 @@ const thumbnail = image => {
   if (image.getSize().width <= 640) return null;
   return `data:image/jpeg;base64,${image.resize({ width: 640, quality: 'good' }).toJPEG(86).toString('base64')}`;
 };
-setThumbnailer(file => { const image = nativeImage.createFromPath(file); return thumbnail(image) || (image.isEmpty() ? null : image.toDataURL()); },
-  url => thumbnail(nativeImage.createFromDataURL(url)) || url);
+const pictureOf = file => { const image = nativeImage.createFromPath(file); return thumbnail(image) || (image.isEmpty() ? null : image.toDataURL()); };
+setThumbnailer(pictureOf, url => thumbnail(nativeImage.createFromDataURL(url)) || url);
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -44,7 +45,7 @@ const { PromptQueue } = require('./prompt-queue.cjs');
 const { createTerminalEnvironment } = require('./terminal-env.cjs');
 const { adoptSystemProxy } = require('./system-proxy.cjs');
 const { PreviewResources, resourceResponse } = require('./preview-resources.cjs');
-const { createFileCards } = require('./features/files/file-cards.cjs');
+const { createFileCards, isImageFile } = require('./features/files/file-cards.cjs');
 const { UpdateManager, isInstalledBuild } = require('./updates.cjs');
 const { getSSHInfo } = require('./ssh-config.cjs');
 const { SSHAuthServer } = require('./ssh-auth.cjs');
@@ -104,7 +105,7 @@ const startupErrors = new Map();
 const restorePlans = new Map();
 const previewResources = new PreviewResources({ remote: project => remoteFor(project.id) });
 const capturePage = require('./features/files/capture-page.cjs').createPageCapture(BrowserWindow);
-const fileCard = createFileCards({ previews: previewResources, capture: capturePage });
+const fileCard = createFileCards({ previews: previewResources, capture: capturePage, shrink: pictureOf });
 let stateTimer;
 let runtimeDir;
 const { prepareAskpass, cleanupAskpass } = createSshRuntime({ fs, execFileSync, tempDirectory: () => app.getPath('temp'), integrationDir });
@@ -588,6 +589,8 @@ function startTerminal(id) {
     powershellPath, notifyPath: path.join(integrationDir, 'notify.ps1'), claudeHookPath: path.join(integrationDir, 'claude-hook.ps1'),
   }), { mode: 0o600 });
   let env = createTerminalEnvironment(withoutAppImage(process.env), bootstrapFile || '');
+  // The agent wrappers tell Claude Code and Codex what the reading view shows; a remote project's files never reach it.
+  if (project.kind !== 'ssh') env.AGENTRIX_READING_NOTE = READING_NOTE;
   // zsh and Bash learn where to report from their environment (integration/zsh-integration.zsh and
   // bash-integration.bash), and report through integration/agent-event.cjs run by this executable as Node.
   const local = project.kind !== 'ssh' && ['zsh', 'bash'].includes(shellKind);
@@ -693,7 +696,7 @@ function startDirect(id, threadId = store.findTerminal(id)?.record.restore?.thre
     if (entry?.role === 'assistant' && entry.text) noteReply(s, { text: entry.text });
   });
   const live = () => sessions.get(id) === s;
-  s.codex = new CodexDirect({ cwd, env: createTerminalEnvironment(withoutAppImage(process.env), ''), conversation: s.conversation, actions: s.actions, version: app.getVersion(),
+  s.codex = new CodexDirect({ cwd, env: createTerminalEnvironment(withoutAppImage(process.env), ''), conversation: s.conversation, actions: s.actions, version: app.getVersion(), instructions: READING_NOTE,
     turn: (state, turnId) => {
       if (!live()) return;
       if (state !== 'working') s.promptQueue.finish(Date.now());
@@ -793,9 +796,10 @@ function registerIpc() {
   // A new project's card offers Claude Code and Codex, fresh or continuing this folder's latest conversation.
   const folderOf = id => store.findTerminal(id)?.record.restore?.cwd || findProject(id).path;
   handle('project:card', (id, file) => fileCard(findProject(id), file, folderOf(id)));
-  // A picture Codex generated opens in the system's image viewer; nothing else is opened this way.
+  // A picture the reading view shows (one Codex generated, or an image file a card shows) opens in the system's image
+  // viewer; nothing but an image file is opened this way.
   handle('agent:open-image', async file => {
-    if (!isGeneratedImage(file) || !fs.existsSync(file)) throw new Error('只能打开 Codex 生成的图片。');
+    if (!(isGeneratedImage(file) || isImageFile(file) && path.isAbsolute(file)) || !fs.statSync(file, { throwIfNoEntry: false })?.isFile()) throw new Error('只能打开图片文件。');
     const error = await shell.openPath(file); if (error) throw new Error(error);
     return true;
   });

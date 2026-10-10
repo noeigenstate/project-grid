@@ -7,6 +7,8 @@ const { spawn, execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { createEventServer } = require('../electron/events.cjs');
 const { createTerminalEnvironment } = require('../electron/terminal-env.cjs');
+// The real text: Markdown, backticks and an exclamation mark pass through the wrappers untouched.
+const { READING_NOTE: NOTE } = require('../electron/features/agents/reading-note.cjs');
 const { findShell, linuxShell, shellEnvironment, bashArguments, withoutAppImage } = require('../electron/zsh-terminal.cjs');
 const { linuxFileClipboard, readFileList, parseFileList } = require('../electron/file-clipboard.cjs');
 const { shellEvent } = require('../integration/agent-event.cjs');
@@ -127,7 +129,7 @@ test('a real Bash terminal keeps the user start-up files and reports prompts, Co
   const events = [];
   const server = await createEventServer(event => events.push(event));
   t.after(() => server.close());
-  const source = { ...process.env, HOME: home, PATH: '/usr/bin:/bin:/usr/sbin:/sbin', PG_TEST_NODE: process.execPath, PG_TEST_RECORDER: recorder, PG_TEST_LOG: log };
+  const source = { ...process.env, HOME: home, PATH: '/usr/bin:/bin:/usr/sbin:/sbin', PG_TEST_NODE: process.execPath, PG_TEST_RECORDER: recorder, PG_TEST_LOG: log, AGENTRIX_READING_NOTE: NOTE };
   delete source.LANG; delete source.LC_ALL; delete source.LC_CTYPE; delete source.CODEX_HOME; delete source.PROMPT_COMMAND;
   const env = shellEnvironment(createTerminalEnvironment(source, ''), { socket: server.address, projectId: 'project', sessionKey: 'key', node: process.execPath, helper, startDir: project, locale: 'C.UTF-8' });
   const terminal = pty.spawn(findShell('bash'), bashArguments(integrationDir), { name: 'xterm-256color', cols: 120, rows: 30, cwd: project, env });
@@ -152,8 +154,8 @@ test('a real Bash terminal keeps the user start-up files and reports prompts, Co
   // The user's file ran, nothing of Agentrix leaks into programs started here, and the user's own prompt
   // command still sees the exit status of the last command.
   type('false');
-  type('printf "%s\\n" "${AGENTRIX_SESSION_KEY-0}${AGENTRIX_SOCKET-0}${AGENTRIX_NODE-0}|$PG_TEST_BASHRC|$PG_TEST_LAST|$LANG|$TERM_PROGRAM|$(bash -c \'type -t codex\' 2>/dev/null)" > "$PG_TEST_LOG/state"');
-  assert.equal(await readLog('state'), '000|1|1|C.UTF-8|agentrix|file');
+  type('printf "%s\\n" "${AGENTRIX_SESSION_KEY-0}${AGENTRIX_SOCKET-0}${AGENTRIX_NODE-0}${AGENTRIX_READING_NOTE-0}|$PG_TEST_BASHRC|$PG_TEST_LAST|$LANG|$TERM_PROGRAM|$(bash -c \'type -t codex\' 2>/dev/null)" > "$PG_TEST_LOG/state"');
+  assert.equal(await readLog('state'), '0000|1|1|C.UTF-8|agentrix|file');
 
   // codex: started and exited around the real program, which gets notify and the title setting first.
   type('codex resume --last');
@@ -161,7 +163,8 @@ test('a real Bash terminal keeps the user start-up files and reports prompts, Co
   const started = events.find(event => event.type === 'codex-started');
   assert.ok(started && started.sequence < exited.sequence); assert.equal(started.agent, 'codex'); assert.equal(exited.exitCode, 3);
   const codexArgs = JSON.parse(fs.readFileSync(path.join(log, 'codex.json'), 'utf8'));
-  assert.deepEqual(codexArgs.slice(2), ['-c', 'tui.terminal_title=["session-id"]', 'resume', '--last']);
+  // What the reading view can show comes next, before the user's own arguments.
+  assert.deepEqual(codexArgs.slice(2), ['-c', 'tui.terminal_title=["session-id"]', '-c', `developer_instructions="${NOTE}"`, 'resume', '--last']);
   assert.equal(codexArgs[0], '-c');
   const notify = JSON.parse(codexArgs[1].replace(/^notify=/, ''));
   assert.deepEqual(notify, ['/usr/bin/env', 'ELECTRON_RUN_AS_NODE=1', process.execPath, helper, 'codex-notify', server.address, 'project', 'key']);
@@ -173,7 +176,7 @@ test('a real Bash terminal keeps the user start-up files and reports prompts, Co
   await waitEvent(event => event.type === 'codex-exited' && event.agent === 'claude', 'claude to exit');
   assert.ok(events.some(event => event.type === 'codex-started' && event.agent === 'claude'));
   const claudeArgs = JSON.parse(fs.readFileSync(path.join(log, 'claude.json'), 'utf8'));
-  assert.deepEqual([claudeArgs.slice(0, 2), claudeArgs.slice(4)], [['--model', 'opus'], ['-p', '中文 prompt']]);
+  assert.deepEqual([claudeArgs.slice(0, 2), claudeArgs.slice(4)], [['--model', 'opus'], ['--append-system-prompt', NOTE, '-p', '中文 prompt']]);
   assert.equal(claudeArgs[2], '--settings');
   const hooks = JSON.parse(claudeArgs[3]).hooks;
   const input = { session_id: 'session-1', transcript_path: '/claude/session-1.jsonl', prompt: '修复 "登录" $HOME `x`' };

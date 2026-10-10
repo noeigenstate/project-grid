@@ -108,12 +108,15 @@ function parseOverlay(agent: ScreenAgent, rows: string[], start: number): AgentS
 // Claude's own prompts before its input exists list their options without numbers: the folder to trust ("❯ No, exit"
 // over "Yes, I trust this folder"), the first run's text style ("❯ ✔ Dark mode" among its siblings, a preview under
 // them). The cursor row with the rows whose labels line up with it are the options, numbered in their order on screen;
-// a mark of the current setting (✔) is not part of a label. Claude's input box (❯ between rules) is never one.
-const bareCursor = /^(\s*❯\s+(?:✔\s+)?)\S/, bareLabel = /^(\s*(?:✔\s+)?)\S/;
+// a mark of the current setting (✔) is not part of a label. Claude's input box (❯ between rules) is never one, nor is a
+// conversation: a dialog open over it (/help) leaves sent prompts ("❯ /model") with their output ("⎿ Kept model…")
+// lined up the same way.
+const bareCursor = /^(\s*❯\s+(?:✔\s+)?)\S/, bareLabel = /^(\s*(?:✔\s+)?)[^\s⎿]/;
+const conversationRow = (row: string) => /^\s*[⎿⏺●]/.test(row);
 function bareChoice(rows: string[]): ScreenChoice | null {
   if (rows.some((row, index) => /^\s*❯/.test(row) && (rule(rows[index - 1] ?? '') || rule(rows[index + 1] ?? '')))) return null;
   const cursor = rows.findIndex(row => bareCursor.test(row));
-  if (cursor < 0) return null;
+  if (cursor < 0 || rows.some((row, index) => conversationRow(row) || index !== cursor && /^\s*❯/.test(row))) return null;
   const column = bareCursor.exec(rows[cursor])![1].length, lines = (index: number) => bareLabel.exec(rows[index] ?? '')?.[1].length === column;
   let first = cursor, last = cursor;
   while (first > 0 && lines(first - 1)) first--;
@@ -150,7 +153,7 @@ function parseChoice(agent: ScreenAgent, rows: string[]): ScreenChoice | null {
   // summary") has no title of a known form: with no input on screen and the cursor on one of its options, the
   // paragraph just above the options heads it.
   if (titleIndex < 0) {
-    if (rows.some(row => inputRow(agent, row))) return null;
+    if (rows.some(row => inputRow(agent, row) || agent === 'claude' && conversationRow(row))) return null;
     // The options' block runs up past their wrapped labels, descriptions and the blank rows between them.
     let first = lastOption;
     const indent = optionRow(rows[lastOption])![1].length;

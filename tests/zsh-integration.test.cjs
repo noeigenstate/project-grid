@@ -7,6 +7,8 @@ const { spawn, execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const { createEventServer, socketAddress } = require('../electron/events.cjs');
 const { createTerminalEnvironment } = require('../electron/terminal-env.cjs');
+// The real text: Markdown, backticks and an exclamation mark pass through the wrappers untouched.
+const { READING_NOTE: NOTE } = require('../electron/features/agents/reading-note.cjs');
 const { ZSH, findShell, prepareZshStartup, zshEnvironment, terminalLocale, loginShellPath, mergePath } = require('../electron/zsh-terminal.cjs');
 const { codexEvent, claudeEvent } = require('../integration/agent-event.cjs');
 
@@ -107,7 +109,7 @@ test('a real zsh terminal keeps the user start-up files and reports prompts, Cod
   const server = await createEventServer(event => events.push(event));
   t.after(() => server.close());
   const folder = prepareZshStartup(path.join(root, 'zdotdir'), integrationDir);
-  const source = { ...process.env, HOME: home, PATH: '/usr/bin:/bin:/usr/sbin:/sbin', PG_TEST_NODE: process.execPath, PG_TEST_RECORDER: recorder, PG_TEST_LOG: log };
+  const source = { ...process.env, HOME: home, PATH: '/usr/bin:/bin:/usr/sbin:/sbin', PG_TEST_NODE: process.execPath, PG_TEST_RECORDER: recorder, PG_TEST_LOG: log, AGENTRIX_READING_NOTE: NOTE };
   delete source.ZDOTDIR; delete source.LANG; delete source.LC_ALL; delete source.LC_CTYPE; delete source.CODEX_HOME;
   const env = zshEnvironment(createTerminalEnvironment(source, ''), { folder, socket: server.address, projectId: 'project', sessionKey: 'key', node: process.execPath, helper, startDir: project, locale: 'en_US.UTF-8' });
   const terminal = pty.spawn(zsh, ['-l', '-i'], { name: 'xterm-256color', cols: 120, rows: 30, cwd: project, env });
@@ -140,7 +142,8 @@ test('a real zsh terminal keeps the user start-up files and reports prompts, Cod
   const started = events.find(event => event.type === 'codex-started');
   assert.ok(started && started.sequence < exited.sequence); assert.equal(started.agent, 'codex'); assert.equal(exited.exitCode, 3);
   const codexArgs = JSON.parse(fs.readFileSync(path.join(log, 'codex.json'), 'utf8'));
-  assert.deepEqual(codexArgs.slice(2), ['-c', 'tui.terminal_title=["session-id"]', 'resume', '--last']);
+  // What the reading view can show comes next, before the user's own arguments.
+  assert.deepEqual(codexArgs.slice(2), ['-c', 'tui.terminal_title=["session-id"]', '-c', `developer_instructions="${NOTE}"`, 'resume', '--last']);
   assert.equal(codexArgs[0], '-c');
   const notify = JSON.parse(codexArgs[1].replace(/^notify=/, ''));
   assert.deepEqual(notify, ['/usr/bin/env', 'ELECTRON_RUN_AS_NODE=1', process.execPath, helper, 'codex-notify', server.address, 'project', 'key']);
@@ -153,7 +156,7 @@ test('a real zsh terminal keeps the user start-up files and reports prompts, Cod
   await waitEvent(event => event.type === 'codex-exited' && event.agent === 'claude', 'claude to exit');
   assert.ok(events.some(event => event.type === 'codex-started' && event.agent === 'claude'));
   const claudeArgs = JSON.parse(fs.readFileSync(path.join(log, 'claude.json'), 'utf8'));
-  assert.deepEqual([claudeArgs.slice(0, 2), claudeArgs.slice(4)], [['--model', 'opus'], ['-p', '中文 prompt']]);
+  assert.deepEqual([claudeArgs.slice(0, 2), claudeArgs.slice(4)], [['--model', 'opus'], ['--append-system-prompt', NOTE, '-p', '中文 prompt']]);
   assert.equal(claudeArgs[2], '--settings');
   const hooks = JSON.parse(claudeArgs[3]).hooks;
   const input = { session_id: 'session-1', transcript_path: '/claude/session-1.jsonl', prompt: '修复 "登录" $HOME `x`' };

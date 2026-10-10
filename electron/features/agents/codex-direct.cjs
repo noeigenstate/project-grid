@@ -172,8 +172,10 @@ class AppServer {
 // A Codex conversation in one project folder. events: what to tell the session (see CodexEvents); card(card) reports
 // the question or approval waiting on the reader, or null; info(info) reports the model and token use.
 class CodexDirect {
-  constructor({ cwd, env, conversation, actions, turn, card = () => {}, info = () => {}, exit = () => {}, version = '0', server = options => new AppServer(options) }) {
+  constructor({ cwd, env, conversation, actions, turn, card = () => {}, info = () => {}, exit = () => {}, version = '0', instructions = '', server = options => new AppServer(options) }) {
     Object.assign(this, { cwd, card, info, version });
+    // Each conversation it starts or resumes is told what the reading view can show (reading-note.cjs).
+    this.thread = instructions ? { cwd, developerInstructions: instructions } : { cwd };
     this.events = new CodexEvents({ conversation, actions, cwd, turn });
     this.server = server({ cwd, env });
     this.waiting = null; this.threadId = null;
@@ -194,7 +196,7 @@ class CodexDirect {
   async start(threadId = null) {
     await this.server.request('initialize', { clientInfo: { name: 'agentrix', title: 'Agentrix', version: this.version }, capabilities: { experimentalApi: false, requestAttestation: false } });
     this.server.notify('initialized');
-    const result = threadId ? await this.server.request('thread/resume', { threadId, cwd: this.cwd }) : await this.server.request('thread/start', { cwd: this.cwd });
+    const result = threadId ? await this.server.request('thread/resume', { threadId, ...this.thread }) : await this.server.request('thread/start', this.thread);
     this.threadId = result.thread.id;
     // A resumed conversation brings its earlier turns: they become the history the reading view opens with; the
     // activity pane shows only the round to come.
@@ -225,7 +227,7 @@ class CodexDirect {
   }
   compact() { return this.server.request('thread/compact/start', { threadId: this.threadId }); }
   models() { return this.server.request('model/list', {}); }
-  async fresh() { const result = await this.server.request('thread/start', { cwd: this.cwd }); this.threadId = result.thread.id; this.info({ threadId: this.threadId, model: result.model || '' }); return result; }
+  async fresh() { const result = await this.server.request('thread/start', this.thread); this.threadId = result.thread.id; this.info({ threadId: this.threadId, model: result.model || '' }); return result; }
   dispose() { this.server.close(); }
 }
 
